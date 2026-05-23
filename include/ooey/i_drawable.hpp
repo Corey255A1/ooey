@@ -1,7 +1,6 @@
 #pragma once
 
-#include "ooey/geometry.hpp"
-#include <vector>
+#include "ooey/i_render_target.hpp"
 
 namespace ooey {
 
@@ -9,8 +8,8 @@ class IDrawable {
 public:
     virtual ~IDrawable() = default;
 
-    // Generate geometry for this drawable
-    virtual std::vector<Geometry> generate_geometry() const = 0;
+    // Draw this drawable to the target
+    virtual void draw(IRenderTarget& target) const = 0;
 };
 
 } // namespace ooey

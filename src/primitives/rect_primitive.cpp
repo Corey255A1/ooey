@@ -8,7 +8,7 @@ void RectPrimitive::set_color(Color color) {
     color_ = color;
 }
 
-std::vector<Geometry> RectPrimitive::generate_geometry() const {
+void RectPrimitive::draw(IRenderTarget& target) const {
     Geometry geo;
     geo.type = PrimitiveType::Triangles;
     
@@ -23,7 +23,7 @@ std::vector<Geometry> RectPrimitive::generate_geometry() const {
 
     geo.indices = {0, 1, 2, 0, 2, 3};
 
-    return {geo};
+    target.draw_geometry(geo);
 }
 
 } // namespace ooey

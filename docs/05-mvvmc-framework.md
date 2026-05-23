@@ -1,21 +1,22 @@
-# Phase 5: Strict MVVM-C Framework (Pending)
+# Phase 5: Strict MVVM-C Framework (Completed)
 
 ## Goal
 Implement the highly opinionated Model-View-ViewModel-Controller architecture described in the project goals, entirely in pure C++.
 
-## Action Items
+## Implementation Details
 
-1. **Controller Design (Pending)**
-   - Implement the `Controller` layer responsible for processing raw system events (keyboard, mouse, touch).
-   - It needs to understand the View's layout to determine focus (e.g., hover states, text field focus).
+We have established the core foundation for a highly decoupled MVVM-C UI architecture:
 
-2. **View & ViewModel Binding (Pending)**
-   - Create base classes/interfaces for `View` and `ViewModel`.
-   - Implement a C++ mechanism to mimic data binding (e.g., using `std::function` callbacks, observer patterns, or a signal/slot mechanism).
-   - Example implementation: A `Button` View that listens to an `ActionModel` in the ViewModel.
+1. **Controller Design (Completed)**
+   - The `Controller` class (implemented in Phase 4) manages the translation of raw system input (from the `InputManager`) into semantic UI events (like `on_pointer_event`) by performing top-down geometric hit-testing against the `View` hierarchy.
 
-3. **Model Layer (Pending)**
-   - Define guidelines for pure state and business logic models that the ViewModels will wrap and expose to the Views.
+2. **View & ViewModel Binding (Completed)**
+   - Introduced `Property<T>`, an observable state wrapper (`include/ooey/mvvmc/property.hpp`).
+   - `Property<T>` allows `View` elements (like our `Button`) to subscribe to state changes via `std::function` callbacks, ensuring the UI always reflects the ViewModel's source of truth.
+   - Example created: `hello_ooey_mvvmc.cpp` demonstrates two `Button`s observing `color_a` and `color_b` properties on a `MainViewModel`.
 
-4. **Event Routing (Pending)**
-   - Ensure events flow correctly: Controller -> ViewModel -> Model, and state changes flow: Model -> ViewModel -> View.
+3. **Event Routing (Completed)**
+   - Inputs flow correctly: `Controller` -> hit-tests `View` -> `View` fires callback -> `ViewModel` processes logic -> `ViewModel` updates `Property<T>` -> `View` is notified and updates visual state.
+
+4. **Model Layer (Pending Guidelines)**
+   - While the base MVVM plumbing works, future work is needed to define strict base classes or concepts for pure Domain Models as the engine scales to accommodate network requests or database access.

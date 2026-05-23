@@ -16,6 +16,12 @@ void Controller::process_events() {
             focused_element_->on_key_event(key_event);
         }
     }
+
+    for (const auto& text_event : input_manager_.get_text_events()) {
+        if (focused_element_) {
+            focused_element_->on_text_event(text_event);
+        }
+    }
 }
 
 void Controller::set_focused_element(IInteractive* element) {
@@ -41,7 +47,12 @@ bool Controller::route_pointer_event(const Pointer& pointer, const std::shared_p
         Rect b = interactive->bounds();
         if (pointer.x >= b.x && pointer.x <= b.x + b.width &&
             pointer.y >= b.y && pointer.y <= b.y + b.height) {
-            return interactive->on_pointer_event(pointer);
+            if (interactive->on_pointer_event(pointer)) {
+                if (pointer.state == PointerState::Pressed) {
+                    set_focused_element(interactive);
+                }
+                return true;
+            }
         }
     }
 

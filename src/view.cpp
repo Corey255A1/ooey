@@ -10,15 +10,10 @@ const std::vector<std::shared_ptr<IDrawable>>& View::get_children() const {
     return children_;
 }
 
-std::vector<Geometry> View::generate_geometry() const {
-    std::vector<Geometry> result;
-
+void View::draw(IRenderTarget& target) const {
     for (const auto& child : children_) {
-        auto child_geos = child->generate_geometry();
-        result.insert(result.end(), child_geos.begin(), child_geos.end());
+        child->draw(target);
     }
-
-    return result;
 }
 
 } // namespace ooey

@@ -23,9 +23,14 @@ void InputManager::push_key_event(const KeyEvent& key_event) {
     key_events_.push_back(key_event);
 }
 
+void InputManager::push_text_event(const TextEvent& text_event) {
+    text_events_.push_back(text_event);
+}
+
 void InputManager::update() {
     pointer_events_.clear();
     key_events_.clear();
+    text_events_.clear();
 }
 
 } // namespace ooey

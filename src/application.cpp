@@ -62,10 +62,7 @@ void Application::run() {
                     target->clear(clear_color_);
 
                     if (root_view_) {
-                        auto geometries = root_view_->generate_geometry();
-                        for (const auto& geo : geometries) {
-                            target->draw_geometry(geo);
-                        }
+                        root_view_->draw(*target);
                     }
 
                     if (after_render_callback_) {

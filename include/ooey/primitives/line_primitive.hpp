@@ -9,7 +9,7 @@ class LinePrimitive : public IDrawable {
 public:
     LinePrimitive(Point start, Point end, Color color);
 
-    std::vector<Geometry> generate_geometry() const override;
+    void draw(IRenderTarget& target) const override;
 
 private:
     Point start_;

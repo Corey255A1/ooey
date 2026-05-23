@@ -4,7 +4,7 @@ namespace ooey {
 
 LinePrimitive::LinePrimitive(Point start, Point end, Color color) : start_(start), end_(end), color_(color) {}
 
-std::vector<Geometry> LinePrimitive::generate_geometry() const {
+void LinePrimitive::draw(IRenderTarget& target) const {
     Geometry geo;
     geo.type = PrimitiveType::Lines;
     
@@ -13,7 +13,7 @@ std::vector<Geometry> LinePrimitive::generate_geometry() const {
 
     geo.indices = {0, 1};
 
-    return {geo};
+    target.draw_geometry(geo);
 }
 
 } // namespace ooey

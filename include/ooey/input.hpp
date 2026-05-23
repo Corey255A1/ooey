@@ -28,6 +28,10 @@ struct KeyEvent {
     KeyState state;
 };
 
+struct TextEvent {
+    char32_t codepoint; // Unicode character
+};
+
 class InputManager; // Forward declare
 
 class IInputProvider {
@@ -44,10 +48,12 @@ class InputManager {
 public:
     void push_pointer_event(const Pointer& pointer);
     void push_key_event(const KeyEvent& key_event);
+    void push_text_event(const TextEvent& text_event);
 
     const std::vector<Pointer>& get_active_pointers() const { return pointers_; }
     const std::vector<Pointer>& get_pointer_events() const { return pointer_events_; }
     const std::vector<KeyEvent>& get_key_events() const { return key_events_; }
+    const std::vector<TextEvent>& get_text_events() const { return text_events_; }
     
     // Clear transient states like 'Moved' if no longer moving, etc.
     void update();
@@ -56,6 +62,7 @@ private:
     std::vector<Pointer> pointers_; // active pointers
     std::vector<Pointer> pointer_events_; // events for this frame
     std::vector<KeyEvent> key_events_; // For this frame
+    std::vector<TextEvent> text_events_; // For this frame
 };
 
 } // namespace ooey

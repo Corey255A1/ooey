@@ -5,7 +5,7 @@
 #include "ooey/platform/x11/x11_window_backend.hpp"
 #include "ooey/view.hpp"
 #include "ooey/controls/button.hpp"
-#include "ooey/property.hpp"
+#include "ooey/mvvmc/property.hpp"
 
 // ---------------------------------------------------------
 // 1. The ViewModel (Logic & State)
@@ -52,12 +52,12 @@ public:
 
         // -- Data Binding: State (ViewModel) -> UI (View) --
         // When color_a changes, update box_a
-        view_model_->color_a.subscribe([box_a](const ooey::Color& c) {
+        bind(view_model_->color_a, [box_a](const ooey::Color& c) {
             box_a->set_color(c);
         });
 
         // When color_b changes, update box_b
-        view_model_->color_b.subscribe([box_b](const ooey::Color& c) {
+        bind(view_model_->color_b, [box_b](const ooey::Color& c) {
             box_b->set_color(c);
         });
 

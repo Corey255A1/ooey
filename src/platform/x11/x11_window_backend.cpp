@@ -47,6 +47,21 @@ public:
         glEnd();
     }
 
+    Size measure_text(const std::string& text, const Font& font) override {
+        return Size{static_cast<int>(text.length() * (font.size * 0.6)), font.size};
+    }
+
+    void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override {
+        Size size = measure_text(text, font);
+        glBegin(GL_LINE_LOOP);
+        glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+        glVertex2f(position.x, position.y);
+        glVertex2f(position.x + size.width, position.y);
+        glVertex2f(position.x + size.width, position.y + size.height);
+        glVertex2f(position.x, position.y + size.height);
+        glEnd();
+    }
+
     void present() override {
         glXSwapBuffers(display_, window_);
     }
@@ -142,6 +157,14 @@ bool X11WindowBackend::poll_events() {
                 input_manager_->push_pointer_event({0, xev.xbutton.x, xev.xbutton.y, PointerState::Released});
             } else if (xev.type == KeyPress) {
                 input_manager_->push_key_event({static_cast<int>(xev.xkey.keycode), KeyState::Pressed});
+                char buffer[32];
+                KeySym keysym;
+                int len = XLookupString(&xev.xkey, buffer, sizeof(buffer), &keysym, nullptr);
+                if (len > 0) {
+                    for(int i = 0; i < len; ++i) {
+                        input_manager_->push_text_event({static_cast<char32_t>(static_cast<unsigned char>(buffer[i]))});
+                    }
+                }
             } else if (xev.type == KeyRelease) {
                 input_manager_->push_key_event({static_cast<int>(xev.xkey.keycode), KeyState::Released});
             }

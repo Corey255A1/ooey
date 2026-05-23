@@ -42,4 +42,25 @@ struct Rect {
         : x(x), y(y), width(width), height(height) {}
 };
 
+enum class FontWeight {
+    Normal,
+    Bold
+};
+
+enum class FontStyle {
+    Normal,
+    Italic
+};
+
+struct Font {
+    const char* family{"sans-serif"};
+    int size{14};
+    FontWeight weight{FontWeight::Normal};
+    FontStyle style{FontStyle::Normal};
+
+    constexpr Font() = default;
+    constexpr Font(const char* family, int size, FontWeight weight = FontWeight::Normal, FontStyle style = FontStyle::Normal)
+        : family(family), size(size), weight(weight), style(style) {}
+};
+
 } // namespace ooey

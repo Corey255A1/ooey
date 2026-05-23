@@ -26,6 +26,7 @@ target_sources(ooey PRIVATE
     src/application.cpp
     src/primitives/rect_primitive.cpp
     src/primitives/line_primitive.cpp
+    src/primitives/text_primitive.cpp
     src/view.cpp
     src/input.cpp
     src/controller.cpp
@@ -48,7 +49,11 @@ option(OOEY_BUILD_CONTROLS "Build the OOEY controls library" ON)
 
 if(OOEY_BUILD_CONTROLS)
     add_library(ooey_controls)
-    target_sources(ooey_controls PRIVATE src/controls/button.cpp)
+    target_sources(ooey_controls PRIVATE 
+        src/controls/button.cpp
+        src/controls/label.cpp
+        src/controls/text_box.cpp
+    )
     target_link_libraries(ooey_controls PUBLIC ooey)
 endif()
 

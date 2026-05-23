@@ -15,6 +15,7 @@ public:
     // Event Handlers (return true if consumed)
     virtual bool on_pointer_event(const Pointer& e) = 0;
     virtual bool on_key_event(const KeyEvent& e) = 0;
+    virtual bool on_text_event(const TextEvent& e) { return false; }
 };
 
 } // namespace ooey
