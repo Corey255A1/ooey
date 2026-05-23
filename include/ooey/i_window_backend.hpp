@@ -1,12 +1,13 @@
 #pragma once
 
 #include "ooey/types.hpp"
+#include "ooey/input.hpp"
 
 namespace ooey {
 
 class IRenderTarget;
 
-class IWindowBackend {
+class IWindowBackend : public IInputProvider {
 public:
     virtual ~IWindowBackend() = default;
 

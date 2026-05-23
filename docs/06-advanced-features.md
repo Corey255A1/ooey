@@ -1,4 +1,4 @@
-# Phase 5: Media, Assets, and Advanced Features (Pending)
+# Phase 6: Media, Assets, and Advanced Features (Pending)
 
 ## Goal
 Expand the engine's capabilities to include rich media, declarative UI definitions, and broader platform support.

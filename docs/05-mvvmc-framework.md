@@ -1,4 +1,4 @@
-# Phase 4: Strict MVVM-C Framework (Pending)
+# Phase 5: Strict MVVM-C Framework (Pending)
 
 ## Goal
 Implement the highly opinionated Model-View-ViewModel-Controller architecture described in the project goals, entirely in pure C++.

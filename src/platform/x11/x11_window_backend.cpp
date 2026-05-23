@@ -28,21 +28,22 @@ public:
         glClear(GL_COLOR_BUFFER_BIT);
     }
 
-    void draw_rect(const Rect& rect, Color color) override {
-        glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
-        glBegin(GL_QUADS);
-        glVertex2i(rect.x, rect.y);
-        glVertex2i(rect.x + rect.width, rect.y);
-        glVertex2i(rect.x + rect.width, rect.y + rect.height);
-        glVertex2i(rect.x, rect.y + rect.height);
-        glEnd();
-    }
+    void draw_geometry(const Geometry& geometry) override {
+        if (geometry.vertices.empty()) return;
 
-    void draw_line(const Point& start, const Point& end, Color color) override {
-        glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
-        glBegin(GL_LINES);
-        glVertex2i(start.x, start.y);
-        glVertex2i(end.x, end.y);
+        if (geometry.type == PrimitiveType::Triangles) {
+            glBegin(GL_TRIANGLES);
+        } else {
+            glBegin(GL_LINES);
+        }
+
+        for (unsigned int index : geometry.indices) {
+            if (index < geometry.vertices.size()) {
+                const auto& v = geometry.vertices[index];
+                glColor4f(v.color.r / 255.0f, v.color.g / 255.0f, v.color.b / 255.0f, v.color.a / 255.0f);
+                glVertex2f(v.x, v.y);
+            }
+        }
         glEnd();
     }
 
@@ -81,7 +82,7 @@ bool X11WindowBackend::create(const Size& size, const char* title) {
 
     XSetWindowAttributes swa;
     swa.colormap = cmap;
-    swa.event_mask = ExposureMask | KeyPressMask | StructureNotifyMask;
+    swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask;
 
     window_ = XCreateWindow(display_, root, 0, 0, size.width, size.height, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
 
@@ -132,9 +133,25 @@ bool X11WindowBackend::poll_events() {
             }
         } else if (xev.type == DestroyNotify) {
             return false;
+        } else if (input_manager_) {
+            if (xev.type == MotionNotify) {
+                input_manager_->push_pointer_event({0, xev.xmotion.x, xev.xmotion.y, PointerState::Moved});
+            } else if (xev.type == ButtonPress) {
+                input_manager_->push_pointer_event({0, xev.xbutton.x, xev.xbutton.y, PointerState::Pressed});
+            } else if (xev.type == ButtonRelease) {
+                input_manager_->push_pointer_event({0, xev.xbutton.x, xev.xbutton.y, PointerState::Released});
+            } else if (xev.type == KeyPress) {
+                input_manager_->push_key_event({static_cast<int>(xev.xkey.keycode), KeyState::Pressed});
+            } else if (xev.type == KeyRelease) {
+                input_manager_->push_key_event({static_cast<int>(xev.xkey.keycode), KeyState::Released});
+            }
         }
     }
     return true;
+}
+
+void X11WindowBackend::poll_input() {
+    // Input is currently polled alongside window events in poll_events() for X11.
 }
 
 IRenderTarget* X11WindowBackend::get_render_target() {

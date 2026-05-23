@@ -27,5 +27,12 @@ app.set_render_callback([](ooey::IRenderTarget* target) { ... });
 - **OpenGL via GLX:** OpenGL provides universal hardware acceleration. `GLX` was chosen because it is the standard "glue" that binds an OpenGL rendering context to an X11 Window, bypassing the CPU to draw directly on the GPU.
 
 ## 5. Strict MVVM-C (Future)
-We are aiming for a highly opinionated **Model-View-ViewModel-Controller** structure.
-- **Why Opinionated?** Many C++ UI frameworks (like Qt or ImGui) are incredibly flexible but allow developers to easily tangle business logic with rendering code. OOEY will strictly enforce data binding to prevent state bugs. The View will *only* reflect the ViewModel, and the Controller will *only* update the ViewModel.
+## 6. Retained Mode Rendering & The Scene Graph
+Initially, `IRenderTarget` utilized a fixed-function immediate mode style (`draw_rect`, `draw_line`). This does not scale. To build complex UIs (like a Button containing a background, border, and text), the engine shifted to a **Retained Mode Scene Graph**. 
+- **`IDrawable` Base Class:** Every visual element inherits from a base `IDrawable`. Higher-level UI elements (like `Button`) are just containers composed of lower-level `IDrawable` primitives (like `RectPrimitive` and `TextPrimitive`).
+- **Data over Functions:** Instead of the `IRenderTarget` knowing how to draw a "Rectangle", the `RectPrimitive` converts its definition into generic Geometry (vertices, indices, colors). The `IRenderTarget` simply consumes geometry data and pushes it to the GPU.
+
+## 7. Unified Abstract Input System
+To maximize portability (from Linux desktops to embedded Raspberry Pi systems without window managers), input is entirely decoupled from the OS Window.
+- **Universal Pointers:** The engine does not have a "Mouse". It has a collection of active `Pointer` objects. A `Pointer` can represent a mouse cursor, a multi-touch finger, or an arrow-key-driven virtual cursor. The core UI logic only cares that a pointer is hovering or clicking.
+- **Input Providers:** Backends (like X11) or custom plugins (like a serial port reader) act as `IInputProvider`s. They translate hardware-specific signals and push universal `Pointer` or `KeyEvent` data into the central `InputManager`.

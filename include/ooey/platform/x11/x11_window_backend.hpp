@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ooey/i_window_backend.hpp"
+#include "ooey/input.hpp"
 #include <memory>
 
 // Forward declarations to avoid including Xlib.h in the header
@@ -16,7 +17,10 @@ public:
     bool create(const Size& size, const char* title) override;
     void destroy() override;
     bool poll_events() override;
+    void poll_input() override;
     IRenderTarget* get_render_target() override;
+
+    void set_input_manager(InputManager* manager) { input_manager_ = manager; }
 
 private:
     Display* display_{nullptr};
@@ -24,6 +28,7 @@ private:
     void* glc_{nullptr}; // GLXContext
     unsigned long wm_delete_window_{0}; // Atom
     std::unique_ptr<IRenderTarget> render_target_;
+    InputManager* input_manager_{nullptr};
 };
 
 } // namespace ooey

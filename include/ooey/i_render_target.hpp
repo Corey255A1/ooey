@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ooey/types.hpp"
+#include "ooey/geometry.hpp"
 
 namespace ooey {
 
@@ -11,11 +12,8 @@ public:
     // Clears the target with the specified color
     virtual void clear(Color color) = 0;
 
-    // Draws a filled rectangle
-    virtual void draw_rect(const Rect& rect, Color color) = 0;
-
-    // Draws a line between two points
-    virtual void draw_line(const Point& start, const Point& end, Color color) = 0;
+    // Draw generic geometry
+    virtual void draw_geometry(const Geometry& geometry) = 0;
 
     // Swap the frame buffers or present the render output
     virtual void present() = 0;

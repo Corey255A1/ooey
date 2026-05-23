@@ -51,6 +51,13 @@ View: {
 
 Something like that is where my head is at. However, this will all be raw C++ api to accomplish this.
 
+## More thoughts
+ok, this is looking good for a prototype. Now here are some additional thoughts and ideas on the architecture. Having a class or interface that defines a bunch of draw functions like draw_rect or draw_line is not exentisble. THere should be a base level primative object Drawable (or something) that can then build built up with lines, rectangles, circles,, text These drawables are then added to the draw surface and when their draws are called, at the lowest level they will draw with the x11/ wayland/ opengl/ etc calls. But at the highest level, when I am using the API to draw out a UI, I should be using encapsulated objects, like button, rectangle etc, that  are built upon primatives, that are then built upon even lower primatives that are the platform indepdent primatives... THen somethign like a button would be composed of stack of objects that get rendered in an order to draw the resulting button.
+
+Additionally, for user input, I want the concept to be that there exists list of pointer points that can track any number of active pointer objects. A pointer object can resprent tracking the motion of a mouse pointer over the UI, it can represnet multitouch inputs over the UI, or it can represent a pointer driver that is being controlled by the arrow keys to move a pointer around the UI. Or a pointer could be driven by some other external piece of hardware from a serial port, etc. The pointer object doesn't care what is driving it. And the same for key presses, they can be coming from computer keyboard, input from another process, etc. It would just be a matter of having the plugin loaded to insert that data. The idea is that I could use this library on linux, windows, embedded, raspberry pi, all sorts of things
+
+Lets define and document how to make these objects interactive. With our base level Pointer notion, there needs to be a way to track when a pointer is over top an area of objects. A typical UI framework will bubble these events from the top object to the bottom object .. as in if there is a button on top, that will process the ponter event first, if it doesn't handle it, it passes it down to the next object in the heirarchy. There needs to be a way to define a heirarchy of objects to handle these types of interactions by a pointer object
+
 ## Building and Running
 
 To compile and run the engine, especially the example that opens a native window, you'll need a few dependencies and a modern C++ compiler. 
@@ -96,9 +103,22 @@ ctest --output-on-failure
 - Initial Linux/Chromebook Implementation
     - Implement a basic Window backend using Wayland or X11.
     - Implement a basic RenderTarget for the Window (potentially using OpenGL or Vulkan).
+- Composable Scene Graph & Unified Input
+    - Refactor `IRenderTarget` to accept a base `IDrawable` or geometry batches instead of fixed `draw_rect` functions.
+    - Create primitive drawables (`RectPrimitive`, `LinePrimitive`) and composable UI elements.
+    - Implement an `InputManager` with a universal `Pointer` struct (X, Y, State) capable of tracking multi-touch, mouse, or keyboard-driven cursors.
+    - Abstract input sources as plugins/providers feeding into the `InputManager`.
+- Interaction Model
+    - Introduce an `IInteractive` interface for hit-testing and event handling.
+    - Create a `Controller` to bridge `InputManager` events to the Scene Graph.
+    - Implement top-down event bubbling for pointer events based on bounding boxes.
+    - Implement state-based focus routing for keyboard events.
 - Expanded Rendering Capabilities
     - Implement an in-memory RenderTarget for CPU-side rendering.
     - Implement a File RenderTarget (e.g., outputting to a raw image file).
+- Strict MVVM-C Framework
+    - Implement the `Controller` layer responsible for processing raw system events.
+    - Implement View and ViewModel binding interfaces.
 - Media and Asset Integration (Future)
     - Integrate `libpng`/`libjpeg` for image loading and display.
     - Explore `alsa`/`pulseaudio` for sound and `ffmpeg` for video playback.

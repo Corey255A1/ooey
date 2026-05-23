@@ -24,6 +24,7 @@ TEST(OoeyTypes, RectInitialization) {
 class MockWindowBackend : public ooey::IWindowBackend {
 public:
     int poll_count = 0;
+    ooey::InputManager* input_manager = nullptr;
 
     bool create(const ooey::Size& size, const char* title) override {
         return true;
@@ -38,6 +39,13 @@ public:
             return false; // Exit after 3 polls
         }
         return true;
+    }
+
+    void set_input_manager(ooey::InputManager* manager) override {
+        input_manager = manager;
+    }
+
+    void poll_input() override {
     }
 
     ooey::IRenderTarget* get_render_target() override {

@@ -2,12 +2,15 @@
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
 #include "ooey/platform/x11/x11_window_backend.hpp"
+#include "ooey/view.hpp"
+#include "ooey/controls/button.hpp"
+#include "ooey/primitives/line_primitive.hpp"
 
 int main() {
     std::cout << "Welcome to OOEY GUI Engine v" << ooey::get_version() << "!\n";
 
     ooey::Application app;
-    
+
     auto backend = std::make_unique<ooey::X11WindowBackend>();
     if (!backend->create({800, 600}, "OOEY Hello World")) {
         std::cerr << "Failed to create window\n";
@@ -16,19 +19,26 @@ int main() {
 
     app.set_window_backend(std::move(backend));
 
-    app.set_render_callback([](ooey::IRenderTarget* target) {
-        if (!target) return;
-        
-        // Clear window with dark gray
-        target->clear(ooey::Color{40, 40, 40});
-        
-        // Draw a red square in the center (assuming 800x600 size)
-        target->draw_rect(ooey::Rect{300, 200, 200, 200}, ooey::Color{0, 255, 0});
-        
-        target->present();
-    });
+    // Construct a scene graph
+    auto root_view = std::make_shared<ooey::View>();
+
+    // Add an interactive red button background
+    auto button = std::make_shared<ooey::Button>(ooey::Rect{300, 200, 200, 200}, ooey::Color{255, 0, 0});
+    button->on_click = []() {
+        std::cout << "Button clicked from Example!\n";
+    };
+    root_view->add_child(std::move(button));
+
+    // Add a blue line across it
+    root_view->add_child(std::make_shared<ooey::LinePrimitive>(ooey::Point{300, 200}, ooey::Point{500, 400}, ooey::Color{0, 0, 255}));
+
+    // Inject the root view into the application
+    app.set_root_view(std::move(root_view));
+
+    // Set our background clear color
+    app.set_clear_color(ooey::Color{40, 40, 40});
 
     app.run();
 
     return 0;
-}
+    }

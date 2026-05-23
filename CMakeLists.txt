@@ -24,6 +24,11 @@ find_package(OpenGL REQUIRED)
 target_sources(ooey PRIVATE 
     src/ooey.cpp
     src/application.cpp
+    src/primitives/rect_primitive.cpp
+    src/primitives/line_primitive.cpp
+    src/view.cpp
+    src/input.cpp
+    src/controller.cpp
     src/platform/x11/x11_window_backend.cpp
 )
 
@@ -37,6 +42,15 @@ target_link_libraries(ooey PUBLIC
     X11::X11 
     OpenGL::GL
 )
+
+# Option to build controls library
+option(OOEY_BUILD_CONTROLS "Build the OOEY controls library" ON)
+
+if(OOEY_BUILD_CONTROLS)
+    add_library(ooey_controls)
+    target_sources(ooey_controls PRIVATE src/controls/button.cpp)
+    target_link_libraries(ooey_controls PUBLIC ooey)
+endif()
 
 # Subdirectories
 add_subdirectory(examples)

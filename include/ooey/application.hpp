@@ -5,6 +5,10 @@
 
 #include "ooey/i_window_backend.hpp"
 #include "ooey/i_render_target.hpp"
+#include "ooey/input.hpp"
+#include "ooey/view.hpp"
+#include "ooey/controller.hpp"
+#include "ooey/i_drawable.hpp"
 
 namespace ooey {
 
@@ -14,10 +18,25 @@ public:
     ~Application();
 
     // Set the window backend to use
-    void set_window_backend(std::unique_ptr<IWindowBackend> backend);
+    void set_window_backend(std::unique_ptr<IWindowBackend>&& backend);
 
-    // Set a callback to execute rendering logic per frame
-    void set_render_callback(std::function<void(IRenderTarget*)> callback);
+    // Get the global input manager
+    InputManager& get_input_manager() { return input_manager_; }
+
+    // Set the root view for the scene graph
+    void set_root_view(std::shared_ptr<View>&& root_view);
+
+    // Get the global controller
+    Controller* get_controller() { return controller_.get(); }
+
+    // Set the default clear color
+    void set_clear_color(Color color);
+
+    // Optional callback executed before the scene graph is rendered
+    void set_before_render_callback(std::function<void(IRenderTarget*)>&& callback);
+
+    // Optional callback executed after the scene graph is rendered but before presentation
+    void set_after_render_callback(std::function<void(IRenderTarget*)>&& callback);
 
     // Run the main application loop
     void run();
@@ -27,7 +46,12 @@ public:
 
 private:
     std::unique_ptr<IWindowBackend> window_backend_;
-    std::function<void(IRenderTarget*)> render_callback_;
+    std::shared_ptr<View> root_view_;
+    std::unique_ptr<Controller> controller_;
+    Color clear_color_{0, 0, 0, 255};
+    std::function<void(IRenderTarget*)> before_render_callback_;
+    std::function<void(IRenderTarget*)> after_render_callback_;
+    InputManager input_manager_;
     bool running_{false};
 };
 
