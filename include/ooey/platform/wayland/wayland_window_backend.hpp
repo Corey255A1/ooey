@@ -12,6 +12,8 @@ struct wl_seat;
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
+struct wl_pointer;
+struct wl_keyboard;
 
 namespace ooey {
 
@@ -26,7 +28,7 @@ public:
     void poll_input() override;
     IRenderTarget* get_render_target() override;
 
-    void set_input_manager(InputManager* manager) { input_manager_ = manager; }
+    void set_input_manager(InputManager* manager);
 
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);
@@ -49,6 +51,11 @@ private:
 
     std::unique_ptr<IRenderTarget> render_target_;
     InputManager* input_manager_{nullptr};
+    // Keep listener contexts so we can update them when the input manager is set later
+    void* pointer_data_{nullptr};
+    void* keyboard_data_{nullptr};
+    wl_pointer* pointer_obj_{};
+    wl_keyboard* keyboard_obj_{};
 
     int width_{};
     int height_{};

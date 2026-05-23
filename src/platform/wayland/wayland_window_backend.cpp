@@ -100,7 +100,8 @@ public:
         uint8_t r = color.r;
         uint8_t g = color.g;
         uint8_t b = color.b;
-        uint32_t pixel = (r << 16) | (g << 8) | (b);
+        uint8_t a = color.a;
+        uint32_t pixel = (static_cast<uint32_t>(a) << 24) | (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | (static_cast<uint32_t>(b));
         for (int y = 0; y < height_; ++y) {
             uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y * stride_);
             for (int x = 0; x < width_; ++x) row[x] = pixel;
@@ -109,23 +110,46 @@ public:
 
     void draw_geometry(const Geometry& geometry) override {
         if (!data_) return;
-        // Simple rasterization: fill the geometry's bounding box with the first vertex color.
         if (geometry.vertices.empty()) return;
-        int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
-        for (const auto& v : geometry.vertices) {
-            int x = static_cast<int>(v.x);
-            int y = static_cast<int>(v.y);
-            if (x < minx) minx = x;
-            if (y < miny) miny = y;
-            if (x > maxx) maxx = x;
-            if (y > maxy) maxy = y;
+
+        if (geometry.type == PrimitiveType::Triangles) {
+            // Simple rasterization: fill the geometry's bounding box with the first vertex color.
+            int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
+            for (const auto& v : geometry.vertices) {
+                int x = static_cast<int>(v.x);
+                int y = static_cast<int>(v.y);
+                if (x < minx) minx = x;
+                if (y < miny) miny = y;
+                if (x > maxx) maxx = x;
+                if (y > maxy) maxy = y;
+            }
+            if (minx == INT_MAX) return;
+            int w = maxx - minx;
+            int h = maxy - miny;
+            if (w <= 0) w = 1;
+            if (h <= 0) h = 1;
+            draw_filled_rect(minx, miny, w, h, geometry.vertices[0].color);
+        } else if (geometry.type == PrimitiveType::Lines) {
+            // Draw each line pair (indices or implicit pairs)
+            if (!geometry.indices.empty()) {
+                for (size_t i = 0; i + 1 < geometry.indices.size(); i += 2) {
+                    unsigned int ia = geometry.indices[i];
+                    unsigned int ib = geometry.indices[i+1];
+                    if (ia < geometry.vertices.size() && ib < geometry.vertices.size()) {
+                        const auto& a = geometry.vertices[ia];
+                        const auto& b = geometry.vertices[ib];
+                        draw_line(static_cast<int>(a.x), static_cast<int>(a.y), static_cast<int>(b.x), static_cast<int>(b.y), a.color);
+                    }
+                }
+            } else {
+                // fallback: draw sequential pairs
+                for (size_t i = 0; i + 1 < geometry.vertices.size(); i += 2) {
+                    const auto& a = geometry.vertices[i];
+                    const auto& b = geometry.vertices[i+1];
+                    draw_line(static_cast<int>(a.x), static_cast<int>(a.y), static_cast<int>(b.x), static_cast<int>(b.y), a.color);
+                }
+            }
         }
-        if (minx == INT_MAX) return;
-        int w = maxx - minx;
-        int h = maxy - miny;
-        if (w <= 0) w = 1;
-        if (h <= 0) h = 1;
-        draw_filled_rect(minx, miny, w, h, geometry.vertices[0].color);
     }
 
     Size measure_text(const std::string& text, const Font& font) override {
@@ -155,7 +179,7 @@ public:
 private:
     void draw_filled_rect(int x, int y, int w, int h, Color color) {
         if (!data_) return;
-        uint32_t pixel = (color.r << 16) | (color.g << 8) | (color.b);
+        uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
         for (int yy = y; yy < y + h; ++yy) {
             if (yy < 0 || yy >= height_) continue;
             uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
@@ -163,6 +187,28 @@ private:
                 if (xx < 0 || xx >= width_) continue;
                 row[xx] = pixel;
             }
+        }
+    }
+
+    void draw_line(int x0, int y0, int x1, int y1, Color color) {
+        if (!data_) return;
+        // Bresenham's line algorithm (integer)
+        int dx = abs(x1 - x0);
+        int sx = x0 < x1 ? 1 : -1;
+        int dy = -abs(y1 - y0);
+        int sy = y0 < y1 ? 1 : -1;
+        int err = dx + dy;
+        uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
+
+        while (true) {
+            if (x0 >= 0 && x0 < width_ && y0 >= 0 && y0 < height_) {
+                uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y0 * stride_);
+                row[x0] = pixel;
+            }
+            if (x0 == x1 && y0 == y1) break;
+            int e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
         }
     }
 
@@ -238,7 +284,18 @@ struct PointerData {
     int last_y{0};
 };
 
-static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/, wl_fixed_t /*sx*/, wl_fixed_t /*sy*/) {}
+static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/, wl_fixed_t sx, wl_fixed_t sy) {
+    PointerData* pd = static_cast<PointerData*>(data);
+    if (!pd) return;
+    int x = wl_fixed_to_int(sx);
+    int y = wl_fixed_to_int(sy);
+    pd->last_x = x;
+    pd->last_y = y;
+    if (pd->input_manager) {
+        ooey::Pointer p{0, x, y, ooey::PointerState::Moved};
+        pd->input_manager->push_pointer_event(p);
+    }
+}
 static void pointer_leave(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/) {}
 static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*time*/, wl_fixed_t sx, wl_fixed_t sy) {
     PointerData* pd = static_cast<PointerData*>(data);
@@ -423,19 +480,23 @@ bool WaylandWindowBackend::create(const Size& size, const char* title) {
         // grab pointer and keyboard if present
         wl_seat_add_listener(seat_, nullptr, nullptr); // no-op: concrete listeners created when creating pointer/keyboard
         // Create pointer
-        wl_pointer* pointer = wl_seat_get_pointer(seat_);
+        pointer_obj_ = wl_seat_get_pointer(seat_);
         PointerData* pd = new PointerData();
         pd->input_manager = input_manager_;
-        wl_pointer_add_listener(pointer, &g_pointer_listener, pd);
+        pointer_data_ = pd;
+        wl_pointer_add_listener(pointer_obj_, &g_pointer_listener, pd);
 
         // Create keyboard
-        wl_keyboard* keyboard = wl_seat_get_keyboard(seat_);
+        keyboard_obj_ = wl_seat_get_keyboard(seat_);
         KeyboardData* kd = new KeyboardData();
         kd->input_manager = input_manager_;
         kd->xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
         kd->keymap = nullptr;
         kd->xkb_state = nullptr;
-        wl_keyboard_add_listener(keyboard, &g_keyboard_listener, kd);
+        keyboard_data_ = kd;
+        wl_keyboard_add_listener(keyboard_obj_, &g_keyboard_listener, kd);
+        // Process any pending enter/motion events so our listener gets initial pointer coords
+        if (display_) wl_display_roundtrip(display_);
     }
 
     return true;
@@ -458,6 +519,26 @@ void WaylandWindowBackend::destroy() {
     if (shm_) {
         wl_shm_destroy(shm_);
         shm_ = nullptr;
+    }
+    if (pointer_obj_) {
+        wl_pointer_destroy(pointer_obj_);
+        pointer_obj_ = nullptr;
+    }
+    if (pointer_data_) {
+        delete static_cast<PointerData*>(pointer_data_);
+        pointer_data_ = nullptr;
+    }
+    if (keyboard_obj_) {
+        wl_keyboard_destroy(keyboard_obj_);
+        keyboard_obj_ = nullptr;
+    }
+    if (keyboard_data_) {
+        KeyboardData* kd = static_cast<KeyboardData*>(keyboard_data_);
+        if (kd->xkb_state) xkb_state_unref(kd->xkb_state);
+        if (kd->keymap) xkb_keymap_unref(kd->keymap);
+        if (kd->xkb_ctx) xkb_context_unref(kd->xkb_ctx);
+        delete kd;
+        keyboard_data_ = nullptr;
     }
     if (compositor_) {
         wl_compositor_destroy(compositor_);
@@ -483,6 +564,19 @@ bool WaylandWindowBackend::poll_events() {
 
 void WaylandWindowBackend::poll_input() {
     // Input events are pushed from listeners already
+}
+
+void WaylandWindowBackend::set_input_manager(InputManager* manager) {
+    input_manager_ = manager;
+    // Update any existing listener contexts so they receive the input manager
+    if (pointer_data_) {
+        PointerData* pd = static_cast<PointerData*>(pointer_data_);
+        pd->input_manager = input_manager_;
+    }
+    if (keyboard_data_) {
+        KeyboardData* kd = static_cast<KeyboardData*>(keyboard_data_);
+        kd->input_manager = input_manager_;
+    }
 }
 
 IRenderTarget* WaylandWindowBackend::get_render_target() {
