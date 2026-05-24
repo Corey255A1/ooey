@@ -51,7 +51,7 @@ bool TextBox::on_key_event(const KeyEvent& e) {
     // Platform independent key codes usually define backspace
     // For now, let's assume standard ASCII backspace (8) or Delete (127) mapped to key_code
     if (e.state == KeyState::Pressed) {
-        if (e.key_code == 8 /* Backspace */) {
+        if (e.key_code == 8 /* Backspace */ || e.key_code == 127 /* Delete */ || e.key_code == 0xFF08 /* XK_BackSpace */) {
             if (!text_.empty()) {
                 text_.pop_back();
                 text_primitive_->set_text(text_);
@@ -70,8 +70,14 @@ bool TextBox::on_text_event(const TextEvent& e) {
 
     // Only process printable ASCII for now, or full UTF-8 encoding
     // A simplistic utf-8 encoder for char32_t:
+    if (e.codepoint == 8 || e.codepoint == 127) {
+        return true;
+    }
+
     if (e.codepoint < 0x80) {
-        text_ += static_cast<char>(e.codepoint);
+        if (e.codepoint >= 32 || e.codepoint == '\n' || e.codepoint == '\t') {
+            text_ += static_cast<char>(e.codepoint);
+        }
     } else if (e.codepoint < 0x800) {
         text_ += static_cast<char>(0xC0 | (e.codepoint >> 6));
         text_ += static_cast<char>(0x80 | (e.codepoint & 0x3F));

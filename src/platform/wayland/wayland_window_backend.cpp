@@ -11,6 +11,8 @@
 #include <cstring>
 #include <iostream>
 #include <limits.h>
+#include <algorithm>
+#include <cstdint>
 
 namespace ooey {
 
@@ -46,6 +48,79 @@ static int create_shm_file(size_t size) {
         return -1;
     }
     return fd;
+}
+
+static const uint8_t kAsciiGlyphs[42][7] = {
+    // Space, 0-9, A-Z, colon, comma, hyphen, period, question
+    {0x00,0x00,0x00,0x00,0x00,0x00,0x00}, // ' '
+    {0x0E,0x11,0x13,0x15,0x19,0x11,0x0E}, // '0'
+    {0x04,0x0C,0x04,0x04,0x04,0x04,0x0E}, // '1'
+    {0x0E,0x11,0x01,0x06,0x08,0x10,0x1F}, // '2'
+    {0x1F,0x02,0x04,0x06,0x01,0x11,0x0E}, // '3'
+    {0x02,0x06,0x0A,0x12,0x1F,0x02,0x02}, // '4'
+    {0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E}, // '5'
+    {0x06,0x08,0x10,0x1E,0x11,0x11,0x0E}, // '6'
+    {0x1F,0x11,0x02,0x04,0x04,0x04,0x04}, // '7'
+    {0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E}, // '8'
+    {0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C}, // '9'
+    {0x0E,0x11,0x11,0x1F,0x11,0x11,0x11}, // 'A'
+    {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E}, // 'B'
+    {0x0E,0x11,0x10,0x10,0x10,0x11,0x0E}, // 'C'
+    {0x1E,0x11,0x11,0x11,0x11,0x11,0x1E}, // 'D'
+    {0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F}, // 'E'
+    {0x1F,0x10,0x10,0x1E,0x10,0x10,0x10}, // 'F'
+    {0x0E,0x11,0x10,0x17,0x11,0x11,0x0F}, // 'G'
+    {0x11,0x11,0x11,0x1F,0x11,0x11,0x11}, // 'H'
+    {0x0E,0x04,0x04,0x04,0x04,0x04,0x0E}, // 'I'
+    {0x07,0x02,0x02,0x02,0x02,0x12,0x0C}, // 'J'
+    {0x11,0x12,0x14,0x18,0x14,0x12,0x11}, // 'K'
+    {0x10,0x10,0x10,0x10,0x10,0x10,0x1F}, // 'L'
+    {0x11,0x1B,0x15,0x15,0x11,0x11,0x11}, // 'M'
+    {0x11,0x19,0x15,0x13,0x11,0x11,0x11}, // 'N'
+    {0x0E,0x11,0x11,0x11,0x11,0x11,0x0E}, // 'O'
+    {0x1E,0x11,0x11,0x1E,0x10,0x10,0x10}, // 'P'
+    {0x0E,0x11,0x11,0x11,0x15,0x12,0x0D}, // 'Q'
+    {0x1E,0x11,0x11,0x1E,0x14,0x12,0x11}, // 'R'
+    {0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E}, // 'S'
+    {0x1F,0x04,0x04,0x04,0x04,0x04,0x04}, // 'T'
+    {0x11,0x11,0x11,0x11,0x11,0x11,0x0E}, // 'U'
+    {0x11,0x11,0x11,0x11,0x11,0x0A,0x04}, // 'V'
+    {0x11,0x11,0x11,0x15,0x15,0x1B,0x11}, // 'W'
+    {0x11,0x11,0x0A,0x04,0x0A,0x11,0x11}, // 'X'
+    {0x11,0x11,0x0A,0x04,0x04,0x04,0x04}, // 'Y'
+    {0x1F,0x01,0x02,0x04,0x08,0x10,0x1F}, // 'Z'
+    {0x00,0x04,0x00,0x00,0x00,0x04,0x00}, // ':'
+    {0x00,0x00,0x00,0x00,0x00,0x04,0x08}, // ','
+    {0x00,0x00,0x00,0x1F,0x00,0x00,0x00}, // '-'
+    {0x00,0x00,0x00,0x00,0x00,0x06,0x06}, // '.'
+    {0x0E,0x11,0x02,0x04,0x08,0x10,0x1F}  // '?'
+};
+
+static const uint8_t* get_glyph_for_char(char c) {
+    if (c == ' ') return kAsciiGlyphs[0];
+    if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+    if (c >= '0' && c <= '9') return kAsciiGlyphs[1 + (c - '0')];
+    if (c >= 'A' && c <= 'Z') return kAsciiGlyphs[11 + (c - 'A')];
+    switch (c) {
+        case ':': return kAsciiGlyphs[37];
+        case ',': return kAsciiGlyphs[38];
+        case '-': return kAsciiGlyphs[39];
+        case '.': return kAsciiGlyphs[40];
+        case '?': return kAsciiGlyphs[41];
+        default: return kAsciiGlyphs[0];
+    }
+}
+
+static int get_font_scale(int font_size) {
+    return std::max(1, font_size / 8);
+}
+
+static int get_glyph_width(int font_size) {
+    return 6 * get_font_scale(font_size);
+}
+
+static int get_glyph_height(int font_size) {
+    return 8 * get_font_scale(font_size);
 }
 
 class ShmRenderTarget : public IRenderTarget {
@@ -153,13 +228,28 @@ public:
     }
 
     Size measure_text(const std::string& text, const Font& font) override {
-        return Size{static_cast<int>(text.length() * (font.size * 0.6)), font.size};
+        int width = static_cast<int>(text.length()) * get_glyph_width(font.size);
+        int height = get_glyph_height(font.size);
+        return Size{width, height};
     }
 
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override {
-        // Placeholder: draw a simple rectangle as text background
-        Size s = measure_text(text, font);
-        draw_filled_rect(position.x, position.y, s.width, s.height, color);
+        if (!data_ || text.empty()) return;
+        int scale = get_font_scale(font.size);
+        int x = position.x;
+        int y = position.y;
+        for (char c : text) {
+            const uint8_t* glyph = get_glyph_for_char(c);
+            for (int row = 0; row < 7; ++row) {
+                uint8_t bits = glyph[row];
+                for (int col = 0; col < 5; ++col) {
+                    if (bits & (1 << (4 - col))) {
+                        draw_filled_rect(x + col * scale, y + row * scale, scale, scale, color);
+                    }
+                }
+            }
+            x += get_glyph_width(font.size);
+        }
     }
 
     void present() override {
@@ -367,18 +457,30 @@ static void keyboard_key(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*se
     KeyboardData* kd = static_cast<KeyboardData*>(data);
     if (!kd->input_manager) return;
     KeyState ks = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? KeyState::Pressed : KeyState::Released;
-    ooey::KeyEvent ev{static_cast<int>(key), ks};
-    kd->input_manager->push_key_event(ev);
-
-    if (state == WL_KEYBOARD_KEY_STATE_PRESSED && kd->keymap && kd->xkb_state) {
+    if (kd->keymap && kd->xkb_state) {
         xkb_keysym_t ksym = xkb_state_key_get_one_sym(kd->xkb_state, key + 8);
-        char buf[64];
-        int len = xkb_keysym_to_utf8(ksym, buf, sizeof(buf));
-        if (len > 0) {
-            for (int i = 0; i < len; ++i) {
-                kd->input_manager->push_text_event({static_cast<char32_t>(static_cast<unsigned char>(buf[i]))});
+        ooey::KeyEvent ev{static_cast<int>(ksym), ks};
+        kd->input_manager->push_key_event(ev);
+
+        if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+            if (ksym == XKB_KEY_BackSpace || ksym == XKB_KEY_Delete) {
+                return;
+            }
+
+            char buf[64];
+            int len = xkb_keysym_to_utf8(ksym, buf, sizeof(buf));
+            if (len > 0) {
+                for (int i = 0; i < len; ++i) {
+                    unsigned char ch = static_cast<unsigned char>(buf[i]);
+                    if (ch >= 32 || ch == '\n' || ch == '\t') {
+                        kd->input_manager->push_text_event({static_cast<char32_t>(ch)});
+                    }
+                }
             }
         }
+    } else {
+        ooey::KeyEvent ev{static_cast<int>(key), ks};
+        kd->input_manager->push_key_event(ev);
     }
 }
 

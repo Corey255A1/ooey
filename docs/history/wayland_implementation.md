@@ -72,6 +72,12 @@ cmake --build build -j
 ./build/examples/hello_wayland
 ```
 
+On Chromebook for Wayland
+```bash
+sudo apt install libwayland-dev wayland-protocols libxkbcommon-dev
+```
+
+
 Remaining work / next steps (prioritized)
 1. Add an `EGLRenderTarget` using `wl_egl_window` + EGL + GLES2 to provide GPU-accelerated rendering and a proper GL backend. (medium/large)
 2. Implement a correct triangle rasterizer (or integrate a small software raster library) so `IRenderTarget::draw_geometry` can render all primitives accurately. (medium)

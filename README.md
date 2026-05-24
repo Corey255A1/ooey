@@ -56,7 +56,9 @@ ok, this is looking good for a prototype. Now here are some additional thoughts 
 
 Additionally, for user input, I want the concept to be that there exists list of pointer points that can track any number of active pointer objects. A pointer object can resprent tracking the motion of a mouse pointer over the UI, it can represnet multitouch inputs over the UI, or it can represent a pointer driver that is being controlled by the arrow keys to move a pointer around the UI. Or a pointer could be driven by some other external piece of hardware from a serial port, etc. The pointer object doesn't care what is driving it. And the same for key presses, they can be coming from computer keyboard, input from another process, etc. It would just be a matter of having the plugin loaded to insert that data. The idea is that I could use this library on linux, windows, embedded, raspberry pi, all sorts of things
 
-Lets define and document how to make these objects interactive. With our base level Pointer notion, there needs to be a way to track when a pointer is over top an area of objects. A typical UI framework will bubble these events from the top object to the bottom object .. as in if there is a button on top, that will process the ponter event first, if it doesn't handle it, it passes it down to the next object in the heirarchy. There needs to be a way to define a heirarchy of objects to handle these types of interactions by a pointer object
+Lets define and document how to make these objects interactive. With our base level Pointer notion, there needs to be a way to track when a pointer is over top an area of objects. A typical UI framework will bubble these events from the top object to the bottom object .. as in if there is a button on top, that will process the ponter event first, if it doesn't handle it, it passes it down to the next object in the heirarchy. There needs to be a way to define a heirarchy of objects to handle these types of interactions by a pointer object. But also, lets say I have a device that is not touch screen, doesn't have a mouse, and just has a keyboard, our API should be able to still be able to handle those input events based on the current visual state, That is where a controller will come in handy
+
+All GUI frameworks have a way to display and edit text. We should be able to display the typical single line or multiline texts as well as having editable single line or multiline texts. I want it to be able to use system fonts, or just default to a built in text renderer for basic english texts. Fonts should be scaleable, colorable, bold, italic.
 
 ## Building and Running
 
@@ -104,15 +106,10 @@ ctest --output-on-failure
     - Implement a basic Window backend using Wayland or X11.
     - Implement a basic RenderTarget for the Window (potentially using OpenGL or Vulkan).
 - Composable Scene Graph & Unified Input
-    - Refactor `IRenderTarget` to accept a base `IDrawable` or geometry batches instead of fixed `draw_rect` functions.
+    - Refactor `IRenderTarget` to accept a base `Drawable` or geometry batches instead of fixed `draw_rect` functions.
     - Create primitive drawables (`RectPrimitive`, `LinePrimitive`) and composable UI elements.
     - Implement an `InputManager` with a universal `Pointer` struct (X, Y, State) capable of tracking multi-touch, mouse, or keyboard-driven cursors.
     - Abstract input sources as plugins/providers feeding into the `InputManager`.
-- Interaction Model
-    - Introduce an `IInteractive` interface for hit-testing and event handling.
-    - Create a `Controller` to bridge `InputManager` events to the Scene Graph.
-    - Implement top-down event bubbling for pointer events based on bounding boxes.
-    - Implement state-based focus routing for keyboard events.
 - Expanded Rendering Capabilities
     - Implement an in-memory RenderTarget for CPU-side rendering.
     - Implement a File RenderTarget (e.g., outputting to a raw image file).
