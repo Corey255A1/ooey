@@ -3,7 +3,7 @@
 #include <string>
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
-#include "ooey/platform/x11/x11_window_backend.hpp"
+#include "ooey/platform/platform.hpp"
 #include "ooey/view.hpp"
 #include "ooey/controls/text_box.hpp"
 #include "ooey/controls/label.hpp"
@@ -86,8 +86,8 @@ int main() {
 
     ooey::Application app;
 
-    auto backend = std::make_unique<ooey::X11WindowBackend>();
-    if (!backend->create({400, 200}, "OOEY Text & Binding")) {
+    auto backend = ooey::create_default_window_backend();
+    if (!backend || !backend->create({400, 200}, "OOEY Text & Binding")) {
         std::cerr << "Failed to create window\n";
         return 1;
     }

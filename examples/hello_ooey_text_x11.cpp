@@ -3,7 +3,7 @@
 #include <string>
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
-#include "ooey/platform/wayland/window_backend.hpp"
+#include "ooey/platform/x11/window_backend.hpp"
 #include "ooey/view.hpp"
 #include "ooey/controls/text_box.hpp"
 #include "ooey/controls/label.hpp"
@@ -58,13 +58,13 @@ private:
 };
 
 int main() {
-    std::cout << "Starting OOEY Wayland Text Example...\n";
+    std::cout << "Starting OOEY X11 Text Example...\n";
 
     ooey::Application app;
 
-    auto backend = std::make_unique<ooey::wayland::WindowBackend>();
-    if (!backend->create({400, 200}, "OOEY Wayland Text Example")) {
-        std::cerr << "Failed to create Wayland window\n";
+    auto backend = std::make_unique<ooey::x11::WindowBackend>();
+    if (!backend->create({400, 200}, "OOEY X11 Text Example")) {
+        std::cerr << "Failed to create X11 window\n";
         return 1;
     }
 

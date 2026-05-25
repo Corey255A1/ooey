@@ -1,7 +1,7 @@
 #include <iostream>
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
-#include "ooey/platform/wayland/wayland_window_backend.hpp"
+#include "ooey/platform/wayland/window_backend.hpp"
 #include "ooey/view.hpp"
 #include "ooey/controls/button.hpp"
 #include "ooey/primitives/line_primitive.hpp"
@@ -11,7 +11,7 @@ int main() {
 
     ooey::Application app;
 
-    auto backend = std::make_unique<ooey::WaylandWindowBackend>();
+    auto backend = std::make_unique<ooey::wayland::WindowBackend>();
     if (!backend->create({800, 600}, "OOEY Hello Wayland")) {
         std::cerr << "Failed to create Wayland window\n";
         return 1;

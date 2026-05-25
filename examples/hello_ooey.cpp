@@ -1,7 +1,7 @@
 #include <iostream>
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
-#include "ooey/platform/x11/x11_window_backend.hpp"
+#include "ooey/platform/platform.hpp"
 #include "ooey/view.hpp"
 #include "ooey/controls/button.hpp"
 #include "ooey/primitives/line_primitive.hpp"
@@ -11,8 +11,8 @@ int main() {
 
     ooey::Application app;
 
-    auto backend = std::make_unique<ooey::X11WindowBackend>();
-    if (!backend->create({800, 600}, "OOEY Hello World")) {
+    auto backend = ooey::create_default_window_backend();
+    if (!backend || !backend->create({800, 600}, "OOEY Hello World")) {
         std::cerr << "Failed to create window\n";
         return 1;
     }

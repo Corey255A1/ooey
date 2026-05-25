@@ -10,11 +10,13 @@ Fonts are defined by the `Font` struct, which encapsulates the styling requireme
 - **Weight:** Normal, Bold, etc.
 - **Style:** Normal, Italic.
 
-To support both system fonts and minimal dependencies, text rendering is abstracted via `IFontBackend` or directly integrated into the `IRenderTarget` depending on the platform implementation. By default, `IRenderTarget` must be able to:
-- Measure text dimensions (`measure_text`).
-- Draw text (`draw_text`).
+To support both system fonts and minimal dependencies, text rendering is integrated into the `IRenderTarget` implementation. By default, `IRenderTarget` must support:
+- Measuring text dimensions (`measure_text`).
+- Drawing text (`draw_text`).
 
-For platforms or minimal builds that do not hook into the OS font engine, a built-in text renderer (like `stb_truetype` or a basic bitmap font) serves as a fallback.
+### Unified Rendering Fallback
+- **System Fonts:** Supported platforms attempt to load native system fonts (e.g. X11 server bitmap fonts) for high-performance rendering.
+- **Embedded Fallback:** If system fonts are missing or fail to load, the engine falls back to `ooey::BitmapFont`, an embedded ASCII character set. The rendering logic maps characters to glyph pixel coordinates, yielding consistent, cross-platform layouts.
 
 ## 2. Displaying Text
 

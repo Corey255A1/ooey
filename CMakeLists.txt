@@ -69,8 +69,11 @@ if(OOEY_BUILD_WAYLAND)
     # Ensure the ooey target builds the xdg_shell_proto objects first
     add_dependencies(ooey xdg_shell_proto)
     pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
-    # Add the wayland source file
-    list(APPEND OOey_WAYLAND_SRCS src/platform/wayland/wayland_window_backend.cpp)
+    # Add the wayland source files
+    list(APPEND OOey_WAYLAND_SRCS
+        src/platform/wayland/window_backend.cpp
+        src/platform/wayland/render_target.cpp
+    )
     target_include_directories(ooey PUBLIC ${WAYLAND_INCLUDE_DIRS} ${XKBCOMMON_INCLUDE_DIRS} ${WAYLAND_PROTOCOLS_INCLUDE_DIRS})
     target_compile_options(ooey PUBLIC ${WAYLAND_CFLAGS_OTHER} ${XKBCOMMON_CFLAGS_OTHER} ${WAYLAND_PROTOCOLS_CFLAGS_OTHER})
     target_link_libraries(ooey PUBLIC ${WAYLAND_LIBRARIES} ${XKBCOMMON_LIBRARIES})
@@ -86,7 +89,10 @@ target_sources(ooey PRIVATE
     src/view.cpp
     src/input.cpp
     src/controller.cpp
-    src/platform/x11/x11_window_backend.cpp
+    src/bitmap_font.cpp
+    src/platform/platform.cpp
+    src/platform/x11/window_backend.cpp
+    src/platform/x11/render_target.cpp
     ${OOey_WAYLAND_SRCS}
 )
 
@@ -95,6 +101,11 @@ target_include_directories(ooey PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+target_compile_definitions(ooey PUBLIC OOEY_BUILD_X11)
+if(OOEY_BUILD_WAYLAND)
+    target_compile_definitions(ooey PUBLIC OOEY_BUILD_WAYLAND)
+endif()
 
 target_link_libraries(ooey PUBLIC 
     X11::X11 

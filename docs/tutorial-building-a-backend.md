@@ -12,30 +12,39 @@ First, decide how you will draw. Are you using a graphics API like Vulkan or Dir
 
 Let's imagine you are making a `MyCustomRenderTarget`. You must implement:
 - `clear(Color color)`
-- `draw_rect(const Rect& rect, Color color)`
-- `draw_line(const Point& start, const Point& end, Color color)`
+- `draw_geometry(const Geometry& geometry)`
+- `measure_text(const std::string& text, const Font& font)`
+- `draw_text(const std::string& text, const Font& font, const Point& position, Color color)`
 - `present()`
 
 ```cpp
 #include "ooey/i_render_target.hpp"
+#include "ooey/bitmap_font.hpp"
 
 class MyCustomRenderTarget : public ooey::IRenderTarget {
 public:
     void clear(ooey::Color color) override {
-        // Translate ooey::Color to your graphics API
-        // Tell your API to clear the screen
+        // Clear the canvas/screen buffer with the given color
     }
 
-    void draw_rect(const ooey::Rect& rect, ooey::Color color) override {
-        // Push vertices to your graphics card based on the Rect
+    void draw_geometry(const ooey::Geometry& geometry) override {
+        // Render raw geometry vertices/indices based on geometry.type (Triangles or Lines)
     }
 
-    void draw_line(const ooey::Point& start, const ooey::Point& end, ooey::Color color) override {
-        // Draw a line using your API
+    ooey::Size measure_text(const std::string& text, const ooey::Font& font) override {
+        // Attempt system font sizing first, or delegate to fallback:
+        return ooey::BitmapFont::measure_text(text, font.size);
+    }
+
+    void draw_text(const std::string& text, const ooey::Font& font, const ooey::Point& position, ooey::Color color) override {
+        // Draw characters using fallback or native API
+        ooey::BitmapFont::draw_text(text, font.size, position, [this, color](int x, int y, int w, int h) {
+            // Draw a filled pixel/rect at (x, y) with size (w, h)
+        });
     }
 
     void present() override {
-        // Tell the OS/Graphics Card to swap the buffers and show the frame
+        // Swap front/back buffers or push software memory to the window
     }
 };
 ```
@@ -97,10 +106,11 @@ int main() {
 
     app.set_window_backend(std::move(backend));
 
-    app.set_render_callback([](ooey::IRenderTarget* target) {
-        target->clear(ooey::Color{0, 0, 0});
-        target->present();
-    });
+    // Construct a scene graph
+    auto root_view = std::make_shared<ooey::View>();
+
+    app.set_root_view(std::move(root_view));
+    app.set_clear_color(ooey::Color{40, 40, 40});
 
     app.run();
     return 0;
