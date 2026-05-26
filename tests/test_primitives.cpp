@@ -8,6 +8,7 @@
 #include "ooey/primitives/rounded_rect_primitive.hpp"
 #include "ooey/primitives/polygon_primitive.hpp"
 #include "ooey/primitives/curve_primitive.hpp"
+#include "ooey/primitives/sinusoid_primitive.hpp"
 #include <vector>
 
 class MockRenderTarget : public ooey::IRenderTarget {
@@ -143,4 +144,28 @@ TEST(PrimitivesTest, CurvePrimitiveBezier) {
 
     ASSERT_EQ(target.geometries.size(), 1);
     EXPECT_EQ(target.geometries[0].vertices.size(), 120);
+}
+
+TEST(PrimitivesTest, SinusoidPrimitiveRendering) {
+    MockRenderTarget target;
+
+    // Thin sinusoid
+    ooey::SinusoidPrimitive thin_sine({10, 100}, {210, 100}, 20.0f, 2.0f, 0.0f, {255, 0, 0}, 1.0f);
+    thin_sine.draw(target);
+
+    ASSERT_EQ(target.geometries.size(), 1);
+    EXPECT_EQ(target.geometries[0].type, ooey::PrimitiveType::Lines);
+    // 100 segments * 2 vertices = 200 vertices
+    EXPECT_EQ(target.geometries[0].vertices.size(), 200);
+
+    target.geometries.clear();
+
+    // Thick sinusoid
+    ooey::SinusoidPrimitive thick_sine({10, 100}, {210, 100}, 20.0f, 2.0f, 0.0f, {255, 0, 0}, 4.0f);
+    thick_sine.draw(target);
+
+    ASSERT_EQ(target.geometries.size(), 1);
+    EXPECT_EQ(target.geometries[0].type, ooey::PrimitiveType::Triangles);
+    // 100 segments * 4 vertices = 400 vertices
+    EXPECT_EQ(target.geometries[0].vertices.size(), 400);
 }

@@ -99,6 +99,7 @@ target_sources(ooey PRIVATE
     src/primitives/rounded_rect_primitive.cpp
     src/primitives/polygon_primitive.cpp
     src/primitives/curve_primitive.cpp
+    src/primitives/sinusoid_primitive.cpp
     src/view.cpp
     src/input.cpp
     src/controller.cpp
