@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "ooey/types.hpp"
 #include "ooey/application.hpp"
+#include "ooey/controls/text_box.hpp"
+#include "ooey/input.hpp"
 
 TEST(OoeyTypes, ColorInitialization) {
     ooey::Color c{255, 128, 64, 200};
@@ -69,4 +71,29 @@ TEST(OoeyApplication, HeadlessExit) {
     // Should exit immediately without an infinite loop if no backend
     app.run(); 
     SUCCEED();
+}
+
+TEST(OoeyControls, TextBoxKeyboardInput) {
+    ooey::Font font{"sans-serif", 16};
+    ooey::TextBox textBox{ooey::Rect{0, 0, 100, 100}, font, ooey::Color{0, 0, 0}, ooey::Color{255, 255, 255}};
+
+    // Text box needs to be focused to process key/text events
+    textBox.on_pointer_event({0, 10, 10, ooey::PointerState::Pressed});
+
+    // Send character text events
+    textBox.on_text_event({static_cast<char32_t>('H')});
+    textBox.on_text_event({static_cast<char32_t>('e')});
+    textBox.on_text_event({static_cast<char32_t>('l')});
+    textBox.on_text_event({static_cast<char32_t>('l')});
+    textBox.on_text_event({static_cast<char32_t>('o')});
+
+    EXPECT_EQ(textBox.get_text(), "Hello");
+
+    // Send backspace key event (using keysym 0xFF08 / XKB_KEY_BackSpace / XK_BackSpace)
+    textBox.on_key_event({0xFF08, ooey::KeyState::Pressed});
+    EXPECT_EQ(textBox.get_text(), "Hell");
+
+    // Send backspace key event (using ASCII backspace 8)
+    textBox.on_key_event({8, ooey::KeyState::Pressed});
+    EXPECT_EQ(textBox.get_text(), "Hel");
 }

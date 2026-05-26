@@ -2,6 +2,7 @@
 #include "ooey/platform/x11/render_target.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/keysym.h>
 #include <GL/glx.h>
 #include <GL/gl.h>
 #include <iostream>
@@ -95,17 +96,22 @@ bool WindowBackend::poll_events() {
             } else if (xev.type == ButtonRelease) {
                 input_manager_->push_pointer_event({0, xev.xbutton.x, xev.xbutton.y, PointerState::Released});
             } else if (xev.type == KeyPress) {
-                input_manager_->push_key_event({static_cast<int>(xev.xkey.keycode), KeyState::Pressed});
                 char buffer[32];
                 KeySym keysym;
                 int len = XLookupString(&xev.xkey, buffer, sizeof(buffer), &keysym, nullptr);
+                input_manager_->push_key_event({static_cast<int>(keysym), KeyState::Pressed});
                 if (len > 0) {
                     for (int i = 0; i < len; ++i) {
-                        input_manager_->push_text_event({static_cast<char32_t>(static_cast<unsigned char>(buffer[i]))});
+                        unsigned char ch = static_cast<unsigned char>(buffer[i]);
+                        if (ch >= 32 || ch == '\n' || ch == '\t') {
+                            input_manager_->push_text_event({static_cast<char32_t>(ch)});
+                        }
                     }
                 }
             } else if (xev.type == KeyRelease) {
-                input_manager_->push_key_event({static_cast<int>(xev.xkey.keycode), KeyState::Released});
+                KeySym keysym;
+                XLookupString(&xev.xkey, nullptr, 0, &keysym, nullptr);
+                input_manager_->push_key_event({static_cast<int>(keysym), KeyState::Released});
             }
         }
     }

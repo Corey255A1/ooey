@@ -41,3 +41,14 @@ This checklist summarizes the minimal steps and concepts used when implementing 
 
 
 (Added after interactive debugging and tests on GNOME Wayland.)
+
+## Refinement: Keysym Mapping and Stateful Keyboard Updates (2026-05-25)
+
+### Challenge
+- The Wayland backend initially pushed raw evdev scan codes directly to `InputManager`'s key events, which broke keyboard-driven UI logic (like backspacing inside `TextBox` which queries X11/XKB keysym values).
+- Text typing did not work correctly under all layouts/modifiers because the `keyboard_modifiers` protocol callback did not update `xkb_state` with mask states.
+
+### Resolution & Lessons
+- **State Mask Tracking:** Implemented `xkb_state_update_mask()` inside the `keyboard_modifiers` listener. Translators (like xkbcommon) are stateful; they must be kept in sync with the compositor's modifier state (Depressed, Latched, Locked, and Group) to yield the correct keysym mappings.
+- **Unified Event Translation:** Ensured that key press and release events push xkb keysyms (e.g. `XKB_KEY_BackSpace`) rather than hardware codes, aligning Wayland's key events with X11 keysyms and keeping the core controls platform-independent.
+- **Control Key De-duplication:** Added filter rules so that keysyms representing control keys (like BackSpace or Delete) do not double-emit as raw character text events, preventing the insertion of control characters into text input widgets.

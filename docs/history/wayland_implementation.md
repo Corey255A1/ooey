@@ -84,8 +84,15 @@ Remaining work / next steps (prioritized)
 3. Improve xdg_toplevel handling:
    - Respect configure size hints and respond to resize, maximize, minimize, and close events properly.
    - Set `app_id` and other window properties.
-4. Clean up Wayland resource ownership and free listener data to avoid leaks (seat/pointer/keyboard listener data currently allocated with `new`).
-5. Add tests and CI checks to build with and without Wayland, and run the example in an automated Wayland compositor for CI (e.g., Weston headless or nested compositor).
+4. Clean up Wayland resource ownership and free listener data to avoid leaks (e.g. pointer_data_ and keyboard_data_ are std::unique_ptr now, but verify all subclasses). (completed pointer/keyboard listener data wrap)
+5. Add nested/headless compositor tests in CI.
 6. Add IME/text input support, clipboard, and selection handling.
 
-If you'd like, I can next implement the EGL/GLES render-target so we have GPU-backed rendering, or tighten up the `wl_shm` path with a better software rasterizer — which do you prefer?
+## Keyboard Input & Keysym Fixes Update (2026-05-25)
+- **Status:** Done.
+- **Accomplishments:**
+  - Standardized Wayland input mapping using xkbcommon keysyms (`xkb_state_key_get_one_sym`) instead of raw keycodes, resolving issues where TextBox was unable to capture Backspace keys.
+  - Implemented `keyboard_modifiers` updates via `xkb_state_update_mask()`.
+  - Filtered raw key controls from leaking into text event streams.
+- **Lessons Learned:**
+  - Modifiers mapping in xkbcommon is layout-dependent and requires direct update hooks on `modifiers` callbacks from the compositor; without this, keysym resolving will degrade or fail entirely when layouts or modifier transitions (Shift, Caps) occur.

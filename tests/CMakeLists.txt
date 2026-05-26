@@ -11,7 +11,7 @@ add_executable(ooey_tests
     test_ooey.cpp
     test_core_architecture.cpp
 )
-target_link_libraries(ooey_tests PRIVATE ooey GTest::gtest_main)
+target_link_libraries(ooey_tests PRIVATE ooey ooey_controls GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(ooey_tests)

@@ -182,22 +182,39 @@ static void keyboard_key(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*se
         return;
     }
     KeyState ks = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? KeyState::Pressed : KeyState::Released;
-    ooey::KeyEvent ev{static_cast<int>(key), ks};
-    kd->input_manager->push_key_event(ev);
-
-    if (state == WL_KEYBOARD_KEY_STATE_PRESSED && kd->keymap_ && kd->xkb_state_) {
+    if (kd->keymap_ && kd->xkb_state_) {
         xkb_keysym_t ksym = xkb_state_key_get_one_sym(kd->xkb_state_, key + 8);
-        char buf[64];
-        int len = xkb_keysym_to_utf8(ksym, buf, sizeof(buf));
-        if (len > 0) {
-            for (int i = 0; i < len; ++i) {
-                kd->input_manager->push_text_event({static_cast<char32_t>(static_cast<unsigned char>(buf[i]))});
+        ooey::KeyEvent ev{static_cast<int>(ksym), ks};
+        kd->input_manager->push_key_event(ev);
+
+        if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+            if (ksym == XKB_KEY_BackSpace || ksym == XKB_KEY_Delete) {
+                return;
+            }
+
+            char buf[64];
+            int len = xkb_keysym_to_utf8(ksym, buf, sizeof(buf));
+            if (len > 0) {
+                for (int i = 0; i < len; ++i) {
+                    unsigned char ch = static_cast<unsigned char>(buf[i]);
+                    if (ch >= 32 || ch == '\n' || ch == '\t') {
+                        kd->input_manager->push_text_event({static_cast<char32_t>(ch)});
+                    }
+                }
             }
         }
+    } else {
+        ooey::KeyEvent ev{static_cast<int>(key), ks};
+        kd->input_manager->push_key_event(ev);
     }
 }
 
-static void keyboard_modifiers(void* /*data*/, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, uint32_t /*mods_depressed*/, uint32_t /*mods_latched*/, uint32_t /*mods_locked*/, uint32_t /*group*/) {}
+static void keyboard_modifiers(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {
+    KeyboardData* kd = static_cast<KeyboardData*>(data);
+    if (kd && kd->xkb_state_) {
+        xkb_state_update_mask(kd->xkb_state_, mods_depressed, mods_latched, mods_locked, 0, 0, group);
+    }
+}
 static void keyboard_repeat_info(void* /*data*/, wl_keyboard* /*wl_keyboard*/, int32_t /*rate*/, int32_t /*delay*/) {}
 
 static const wl_keyboard_listener g_keyboard_listener = {

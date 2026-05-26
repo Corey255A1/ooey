@@ -78,7 +78,40 @@ This document records the issues found while implementing text rendering and edi
 - Added a minimal Wayland bitmap font renderer and proper Wayland key/text event filtering.
 - Kept fallback behavior for font setup failures and minimal cross-platform compatibility.
 
-## Notes
-- X11 now renders actual glyphs through OpenGL bitmap fonts.
-- Wayland now supports text rendering with a built-in bitmap font fallback and proper backspace/delete handling.
-- Future improvements should include a shared text rendering abstraction and a richer font backend for both X11 and Wayland.
+## 5. Issue: X11 Backspace failed to delete characters after platform decoupling
+
+### Symptoms
+- In the refactored modular X11 backend, typing characters into the focused `TextBox` worked correctly, but pressing backspace did not delete any characters.
+
+### Root cause
+- During the refactoring of `X11WindowBackend::poll_events()`, the KeyPress/KeyRelease handler began pushing the raw hardware keycode (`xev.xkey.keycode`) to `input_manager_->push_key_event()` instead of looking up keysyms via `XLookupString`.
+- Because the `TextBox::on_key_event()` checks for the standard keysym `0xFF08` (or ASCII `8` / `127`) rather than hardware scan codes, the event was ignored.
+
+### Resolution
+- Modified `src/platform/x11/window_backend.cpp` KeyPress/KeyRelease handlers to perform `XLookupString` first, extracting the translated X11 `KeySym`.
+- Passed the translated `KeySym` into `push_key_event` for both key press and release events.
+- Re-established character text filtering (`ch >= 32 || ch == '\n' || ch == '\t'`) to filter out non-printable raw control bytes from reaching the text buffer.
+
+---
+
+## 6. Issue: Wayland text window failed to type any characters or backspace
+
+### Symptoms
+- The focused `TextBox` on the Wayland backend did not display any typed characters, and pressing backspace had no effect.
+
+### Root cause
+- Similar to X11, the refactored Wayland backend pushed raw hardware scan codes from Wayland `wl_keyboard_listener::key` events directly to `push_key_event` instead of the mapped keysym from xkbcommon.
+- Because `xkb_state_key_get_one_sym(kd->xkb_state_, key + 8)` was not checked for keysym-based key routing, Backspace (`XKB_KEY_BackSpace`) was never correctly identified in `on_key_event`.
+- General character typing did not work because the framework lacked a callback to update `xkb_state_` masks when modifiers changed, preventing keysym resolution from succeeding reliably, and the text buffer checks were not filtering out raw control characters.
+
+### Resolution
+- Updated `keyboard_key` callback in `src/platform/wayland/window_backend.cpp` to map the evdev key to a keysym using `xkb_state_key_get_one_sym` and route the translated keysym to the key event stream.
+- Added an early return check for backspace and delete keysyms inside the keyboard handler, preventing key controls from being pushed as raw printable text characters.
+- Implemented state updates in `keyboard_modifiers` using `xkb_state_update_mask` to keep the XKB modifier state in sync with the compositor, ensuring Shift and modifier transitions are correctly evaluated.
+
+---
+
+## Summary of Refined Keyboard Architecture
+- **Unified Key Mappings:** Both X11 and Wayland backends must map hardware-specific key indices to standard X11/XKB keysyms before pushing them to `InputManager`. This keeps controls like `TextBox` platform-agnostic.
+- **Control Key vs. Text Streams:** Core text editing controls separate structural key codes (handled in `on_key_event`) from text character inputs (handled in `on_text_event`). Backends must avoid leaking control characters (like Backspace/Delete) as text events.
+- **Stateful Input Translators:** Native systems using XKB (like Wayland) must explicitly sync layout/modifier changes back to their translators on modifier callbacks.
