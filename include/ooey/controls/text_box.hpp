@@ -2,7 +2,7 @@
 
 #include "ooey/view.hpp"
 #include "ooey/i_interactive.hpp"
-#include "ooey/primitives/rect_primitive.hpp"
+#include "ooey/primitives/rounded_rect_primitive.hpp"
 #include "ooey/primitives/text_primitive.hpp"
 #include <functional>
 #include <memory>
@@ -27,7 +27,7 @@ public:
 
 private:
     Rect bounds_;
-    std::shared_ptr<RectPrimitive> bg_;
+    std::shared_ptr<RoundedRectPrimitive> bg_;
     std::shared_ptr<TextPrimitive> text_primitive_;
     std::string text_;
     bool is_focused_{false};

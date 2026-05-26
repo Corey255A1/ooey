@@ -12,6 +12,9 @@ if(OOEY_BUILD_CONTROLS)
 
     add_executable(hello_ooey_text_x11 hello_ooey_text_x11.cpp)
     target_link_libraries(hello_ooey_text_x11 PRIVATE ooey ooey_controls)
+
+    add_executable(hello_ooey_modern hello_ooey_modern.cpp)
+    target_link_libraries(hello_ooey_modern PRIVATE ooey ooey_controls)
 endif()
 
 if(OOEY_BUILD_WAYLAND)

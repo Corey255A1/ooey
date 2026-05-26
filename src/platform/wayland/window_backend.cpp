@@ -90,45 +90,45 @@ static const xdg_wm_base_listener g_xdg_wm_base_listener = {
 };
 
 // Pointer and keyboard handling
-static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/, wl_fixed_t sx, wl_fixed_t sy) {
-    PointerData* pd = static_cast<PointerData*>(data);
-    if (!pd) {
+static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/, wl_fixed_t surface_x, wl_fixed_t surface_y) {
+    PointerData* pointer_data = static_cast<PointerData*>(data);
+    if (!pointer_data) {
         return;
     }
-    int x = wl_fixed_to_int(sx);
-    int y = wl_fixed_to_int(sy);
-    pd->last_x = x;
-    pd->last_y = y;
-    if (pd->input_manager) {
+    int x = wl_fixed_to_int(surface_x);
+    int y = wl_fixed_to_int(surface_y);
+    pointer_data->last_x = x;
+    pointer_data->last_y = y;
+    if (pointer_data->input_manager) {
         ooey::Pointer p{0, x, y, ooey::PointerState::Moved};
-        pd->input_manager->push_pointer_event(p);
+        pointer_data->input_manager->push_pointer_event(p);
     }
 }
 
 static void pointer_leave(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/) {}
 
-static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*time*/, wl_fixed_t sx, wl_fixed_t sy) {
-    PointerData* pd = static_cast<PointerData*>(data);
-    if (!pd || !pd->input_manager) {
+static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*time*/, wl_fixed_t surface_x, wl_fixed_t surface_y) {
+    PointerData* pointer_data = static_cast<PointerData*>(data);
+    if (!pointer_data || !pointer_data->input_manager) {
         return;
     }
-    int x = wl_fixed_to_int(sx);
-    int y = wl_fixed_to_int(sy);
-    pd->last_x = x;
-    pd->last_y = y;
+    int x = wl_fixed_to_int(surface_x);
+    int y = wl_fixed_to_int(surface_y);
+    pointer_data->last_x = x;
+    pointer_data->last_y = y;
     ooey::Pointer p{0, x, y, PointerState::Moved};
-    pd->input_manager->push_pointer_event(p);
+    pointer_data->input_manager->push_pointer_event(p);
 }
 
 static void pointer_button(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t button, uint32_t state) {
-    PointerData* pd = static_cast<PointerData*>(data);
-    if (!pd || !pd->input_manager) {
+    PointerData* pointer_data = static_cast<PointerData*>(data);
+    if (!pointer_data || !pointer_data->input_manager) {
         return;
     }
     // Use last known pointer coordinates
-    PointerState st = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? PointerState::Pressed : PointerState::Released;
-    ooey::Pointer p{0, pd->last_x, pd->last_y, st};
-    pd->input_manager->push_pointer_event(p);
+    PointerState pointer_state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? PointerState::Pressed : PointerState::Released;
+    ooey::Pointer p{0, pointer_data->last_x, pointer_data->last_y, pointer_state};
+    pointer_data->input_manager->push_pointer_event(p);
 }
 
 static void pointer_axis(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32_t /*time*/, uint32_t /*axis*/, wl_fixed_t /*value*/) {}
@@ -151,8 +151,8 @@ static const wl_pointer_listener g_pointer_listener = {
 
 // Keyboard handling with xkbcommon
 static void keyboard_keymap(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t format, int fd, uint32_t size) {
-    KeyboardData* kd = static_cast<KeyboardData*>(data);
-    if (!kd) {
+    KeyboardData* keyboard_data = static_cast<KeyboardData*>(data);
+    if (!keyboard_data) {
         close(fd);
         return;
     }
@@ -165,54 +165,54 @@ static void keyboard_keymap(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t f
         close(fd);
         return;
     }
-    xkb_keymap_unref(kd->keymap_);
-    kd->keymap_ = xkb_keymap_new_from_string(kd->xkb_ctx_, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    xkb_keymap_unref(keyboard_data->keymap_);
+    keyboard_data->keymap_ = xkb_keymap_new_from_string(keyboard_data->xkb_ctx_, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
     munmap(map_str, size);
     close(fd);
-    xkb_state_unref(kd->xkb_state_);
-    kd->xkb_state_ = xkb_state_new(kd->keymap_);
+    xkb_state_unref(keyboard_data->xkb_state_);
+    keyboard_data->xkb_state_ = xkb_state_new(keyboard_data->keymap_);
 }
 
 static void keyboard_enter(void* /*data*/, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/, struct wl_array* /*keys*/) {}
 static void keyboard_leave(void* /*data*/, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/) {}
 
 static void keyboard_key(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t key, uint32_t state) {
-    KeyboardData* kd = static_cast<KeyboardData*>(data);
-    if (!kd || !kd->input_manager) {
+    KeyboardData* keyboard_data = static_cast<KeyboardData*>(data);
+    if (!keyboard_data || !keyboard_data->input_manager) {
         return;
     }
-    KeyState ks = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? KeyState::Pressed : KeyState::Released;
-    if (kd->keymap_ && kd->xkb_state_) {
-        xkb_keysym_t ksym = xkb_state_key_get_one_sym(kd->xkb_state_, key + 8);
-        ooey::KeyEvent ev{static_cast<int>(ksym), ks};
-        kd->input_manager->push_key_event(ev);
+    KeyState key_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? KeyState::Pressed : KeyState::Released;
+    if (keyboard_data->keymap_ && keyboard_data->xkb_state_) {
+        xkb_keysym_t key_sym = xkb_state_key_get_one_sym(keyboard_data->xkb_state_, key + 8);
+        ooey::KeyEvent ev{static_cast<int>(key_sym), key_state};
+        keyboard_data->input_manager->push_key_event(ev);
 
         if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-            if (ksym == XKB_KEY_BackSpace || ksym == XKB_KEY_Delete) {
+            if (key_sym == XKB_KEY_BackSpace || key_sym == XKB_KEY_Delete) {
                 return;
             }
 
             char buf[64];
-            int len = xkb_keysym_to_utf8(ksym, buf, sizeof(buf));
+            int len = xkb_keysym_to_utf8(key_sym, buf, sizeof(buf));
             if (len > 0) {
                 for (int i = 0; i < len; ++i) {
                     unsigned char ch = static_cast<unsigned char>(buf[i]);
                     if (ch >= 32 || ch == '\n' || ch == '\t') {
-                        kd->input_manager->push_text_event({static_cast<char32_t>(ch)});
+                        keyboard_data->input_manager->push_text_event({static_cast<char32_t>(ch)});
                     }
                 }
             }
         }
     } else {
-        ooey::KeyEvent ev{static_cast<int>(key), ks};
-        kd->input_manager->push_key_event(ev);
+        ooey::KeyEvent ev{static_cast<int>(key), key_state};
+        keyboard_data->input_manager->push_key_event(ev);
     }
 }
 
 static void keyboard_modifiers(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {
-    KeyboardData* kd = static_cast<KeyboardData*>(data);
-    if (kd && kd->xkb_state_) {
-        xkb_state_update_mask(kd->xkb_state_, mods_depressed, mods_latched, mods_locked, 0, 0, group);
+    KeyboardData* keyboard_data = static_cast<KeyboardData*>(data);
+    if (keyboard_data && keyboard_data->xkb_state_) {
+        xkb_state_update_mask(keyboard_data->xkb_state_, mods_depressed, mods_latched, mods_locked, 0, 0, group);
     }
 }
 static void keyboard_repeat_info(void* /*data*/, wl_keyboard* /*wl_keyboard*/, int32_t /*rate*/, int32_t /*delay*/) {}
@@ -281,16 +281,16 @@ bool WindowBackend::create(const Size& size, const char* title) {
     surface_ = wl_compositor_create_surface(compositor_);
 
     // If xdg wm base is available, create an xdg surface/toplevel so the compositor maps our surface
-    xdg_surface* xs = nullptr;
-    xdg_toplevel* xt = nullptr;
+    xdg_surface* xdg_surface_ptr = nullptr;
+    xdg_toplevel* xdg_toplevel_ptr = nullptr;
     if (state.wm_base) {
-        xs = xdg_wm_base_get_xdg_surface(state.wm_base, surface_);
-        if (xs) {
-            xdg_surface_add_listener(xs, &g_xdg_surface_listener, this);
-            xt = xdg_surface_get_toplevel(xs);
-            if (xt) {
-                xdg_toplevel_add_listener(xt, &g_xdg_toplevel_listener, this);
-                xdg_toplevel_set_title(xt, title_.c_str());
+        xdg_surface_ptr = xdg_wm_base_get_xdg_surface(state.wm_base, surface_);
+        if (xdg_surface_ptr) {
+            xdg_surface_add_listener(xdg_surface_ptr, &g_xdg_surface_listener, this);
+            xdg_toplevel_ptr = xdg_surface_get_toplevel(xdg_surface_ptr);
+            if (xdg_toplevel_ptr) {
+                xdg_toplevel_add_listener(xdg_toplevel_ptr, &g_xdg_toplevel_listener, this);
+                xdg_toplevel_set_title(xdg_toplevel_ptr, title_.c_str());
             }
         }
         // Do not attach content before acknowledging configure; wait for configure callback
@@ -301,8 +301,8 @@ bool WindowBackend::create(const Size& size, const char* title) {
     }
 
     // Store xdg objects in members if created
-    xdg_surface_ = xs;
-    xdg_toplevel_ = xt;
+    xdg_surface_ = xdg_surface_ptr;
+    xdg_toplevel_ = xdg_toplevel_ptr;
 
     // If no xdg (older compositor?), create shm target immediately
     if (!xdg_surface_) {
@@ -316,19 +316,19 @@ bool WindowBackend::create(const Size& size, const char* title) {
         wl_seat_add_listener(seat_, nullptr, nullptr); // no-op: concrete listeners created when creating pointer/keyboard
         // Create pointer
         pointer_obj_ = wl_seat_get_pointer(seat_);
-        auto pd = std::make_unique<PointerData>();
-        pd->input_manager = input_manager_;
-        pointer_data_ = std::move(pd);
+        auto pointer_data_ptr = std::make_unique<PointerData>();
+        pointer_data_ptr->input_manager = input_manager_;
+        pointer_data_ = std::move(pointer_data_ptr);
         wl_pointer_add_listener(pointer_obj_, &g_pointer_listener, pointer_data_.get());
 
         // Create keyboard
         keyboard_obj_ = wl_seat_get_keyboard(seat_);
-        auto kd = std::make_unique<KeyboardData>();
-        kd->input_manager = input_manager_;
-        kd->xkb_ctx_ = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-        kd->keymap_ = nullptr;
-        kd->xkb_state_ = nullptr;
-        keyboard_data_ = std::move(kd);
+        auto keyboard_data_ptr = std::make_unique<KeyboardData>();
+        keyboard_data_ptr->input_manager = input_manager_;
+        keyboard_data_ptr->xkb_ctx_ = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+        keyboard_data_ptr->keymap_ = nullptr;
+        keyboard_data_ptr->xkb_state_ = nullptr;
+        keyboard_data_ = std::move(keyboard_data_ptr);
         wl_keyboard_add_listener(keyboard_obj_, &g_keyboard_listener, keyboard_data_.get());
         // Process any pending enter/motion events so our listener gets initial pointer coords
         if (display_) {

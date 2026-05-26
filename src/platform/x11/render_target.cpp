@@ -36,13 +36,13 @@ RenderTarget::~RenderTarget() {
 }
 
 void RenderTarget::clear(Color color) {
-    XWindowAttributes gwa;
-    XGetWindowAttributes(display_, window_, &gwa);
-    glViewport(0, 0, gwa.width, gwa.height);
+    XWindowAttributes window_attributes;
+    XGetWindowAttributes(display_, window_, &window_attributes);
+    glViewport(0, 0, window_attributes.width, window_attributes.height);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, gwa.width, gwa.height, 0, -1, 1);
+    glOrtho(0, window_attributes.width, window_attributes.height, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
@@ -63,9 +63,9 @@ void RenderTarget::draw_geometry(const Geometry& geometry) {
 
     for (unsigned int index : geometry.indices) {
         if (index < geometry.vertices.size()) {
-            const auto& v = geometry.vertices[index];
-            glColor4f(v.color.r / 255.0f, v.color.g / 255.0f, v.color.b / 255.0f, v.color.a / 255.0f);
-            glVertex2f(v.x, v.y);
+            const auto& vertex = geometry.vertices[index];
+            glColor4f(vertex.color.r / 255.0f, vertex.color.g / 255.0f, vertex.color.b / 255.0f, vertex.color.a / 255.0f);
+            glVertex2f(vertex.x, vertex.y);
         }
     }
     glEnd();

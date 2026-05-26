@@ -79,39 +79,39 @@ bool WindowBackend::poll_events() {
     if (!display_) {
         return false;
     }
-    XEvent xev;
+    XEvent event;
     while (XPending(display_)) {
-        XNextEvent(display_, &xev);
-        if (xev.type == ClientMessage) {
-            if (static_cast<unsigned long>(xev.xclient.data.l[0]) == wm_delete_window_) {
+        XNextEvent(display_, &event);
+        if (event.type == ClientMessage) {
+            if (static_cast<unsigned long>(event.xclient.data.l[0]) == wm_delete_window_) {
                 return false;
             }
-        } else if (xev.type == DestroyNotify) {
+        } else if (event.type == DestroyNotify) {
             return false;
         } else if (input_manager_) {
-            if (xev.type == MotionNotify) {
-                input_manager_->push_pointer_event({0, xev.xmotion.x, xev.xmotion.y, PointerState::Moved});
-            } else if (xev.type == ButtonPress) {
-                input_manager_->push_pointer_event({0, xev.xbutton.x, xev.xbutton.y, PointerState::Pressed});
-            } else if (xev.type == ButtonRelease) {
-                input_manager_->push_pointer_event({0, xev.xbutton.x, xev.xbutton.y, PointerState::Released});
-            } else if (xev.type == KeyPress) {
+            if (event.type == MotionNotify) {
+                input_manager_->push_pointer_event({0, event.xmotion.x, event.xmotion.y, PointerState::Moved});
+            } else if (event.type == ButtonPress) {
+                input_manager_->push_pointer_event({0, event.xbutton.x, event.xbutton.y, PointerState::Pressed});
+            } else if (event.type == ButtonRelease) {
+                input_manager_->push_pointer_event({0, event.xbutton.x, event.xbutton.y, PointerState::Released});
+            } else if (event.type == KeyPress) {
                 char buffer[32];
-                KeySym keysym;
-                int len = XLookupString(&xev.xkey, buffer, sizeof(buffer), &keysym, nullptr);
-                input_manager_->push_key_event({static_cast<int>(keysym), KeyState::Pressed});
-                if (len > 0) {
-                    for (int i = 0; i < len; ++i) {
+                KeySym key_symbol;
+                int length = XLookupString(&event.xkey, buffer, sizeof(buffer), &key_symbol, nullptr);
+                input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Pressed});
+                if (length > 0) {
+                    for (int i = 0; i < length; ++i) {
                         unsigned char ch = static_cast<unsigned char>(buffer[i]);
                         if (ch >= 32 || ch == '\n' || ch == '\t') {
                             input_manager_->push_text_event({static_cast<char32_t>(ch)});
                         }
                     }
                 }
-            } else if (xev.type == KeyRelease) {
-                KeySym keysym;
-                XLookupString(&xev.xkey, nullptr, 0, &keysym, nullptr);
-                input_manager_->push_key_event({static_cast<int>(keysym), KeyState::Released});
+            } else if (event.type == KeyRelease) {
+                KeySym key_symbol;
+                XLookupString(&event.xkey, nullptr, 0, &key_symbol, nullptr);
+                input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Released});
             }
         }
     }

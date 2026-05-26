@@ -13,7 +13,7 @@ Evolve the engine's core architecture from fixed-function rendering to a composa
 
 2. **UI Composability**
    - Create a `View` base class that acts as a container for `Drawable` components.
-   - Example: A `Button` class that is constructed by layering a `RectPrimitive` (background) and a `TextPrimitive` (label).
+   - Example: A `Button` class that is constructed by layering a `RoundedRectPrimitive` (background) and a `Label` (text).
    - Establish a rendering queue/Z-index ordering system to draw stacked objects correctly.
 
 3. **Unified Abstract Input System (Completed)**

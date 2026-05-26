@@ -10,6 +10,8 @@ FetchContent_MakeAvailable(googletest)
 add_executable(ooey_tests 
     test_ooey.cpp
     test_core_architecture.cpp
+    test_framebuffer.cpp
+    test_primitives.cpp
 )
 target_link_libraries(ooey_tests PRIVATE ooey ooey_controls GTest::gtest_main)
 

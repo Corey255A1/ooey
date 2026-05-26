@@ -2,17 +2,17 @@
 
 #include "ooey/i_drawable.hpp"
 #include "ooey/types.hpp"
+#include <vector>
 
 namespace ooey {
 
-class RectPrimitive : public IDrawable {
+class PolygonPrimitive : public IDrawable {
 public:
-    RectPrimitive(Rect rect, Color fill_color, Color stroke_color = Color{0, 0, 0, 0}, float stroke_thickness = 0.0f);
+    PolygonPrimitive(std::vector<Point> points, Color fill_color, Color stroke_color = Color{0, 0, 0, 0}, float stroke_thickness = 0.0f);
 
-    void set_rect(Rect rect) { rect_ = rect; }
-    Rect get_rect() const { return rect_; }
+    void set_points(std::vector<Point> points) { points_ = std::move(points); }
+    const std::vector<Point>& get_points() const { return points_; }
 
-    void set_color(Color color) { fill_color_ = color; } // Compatibility
     void set_fill_color(Color color) { fill_color_ = color; }
     Color get_fill_color() const { return fill_color_; }
 
@@ -25,10 +25,10 @@ public:
     void draw(IRenderTarget& target) const override;
 
 private:
-    Rect rect_;
+    std::vector<Point> points_;
     Color fill_color_;
-    Color stroke_color_{0, 0, 0, 0};
-    float stroke_thickness_{0.0f};
+    Color stroke_color_;
+    float stroke_thickness_;
 };
 
 } // namespace ooey

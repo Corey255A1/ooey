@@ -79,6 +79,15 @@ if(OOEY_BUILD_WAYLAND)
     target_link_libraries(ooey PUBLIC ${WAYLAND_LIBRARIES} ${XKBCOMMON_LIBRARIES})
 endif()
 
+# Optional Framebuffer backend
+option(OOEY_BUILD_FRAMEBUFFER "Build the Framebuffer backend (requires Linux framebuffer /dev/fb0)" ON)
+if(OOEY_BUILD_FRAMEBUFFER)
+    list(APPEND OOey_FRAMEBUFFER_SRCS
+        src/platform/framebuffer/window_backend.cpp
+        src/platform/framebuffer/render_target.cpp
+    )
+endif()
+
 # Add source files
 target_sources(ooey PRIVATE 
     src/ooey.cpp
@@ -86,6 +95,10 @@ target_sources(ooey PRIVATE
     src/primitives/rect_primitive.cpp
     src/primitives/line_primitive.cpp
     src/primitives/text_primitive.cpp
+    src/primitives/circle_primitive.cpp
+    src/primitives/rounded_rect_primitive.cpp
+    src/primitives/polygon_primitive.cpp
+    src/primitives/curve_primitive.cpp
     src/view.cpp
     src/input.cpp
     src/controller.cpp
@@ -94,6 +107,7 @@ target_sources(ooey PRIVATE
     src/platform/x11/window_backend.cpp
     src/platform/x11/render_target.cpp
     ${OOey_WAYLAND_SRCS}
+    ${OOey_FRAMEBUFFER_SRCS}
 )
 
 # Setup include directories
@@ -105,6 +119,9 @@ target_include_directories(ooey PUBLIC
 target_compile_definitions(ooey PUBLIC OOEY_BUILD_X11)
 if(OOEY_BUILD_WAYLAND)
     target_compile_definitions(ooey PUBLIC OOEY_BUILD_WAYLAND)
+endif()
+if(OOEY_BUILD_FRAMEBUFFER)
+    target_compile_definitions(ooey PUBLIC OOEY_BUILD_FRAMEBUFFER)
 endif()
 
 target_link_libraries(ooey PUBLIC 

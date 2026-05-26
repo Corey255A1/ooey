@@ -5,8 +5,8 @@ namespace ooey {
 
 TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     : bounds_(bounds) {
-    
-    bg_ = std::make_shared<RectPrimitive>(bounds_, bg_color);
+    // Modern inputs have rounded corners (6px), subtle gray border (1.5px)
+    bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, 6, bg_color, Color{200, 200, 200}, 1.5f);
     text_primitive_ = std::make_shared<TextPrimitive>("", font, Point{bounds_.x + 5, bounds_.y + 5}, text_color);
     
     add_child(bg_);
@@ -29,20 +29,23 @@ const std::string& TextBox::get_text() const {
 }
 
 bool TextBox::on_pointer_event(const Pointer& e) {
-    // Basic hit test
     bool hit = (e.x >= bounds_.x && e.x <= bounds_.x + bounds_.width &&
                 e.y >= bounds_.y && e.y <= bounds_.y + bounds_.height);
     
     if (hit && e.state == PointerState::Pressed) {
         is_focused_ = true;
-        bg_->set_color(Color{200, 200, 200}); // Highlight border/bg to show focus
+        // Accent focus outline (blue)
+        bg_->set_stroke_color(Color{0, 120, 215});
+        bg_->set_stroke_thickness(2.0f);
         return true;
     } else if (!hit && e.state == PointerState::Pressed) {
         is_focused_ = false;
-        bg_->set_color(Color{255, 255, 255}); // Unfocus
+        // Default subtle outline
+        bg_->set_stroke_color(Color{200, 200, 200});
+        bg_->set_stroke_thickness(1.5f);
     }
     
-    return false; // don't swallow if we didn't hit or just releasing outside
+    return false;
 }
 
 bool TextBox::on_key_event(const KeyEvent& e) {

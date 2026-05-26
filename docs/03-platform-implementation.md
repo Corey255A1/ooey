@@ -27,6 +27,6 @@ sudo apt-get install -y libx11-dev libgl1-mesa-dev libglx-dev
    - Mapped context creation tightly to the X11 Window via GLX.
    - Added `present()` functionality to properly swap the double buffers.
 
-3. **Expanded Rendering Targets (CPU & File) (Pending)**
-   - Implement a `MemoryRenderTarget` that draws pixel data into a CPU memory buffer (software rendering basics).
-   - Implement a `FileRenderTarget` that extends the memory target to output the buffer to a raw image file.
+3. **Expanded Rendering Targets (CPU & File) (Completed)**
+   - Implemented software CPU rendering in the **Linux Framebuffer backend** (`docs/08-framebuffer-platform.md`).
+   - Supports raw pixel formats, Bresenham line drawing, and scanline triangle rasterization with screen rotation.

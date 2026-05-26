@@ -211,34 +211,34 @@ void RenderTarget::draw_filled_rect(int x, int y, int w, int h, Color color) {
     }
 }
 
-void RenderTarget::draw_line(int x0, int y0, int x1, int y1, Color color) {
+void RenderTarget::draw_line(int start_x, int start_y, int end_x, int end_y, Color color) {
     if (!data_) {
         return;
     }
     // Bresenham's line algorithm (integer)
-    int dx = abs(x1 - x0);
-    int sx = x0 < x1 ? 1 : -1;
-    int dy = -abs(y1 - y0);
-    int sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy;
+    int delta_x = abs(end_x - start_x);
+    int step_x = start_x < end_x ? 1 : -1;
+    int delta_y = -abs(end_y - start_y);
+    int step_y = start_y < end_y ? 1 : -1;
+    int error = delta_x + delta_y;
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
 
     while (true) {
-        if (x0 >= 0 && x0 < width_ && y0 >= 0 && y0 < height_) {
-            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y0 * stride_);
-            row[x0] = pixel;
+        if (start_x >= 0 && start_x < width_ && start_y >= 0 && start_y < height_) {
+            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + start_y * stride_);
+            row[start_x] = pixel;
         }
-        if (x0 == x1 && y0 == y1) {
+        if (start_x == end_x && start_y == end_y) {
             break;
         }
-        int e2 = 2 * err;
-        if (e2 >= dy) {
-            err += dy;
-            x0 += sx;
+        int error2 = 2 * error;
+        if (error2 >= delta_y) {
+            error += delta_y;
+            start_x += step_x;
         }
-        if (e2 <= dx) {
-            err += dx;
-            y0 += sy;
+        if (error2 <= delta_x) {
+            error += delta_x;
+            start_y += step_y;
         }
     }
 }

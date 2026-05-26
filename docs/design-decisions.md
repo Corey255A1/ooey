@@ -26,7 +26,11 @@ app.set_render_callback([](ooey::IRenderTarget* target) { ... });
 - **X11 over Wayland:** While Wayland is the future of Linux graphics, X11 is still the most universally compatible windowing system, especially inside environments like ChromeOS Crostini or WSL2.
 - **OpenGL via GLX:** OpenGL provides universal hardware acceleration. `GLX` was chosen because it is the standard "glue" that binds an OpenGL rendering context to an X11 Window, bypassing the CPU to draw directly on the GPU.
 
-## 5. Strict MVVM-C (Future)
+## 5. Overarching Architecture
+As the GUI library evolves, the architecture is fundamentally split into three main layers:
+- **Renderer**: The core UI relies on abstract rendering tools (strokes, fills, text) defined by an interface. Platform-specific details (like Wayland or X11) implement these tools to draw elements to the screen.
+- **Interaction**: Interacting with the user is abstracted through a unified event system. Whether input comes from a mouse, keyboard, touch screen, or a socket protocol, device-specific implementations push interaction messages into the core UI library's event manager. Platform-specific events are converted into our interaction event system, which propagates events to control handlers.
+- **MVVMC**: The core UI architecture ties the View to the Controller. It drives user interactions to mutate the View Model and reflect state changes from the View Model back to the View.
 ## 6. Retained Mode Rendering & The Scene Graph
 Initially, `IRenderTarget` utilized a fixed-function immediate mode style (`draw_rect`, `draw_line`). This does not scale. To build complex UIs (like a Button containing a background, border, and text), the engine shifted to a **Retained Mode Scene Graph**. 
 - **`IDrawable` Base Class:** Every visual element inherits from a base `IDrawable`. Higher-level UI elements (like `Button`) are just containers composed of lower-level `IDrawable` primitives (like `RectPrimitive` and `TextPrimitive`).
