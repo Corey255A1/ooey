@@ -2,6 +2,7 @@
 #include "ooey/types.hpp"
 #include "ooey/application.hpp"
 #include "ooey/controls/text_box.hpp"
+#include "ooey/controls/list_control.hpp"
 #include "ooey/input.hpp"
 
 TEST(OoeyTypes, ColorInitialization) {
@@ -97,3 +98,56 @@ TEST(OoeyControls, TextBoxKeyboardInput) {
     textBox.on_key_event({8, ooey::KeyState::Pressed});
     EXPECT_EQ(textBox.get_text(), "Hel");
 }
+
+TEST(OoeyControls, ListControlNavigationAndScrolling) {
+    ooey::Rect bounds{100, 100, 200, 250};
+    ooey::Font font{"sans-serif", 16};
+    ooey::Color text_color{255, 255, 255};
+    ooey::Color bg_color{30, 30, 30};
+    ooey::Color highlight_bg{0, 120, 215};
+    ooey::Color highlight_text{255, 255, 255};
+
+    ooey::ListControl listCtrl{bounds, 50, font, text_color, bg_color, highlight_bg, highlight_text};
+
+    std::vector<std::string> items;
+    for (int i = 1; i <= 200; ++i) {
+        items.push_back("Element " + std::to_string(i));
+    }
+    listCtrl.set_items(items);
+
+    // Initial state
+    EXPECT_EQ(listCtrl.get_selected_index(), 0);
+
+    // select_next
+    listCtrl.select_next();
+    EXPECT_EQ(listCtrl.get_selected_index(), 1);
+
+    // select_previous
+    listCtrl.select_previous();
+    EXPECT_EQ(listCtrl.get_selected_index(), 0);
+
+    // Scroll boundary test: select 6th item (index 5)
+    for (int i = 0; i < 5; ++i) {
+        listCtrl.select_next();
+    }
+    EXPECT_EQ(listCtrl.get_selected_index(), 5);
+
+    // Clicking to select (3rd visible item, which corresponds to index scroll_offset + 2)
+    // At selected_index_ = 5, the scroll_offset should adjust:
+    // since selected_index (5) >= scroll_offset (0) + 5, scroll_offset_ becomes 5 - 4 = 1.
+    // So visible items are index 1 to 5.
+    // 3rd visible item is at index 1 + 2 = 3.
+    // item_height is 250 / 5 = 50.
+    // 3rd slot: y from 100 + 2 * 50 = 200 to 250.
+    // Click at y = 225, x = 150.
+    listCtrl.on_pointer_event({0, 150, 225, ooey::PointerState::Pressed});
+    EXPECT_EQ(listCtrl.get_selected_index(), 3);
+
+    // Key events (XK_Down = 0xFF54, XK_Up = 0xFF52)
+    listCtrl.on_key_event({0xFF54, ooey::KeyState::Pressed}); // Down arrow
+    EXPECT_EQ(listCtrl.get_selected_index(), 4);
+
+    listCtrl.on_key_event({0xFF52, ooey::KeyState::Pressed}); // Up arrow
+    EXPECT_EQ(listCtrl.get_selected_index(), 3);
+}
+

@@ -8,6 +8,8 @@
 #include <cstring>
 #include <iostream>
 #include <climits>
+#include <cmath>
+#include <algorithm>
 
 namespace ooey::wayland {
 
@@ -119,34 +121,26 @@ void RenderTarget::draw_geometry(const Geometry& geometry) {
     }
 
     if (geometry.type == PrimitiveType::Triangles) {
-        // Simple rasterization: fill the geometry's bounding box with the first vertex color.
-        int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
-        for (const auto& v : geometry.vertices) {
-            int x = static_cast<int>(v.x);
-            int y = static_cast<int>(v.y);
-            if (x < minx) minx = x;
-            if (y < miny) miny = y;
-            if (x > maxx) maxx = x;
-            if (y > maxy) maxy = y;
+        if (!geometry.indices.empty()) {
+            for (size_t i = 0; i + 2 < geometry.indices.size(); i += 3) {
+                unsigned int i0 = geometry.indices[i];
+                unsigned int i1 = geometry.indices[i + 1];
+                unsigned int i2 = geometry.indices[i + 2];
+                if (i0 < geometry.vertices.size() && i1 < geometry.vertices.size() && i2 < geometry.vertices.size()) {
+                    draw_triangle(geometry.vertices[i0], geometry.vertices[i1], geometry.vertices[i2], geometry.vertices[i0].color);
+                }
+            }
+        } else {
+            for (size_t i = 0; i + 2 < geometry.vertices.size(); i += 3) {
+                draw_triangle(geometry.vertices[i], geometry.vertices[i + 1], geometry.vertices[i + 2], geometry.vertices[i].color);
+            }
         }
-        if (minx == INT_MAX) {
-            return;
-        }
-        int w = maxx - minx;
-        int h = maxy - miny;
-        if (w <= 0) {
-            w = 1;
-        }
-        if (h <= 0) {
-            h = 1;
-        }
-        draw_filled_rect(minx, miny, w, h, geometry.vertices[0].color);
     } else if (geometry.type == PrimitiveType::Lines) {
         // Draw each line pair (indices or implicit pairs)
         if (!geometry.indices.empty()) {
             for (size_t i = 0; i + 1 < geometry.indices.size(); i += 2) {
                 unsigned int ia = geometry.indices[i];
-                unsigned int ib = geometry.indices[i+1];
+                unsigned int ib = geometry.indices[i + 1];
                 if (ia < geometry.vertices.size() && ib < geometry.vertices.size()) {
                     const auto& a = geometry.vertices[ia];
                     const auto& b = geometry.vertices[ib];
@@ -157,7 +151,7 @@ void RenderTarget::draw_geometry(const Geometry& geometry) {
             // fallback: draw sequential pairs
             for (size_t i = 0; i + 1 < geometry.vertices.size(); i += 2) {
                 const auto& a = geometry.vertices[i];
-                const auto& b = geometry.vertices[i+1];
+                const auto& b = geometry.vertices[i + 1];
                 draw_line(static_cast<int>(a.x), static_cast<int>(a.y), static_cast<int>(b.x), static_cast<int>(b.y), a.color);
             }
         }
@@ -240,6 +234,100 @@ void RenderTarget::draw_line(int start_x, int start_y, int end_x, int end_y, Col
             error += delta_x;
             start_y += step_y;
         }
+    }
+}
+
+void RenderTarget::draw_pixel(int x, int y, Color color) {
+    if (!data_) {
+        return;
+    }
+    if (x >= 0 && x < width_ && y >= 0 && y < height_) {
+        uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y * stride_);
+        uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
+        row[x] = pixel;
+    }
+}
+
+void RenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color) {
+    if (std::abs(v1.y - v0.y) < 1e-5f) {
+        return;
+    }
+    float invslope1 = (v1.x - v0.x) / (v1.y - v0.y);
+    float invslope2 = (v2.x - v0.x) / (v2.y - v0.y);
+
+    float curx1 = v0.x;
+    float curx2 = v0.x;
+
+    int y_start = static_cast<int>(std::round(v0.y));
+    int y_end = static_cast<int>(std::round(v1.y));
+
+    for (int scanline_y = y_start; scanline_y < y_end; scanline_y++) {
+        int x1 = static_cast<int>(std::round(curx1));
+        int x2 = static_cast<int>(std::round(curx2));
+        if (x1 > x2) {
+            std::swap(x1, x2);
+        }
+        for (int x = x1; x <= x2; ++x) {
+            draw_pixel(x, scanline_y, color);
+        }
+        curx1 += invslope1;
+        curx2 += invslope2;
+    }
+}
+
+void RenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color) {
+    if (std::abs(v2.y - v0.y) < 1e-5f) {
+        return;
+    }
+    float invslope1 = (v2.x - v0.x) / (v2.y - v0.y);
+    float invslope2 = (v2.x - v1.x) / (v2.y - v1.y);
+
+    float curx1 = v2.x;
+    float curx2 = v2.x;
+
+    int y_start = static_cast<int>(std::round(v2.y));
+    int y_end = static_cast<int>(std::round(v0.y));
+
+    for (int scanline_y = y_start; scanline_y > y_end; scanline_y--) {
+        int x1 = static_cast<int>(std::round(curx1));
+        int x2 = static_cast<int>(std::round(curx2));
+        if (x1 > x2) {
+            std::swap(x1, x2);
+        }
+        for (int x = x1; x <= x2; ++x) {
+            draw_pixel(x, scanline_y, color);
+        }
+        curx1 -= invslope1;
+        curx2 -= invslope2;
+    }
+}
+
+void RenderTarget::draw_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color) {
+    Vertex sorted_v0 = v0;
+    Vertex sorted_v1 = v1;
+    Vertex sorted_v2 = v2;
+
+    if (sorted_v0.y > sorted_v1.y) {
+        std::swap(sorted_v0, sorted_v1);
+    }
+    if (sorted_v0.y > sorted_v2.y) {
+        std::swap(sorted_v0, sorted_v2);
+    }
+    if (sorted_v1.y > sorted_v2.y) {
+        std::swap(sorted_v1, sorted_v2);
+    }
+
+    if (std::abs(sorted_v1.y - sorted_v2.y) < 1e-5f) {
+        draw_flat_bottom_triangle(sorted_v0, sorted_v1, sorted_v2, color);
+    } else if (std::abs(sorted_v0.y - sorted_v1.y) < 1e-5f) {
+        draw_flat_top_triangle(sorted_v0, sorted_v1, sorted_v2, color);
+    } else {
+        Vertex v3;
+        v3.y = sorted_v1.y;
+        v3.x = sorted_v0.x + ((sorted_v1.y - sorted_v0.y) / (sorted_v2.y - sorted_v0.y)) * (sorted_v2.x - sorted_v0.x);
+        v3.color = color;
+        draw_flat_bottom_triangle(sorted_v0, sorted_v1, v3, color);
+        draw_flat_top_triangle(sorted_v1, v3, sorted_v2, color);
     }
 }
 

@@ -36,7 +36,7 @@ This checklist summarizes the minimal steps and concepts used when implementing 
 
 ## Next steps (recommended)
 - Add an `EGLRenderTarget` using `wl_egl_window` + EGL + GLES2 for GPU-accelerated rendering.
-- Implement a proper triangle rasterizer or integrate a software raster library to fully support `IRenderTarget::draw_geometry` semantics.
+- Implement a proper triangle rasterizer or integrate a software raster library to fully support `IRenderTarget::draw_geometry` semantics. (Completed on 2026-05-27)
 - Improve `xdg_toplevel` handling (resize, maximize, close), set `app_id`, and harden resource lifecycle and listener cleanup.
 
 
@@ -52,3 +52,14 @@ This checklist summarizes the minimal steps and concepts used when implementing 
 - **State Mask Tracking:** Implemented `xkb_state_update_mask()` inside the `keyboard_modifiers` listener. Translators (like xkbcommon) are stateful; they must be kept in sync with the compositor's modifier state (Depressed, Latched, Locked, and Group) to yield the correct keysym mappings.
 - **Unified Event Translation:** Ensured that key press and release events push xkb keysyms (e.g. `XKB_KEY_BackSpace`) rather than hardware codes, aligning Wayland's key events with X11 keysyms and keeping the core controls platform-independent.
 - **Control Key De-duplication:** Added filter rules so that keysyms representing control keys (like BackSpace or Delete) do not double-emit as raw character text events, preventing the insertion of control characters into text input widgets.
+
+## Refinement: Software Triangle Rasterization (2026-05-27)
+
+### Challenge
+- Complex shapes (circles, curves, rotating thick lines) displayed incorrectly on Wayland because the initial implementation used a bounding-box hack that rendered all triangles as axis-aligned flat rectangles. This caused the clock to be a square, its hands to be size-changing squares, and the sinusoid to be a long flat box.
+
+### Resolution & Lessons
+- **Software Scanline Rasterizer:** Replaced the bounding box hack with a mathematically sound CPU scanline triangle rasterizer (flat-top, flat-bottom, and arbitrary split triangle rendering) matching the Framebuffer backend.
+- **Correct Shape Decompositions:** Since shapes are represented as triangle lists or triangle fans, rasterizing individual triangles correctly immediately resolved the issues across all advanced geometry primitives.
+- **Unified Rendering Behaviors:** Verified that software rendering behaves identically under Framebuffer and Wayland, aligning visually with the OpenGL X11 renderer.
+

@@ -1,4 +1,5 @@
 build/
+.antigravitycli/
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles

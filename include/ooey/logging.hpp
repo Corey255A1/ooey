@@ -78,10 +78,10 @@ private:
 #else
 
 // No-op implementations when OOEY_LOGGING is not defined
-#define OOEY_LOG_DEBUG(category, msg) do { (void)(category); (void)(msg); } while (0)
-#define OOEY_LOG_INFO(category, msg) do { (void)(category); (void)(msg); } while (0)
-#define OOEY_LOG_WARNING(category, msg) do { (void)(category); (void)(msg); } while (0)
-#define OOEY_LOG_ERROR(category, msg) do { (void)(category); (void)(msg); } while (0)
+#define OOEY_LOG_DEBUG(category, msg)
+#define OOEY_LOG_INFO(category, msg)
+#define OOEY_LOG_WARNING(category, msg)
+#define OOEY_LOG_ERROR(category, msg)
 
 #endif // OOEY_LOGGING
 

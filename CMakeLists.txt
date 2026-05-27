@@ -16,11 +16,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Define the ooey library target
 add_library(ooey)
 
-# Find dependencies
-find_package(OpenGL REQUIRED)
+
 # Optional X11 backend
 option(OOEY_BUILD_X11 "Build the X11 backend (requires X11 and GLX)" ON)
 if(OOEY_BUILD_X11)
+    # Find dependencies
+    find_package(OpenGL REQUIRED)
     find_package(X11 REQUIRED)
 endif()
 # Optional Wayland backend
@@ -155,6 +156,7 @@ if(OOEY_BUILD_CONTROLS)
         src/controls/button.cpp
         src/controls/label.cpp
         src/controls/text_box.cpp
+        src/controls/list_control.cpp
     )
     target_link_libraries(ooey_controls PUBLIC ooey)
 endif()

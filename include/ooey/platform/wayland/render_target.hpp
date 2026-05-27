@@ -24,6 +24,10 @@ public:
 private:
     void draw_filled_rect(int x, int y, int w, int h, Color color);
     void draw_line(int x0, int y0, int x1, int y1, Color color);
+    void draw_pixel(int x, int y, Color color);
+    void draw_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color);
+    void draw_flat_bottom_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color);
+    void draw_flat_top_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color);
 
     wl_shm* shm_{nullptr};
     wl_surface* surface_{nullptr};

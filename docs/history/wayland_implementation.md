@@ -80,7 +80,7 @@ sudo apt install libwayland-dev wayland-protocols libxkbcommon-dev
 
 Remaining work / next steps (prioritized)
 1. Add an `EGLRenderTarget` using `wl_egl_window` + EGL + GLES2 to provide GPU-accelerated rendering and a proper GL backend. (medium/large)
-2. Implement a correct triangle rasterizer (or integrate a small software raster library) so `IRenderTarget::draw_geometry` can render all primitives accurately. (medium)
+2. Implement a correct triangle rasterizer (or integrate a small software raster library) so `IRenderTarget::draw_geometry` can render all primitives accurately. (Completed on 2026-05-27)
 3. Improve xdg_toplevel handling:
    - Respect configure size hints and respond to resize, maximize, minimize, and close events properly.
    - Set `app_id` and other window properties.
@@ -96,3 +96,17 @@ Remaining work / next steps (prioritized)
   - Filtered raw key controls from leaking into text event streams.
 - **Lessons Learned:**
   - Modifiers mapping in xkbcommon is layout-dependent and requires direct update hooks on `modifiers` callbacks from the compositor; without this, keysym resolving will degrade or fail entirely when layouts or modifier transitions (Shift, Caps) occur.
+
+## Wayland Software Rasterizer & Display Fixes (2026-05-27)
+- **Status:** Done.
+- **Discovery / Challenge:**
+  - When rendering complex shape primitives (such as the analog clock's circle, the clock hands' thick line segments, and the sinusoid wave's curves), the shapes rendered incorrectly on the Wayland backend. The clock appeared as a square, the rotating clock hands appeared as squares changing size, and the sinusoid was rendered as a single long rectangle.
+  - The root cause was that `RenderTarget::draw_geometry` inside `src/platform/wayland/render_target.cpp` lacked triangle rasterization. When it encountered `PrimitiveType::Triangles`, it simply calculated the axis-aligned bounding box of all vertices and drew a flat filled rectangle over it.
+- **Resolution:**
+  - Designed and implemented a mathematically correct software scanline triangle rasterizer (similar to the Framebuffer platform's software rasterizer) inside the Wayland `RenderTarget`.
+  - Added declarations and definitions for helper functions: `draw_pixel`, `draw_triangle`, `draw_flat_bottom_triangle`, and `draw_flat_top_triangle`.
+  - Updated `RenderTarget::draw_geometry` to traverse geometry indices or sequential vertices and rasterize them triangle-by-triangle using the scanline algorithm.
+- **Lessons Learned:**
+  - A simple bounding box shortcut for rendering geometry is only sufficient for simple axis-aligned rectangles. Rotating or non-rectangular complex shape primitives require a mathematically correct software rasterizer or a hardware-accelerated GPU backend.
+  - Code duplication for software rasterizers can be minimized by abstracting drawing helpers or utilizing a shared CPU rasterizer engine across platform backends.
+
