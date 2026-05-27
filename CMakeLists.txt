@@ -17,8 +17,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_library(ooey)
 
 # Find dependencies
-find_package(X11 REQUIRED)
 find_package(OpenGL REQUIRED)
+# Optional X11 backend
+option(OOEY_BUILD_X11 "Build the X11 backend (requires X11 and GLX)" ON)
+if(OOEY_BUILD_X11)
+    find_package(X11 REQUIRED)
+endif()
 # Optional Wayland backend
 option(OOEY_BUILD_WAYLAND "Build the Wayland backend (requires wayland-client, xkbcommon, wayland-protocols)" OFF)
 if(OOEY_BUILD_WAYLAND)
@@ -89,7 +93,7 @@ if(OOEY_BUILD_FRAMEBUFFER)
 endif()
 
 # Add source files
-target_sources(ooey PRIVATE 
+set(OOEY_SRCS
     src/ooey.cpp
     src/application.cpp
     src/primitives/rect_primitive.cpp
@@ -105,11 +109,21 @@ target_sources(ooey PRIVATE
     src/controller.cpp
     src/bitmap_font.cpp
     src/platform/platform.cpp
-    src/platform/x11/window_backend.cpp
-    src/platform/x11/render_target.cpp
+)
+
+if(OOEY_BUILD_X11)
+    list(APPEND OOEY_SRCS
+        src/platform/x11/window_backend.cpp
+        src/platform/x11/render_target.cpp
+    )
+endif()
+
+list(APPEND OOEY_SRCS
     ${OOey_WAYLAND_SRCS}
     ${OOey_FRAMEBUFFER_SRCS}
 )
+
+target_sources(ooey PRIVATE ${OOEY_SRCS})
 
 # Setup include directories
 target_include_directories(ooey PUBLIC
@@ -117,7 +131,10 @@ target_include_directories(ooey PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_compile_definitions(ooey PUBLIC OOEY_BUILD_X11)
+if(OOEY_BUILD_X11)
+    target_compile_definitions(ooey PUBLIC OOEY_BUILD_X11)
+    target_link_libraries(ooey PUBLIC X11::X11)
+endif()
 if(OOEY_BUILD_WAYLAND)
     target_compile_definitions(ooey PUBLIC OOEY_BUILD_WAYLAND)
 endif()
@@ -126,7 +143,6 @@ if(OOEY_BUILD_FRAMEBUFFER)
 endif()
 
 target_link_libraries(ooey PUBLIC 
-    X11::X11 
     OpenGL::GL
 )
 
