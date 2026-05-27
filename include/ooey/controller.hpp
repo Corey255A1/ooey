@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ooey/i_controller.hpp"
 #include "ooey/input.hpp"
 #include "ooey/view.hpp"
 #include "ooey/i_interactive.hpp"
@@ -7,7 +8,7 @@
 
 namespace ooey {
 
-class Controller {
+class Controller : public IController {
 public:
     Controller(InputManager& input_manager, std::shared_ptr<View> root_view);
 

@@ -24,6 +24,14 @@ if(OOEY_BUILD_CONTROLS)
 
     add_executable(hello_wizard hello_wizard.cpp)
     target_link_libraries(hello_wizard PRIVATE ooey ooey_controls)
+
+    find_package(Boost REQUIRED)
+    find_package(Threads REQUIRED)
+    if(Boost_FOUND)
+        add_executable(hello_network hello_network.cpp)
+        target_link_libraries(hello_network PRIVATE ooey ooey_controls Threads::Threads)
+        target_include_directories(hello_network PRIVATE ${Boost_INCLUDE_DIRS})
+    endif()
 endif()
 
 if(OOEY_BUILD_WAYLAND)

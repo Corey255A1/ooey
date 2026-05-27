@@ -208,4 +208,25 @@ TEST(OoeyMvvmc, NavigationCoordinatorTransitions) {
     EXPECT_EQ(coordinator->current_viewmodel.get(), p3);
 }
 
+class MockController : public ooey::IController {
+public:
+    int process_count = 0;
+    void process_events() override {
+        process_count++;
+    }
+};
 
+TEST(OoeyApplication, CustomControllerExecution) {
+    ooey::Application app;
+    auto mock_backend = std::make_unique<MockWindowBackend>();
+
+    auto mock_controller = std::make_unique<MockController>();
+    auto* controller_ptr = mock_controller.get();
+
+    app.set_window_backend(std::move(mock_backend));
+    app.set_controller(std::move(mock_controller));
+
+    app.run();
+
+    EXPECT_EQ(controller_ptr->process_count, 2);
+}

@@ -1,4 +1,5 @@
 #include "ooey/application.hpp"
+#include "ooey/controller.hpp"
 #include "ooey/logging.hpp"
 
 namespace ooey {
@@ -31,6 +32,11 @@ void Application::set_root_view(std::shared_ptr<View>&& root_view) {
     root_view_ = std::move(root_view);
     controller_ = std::make_unique<Controller>(input_manager_, root_view_);
     OOEY_LOG_INFO("Application", "Root view and controller initialized");
+}
+
+void Application::set_controller(std::unique_ptr<IController>&& controller) {
+    controller_ = std::move(controller);
+    OOEY_LOG_INFO("Application", "Custom controller set");
 }
 
 void Application::set_clear_color(Color color) {

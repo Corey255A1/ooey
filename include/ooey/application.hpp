@@ -7,7 +7,7 @@
 #include "ooey/i_render_target.hpp"
 #include "ooey/input.hpp"
 #include "ooey/view.hpp"
-#include "ooey/controller.hpp"
+#include "ooey/i_controller.hpp"
 #include "ooey/i_drawable.hpp"
 
 namespace ooey {
@@ -26,8 +26,11 @@ public:
     // Set the root view for the scene graph
     void set_root_view(std::shared_ptr<View>&& root_view);
 
+    // Set a custom controller
+    void set_controller(std::unique_ptr<IController>&& controller);
+
     // Get the global controller
-    Controller* get_controller() { return controller_.get(); }
+    IController* get_controller() { return controller_.get(); }
 
     // Set the default clear color
     void set_clear_color(Color color);
@@ -47,7 +50,7 @@ public:
 private:
     std::unique_ptr<IWindowBackend> window_backend_;
     std::shared_ptr<View> root_view_;
-    std::unique_ptr<Controller> controller_;
+    std::unique_ptr<IController> controller_;
     Color clear_color_{0, 0, 0, 255};
     std::function<void(IRenderTarget*)> before_render_callback_;
     std::function<void(IRenderTarget*)> after_render_callback_;
