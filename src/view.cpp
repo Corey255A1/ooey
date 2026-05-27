@@ -16,4 +16,8 @@ void View::draw(IRenderTarget& target) const {
     }
 }
 
+void View::clear_children() {
+    children_.clear();
+}
+
 } // namespace ooey

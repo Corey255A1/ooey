@@ -23,6 +23,7 @@ public:
     }
 
     void draw(IRenderTarget& target) const override;
+    void clear_children();
 
 private:
     std::vector<std::shared_ptr<IDrawable>> children_;

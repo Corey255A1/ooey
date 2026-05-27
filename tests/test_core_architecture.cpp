@@ -3,6 +3,7 @@
 #include "ooey/application.hpp"
 #include "ooey/controls/text_box.hpp"
 #include "ooey/controls/list_control.hpp"
+#include "ooey/mvvmc/navigation_coordinator.hpp"
 #include "ooey/input.hpp"
 
 TEST(OoeyTypes, ColorInitialization) {
@@ -150,4 +151,61 @@ TEST(OoeyControls, ListControlNavigationAndScrolling) {
     listCtrl.on_key_event({0xFF52, ooey::KeyState::Pressed}); // Up arrow
     EXPECT_EQ(listCtrl.get_selected_index(), 3);
 }
+
+class TestPageViewModel : public ooey::PageViewModelBase {
+public:
+    explicit TestPageViewModel(std::string name) : name_(std::move(name)) {}
+    std::string get_title() const override { return name_; }
+private:
+    std::string name_;
+};
+
+TEST(OoeyMvvmc, NavigationCoordinatorTransitions) {
+    auto coordinator = std::make_shared<ooey::NavigationCoordinator>();
+
+    auto p1 = std::make_shared<TestPageViewModel>("Page 1");
+    auto p2 = std::make_shared<TestPageViewModel>("Page 2");
+    auto p3 = std::make_shared<TestPageViewModel>("Page 3");
+
+    // Initial state
+    EXPECT_FALSE(coordinator->can_go_back.get());
+    EXPECT_FALSE(coordinator->can_go_forward.get());
+    EXPECT_EQ(coordinator->current_viewmodel.get(), nullptr);
+
+    // Navigate to Page 1
+    coordinator->navigate_to(p1);
+    EXPECT_EQ(coordinator->current_viewmodel.get(), p1);
+    EXPECT_FALSE(coordinator->can_go_back.get());
+    EXPECT_FALSE(coordinator->can_go_forward.get());
+
+    // Navigate to Page 2
+    coordinator->navigate_to(p2);
+    EXPECT_EQ(coordinator->current_viewmodel.get(), p2);
+    EXPECT_TRUE(coordinator->can_go_back.get());
+    EXPECT_FALSE(coordinator->can_go_forward.get());
+
+    // Go back
+    coordinator->go_back();
+    EXPECT_EQ(coordinator->current_viewmodel.get(), p1);
+    EXPECT_FALSE(coordinator->can_go_back.get());
+    EXPECT_TRUE(coordinator->can_go_forward.get());
+
+    // Go forward
+    coordinator->go_forward();
+    EXPECT_EQ(coordinator->current_viewmodel.get(), p2);
+    EXPECT_TRUE(coordinator->can_go_back.get());
+    EXPECT_FALSE(coordinator->can_go_forward.get());
+
+    // Branching: go back to Page 1, then navigate to Page 3 (should clear Page 2 from forward history)
+    coordinator->go_back();
+    coordinator->navigate_to(p3);
+    EXPECT_EQ(coordinator->current_viewmodel.get(), p3);
+    EXPECT_TRUE(coordinator->can_go_back.get());
+    EXPECT_FALSE(coordinator->can_go_forward.get());
+
+    // Try go forward (should fail, forward history cleared)
+    coordinator->go_forward();
+    EXPECT_EQ(coordinator->current_viewmodel.get(), p3);
+}
+
 

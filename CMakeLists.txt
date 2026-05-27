@@ -110,6 +110,7 @@ set(OOEY_SRCS
     src/controller.cpp
     src/bitmap_font.cpp
     src/platform/platform.cpp
+    src/mvvmc/navigation_coordinator.cpp
 )
 
 if(OOEY_BUILD_X11)
