@@ -14,9 +14,17 @@
 #include "ooey/platform/framebuffer/window_backend.hpp"
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include "ooey/platform/emscripten/window_backend.hpp"
+#endif
+
 namespace ooey {
 
 std::unique_ptr<IWindowBackend> create_default_window_backend() {
+#ifdef __EMSCRIPTEN__
+    return std::make_unique<emscripten::WindowBackend>();
+#endif
+
 #ifdef OOEY_BUILD_WAYLAND
     if (std::getenv("WAYLAND_DISPLAY") != nullptr) {
         return std::make_unique<wayland::WindowBackend>();

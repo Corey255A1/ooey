@@ -10,6 +10,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(EMSCRIPTEN)
+    set(OOEY_BUILD_X11 OFF CACHE BOOL "Build X11" FORCE)
+    set(OOEY_BUILD_WAYLAND OFF CACHE BOOL "Build Wayland" FORCE)
+    set(OOEY_BUILD_FRAMEBUFFER OFF CACHE BOOL "Build Framebuffer" FORCE)
+endif()
+
 # Export compile commands for tooling (clangd, etc)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -120,6 +126,13 @@ if(OOEY_BUILD_X11)
     )
 endif()
 
+if(EMSCRIPTEN)
+    list(APPEND OOEY_SRCS
+        src/platform/emscripten/window_backend.cpp
+        src/platform/emscripten/render_target.cpp
+    )
+endif()
+
 list(APPEND OOEY_SRCS
     ${OOey_WAYLAND_SRCS}
     ${OOey_FRAMEBUFFER_SRCS}
@@ -144,9 +157,14 @@ if(OOEY_BUILD_FRAMEBUFFER)
     target_compile_definitions(ooey PUBLIC OOEY_BUILD_FRAMEBUFFER)
 endif()
 
-target_link_libraries(ooey PUBLIC 
-    OpenGL::GL
-)
+if(EMSCRIPTEN)
+    target_compile_options(ooey PUBLIC -sLEGACY_GL_EMULATION=1)
+    target_link_options(ooey PUBLIC -sLEGACY_GL_EMULATION=1 -sALLOW_MEMORY_GROWTH=1)
+else()
+    target_link_libraries(ooey PUBLIC 
+        OpenGL::GL
+    )
+endif()
 
 # Option to build controls library
 option(OOEY_BUILD_CONTROLS "Build the OOEY controls library" ON)

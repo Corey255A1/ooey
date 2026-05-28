@@ -44,6 +44,9 @@ public:
     // Run the main application loop
     void run();
 
+    // Run a single frame iteration (useful for Emscripten or custom loop scheduling)
+    void run_iteration();
+
     // Quit the application
     void quit();
 
@@ -55,6 +58,7 @@ private:
     std::function<void(renderer::IRenderTarget*)> before_render_callback_;
     std::function<void(renderer::IRenderTarget*)> after_render_callback_;
     InputManager input_manager_;
+    int frame_count_{0};
     bool running_{false};
 };
 

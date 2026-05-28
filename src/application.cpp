@@ -56,59 +56,74 @@ void Application::set_after_render_callback(std::function<void(renderer::IRender
     OOEY_LOG_DEBUG("Application", "After render callback set");
 }
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 void Application::run() {
     OOEY_LOG_INFO("Application", "Starting application run loop");
     running_ = true;
-    
-    int frame_count = 0;
+    frame_count_ = 0;
 
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg([](void* arg) {
+        static_cast<Application*>(arg)->run_iteration();
+    }, this, 0, 1);
+#else
     while (running_) {
-        if (window_backend_) {
-            if (!window_backend_->poll_events()) {
-                OOEY_LOG_INFO("Application", "Poll events returned false, shutting down");
-                running_ = false;
-            }
-
-            if (running_) {
-                if (controller_) {
-                    controller_->process_events();
-                }
-
-                input_manager_.update(); // clear transient states
-
-                auto* target = window_backend_->get_render_target();
-                if (target) {
-                    if (before_render_callback_) {
-                        before_render_callback_(target);
-                    }
-
-                    target->clear(clear_color_);
-
-                    if (root_view_) {
-                        root_view_->draw(*target);
-                    }
-
-                    if (after_render_callback_) {
-                        after_render_callback_(target);
-                    }
-
-                    target->present();
-                    
-                    frame_count++;
-                    if (frame_count % 300 == 0) {
-                        OOEY_LOG_DEBUG("Application", "Rendered " << frame_count << " frames");
-                    }
-                }
-            }
-        } else {
-            // Without a window backend, we'll just exit for now to avoid an infinite busy loop.
-            // In the future, this could run a headless simulation loop or memory renderer loop.
-            OOEY_LOG_WARNING("Application", "No window backend available, exiting run loop");
-            running_ = false; 
-        }
+        run_iteration();
     }
-    
-    OOEY_LOG_INFO("Application", "Application run loop ended after " << frame_count << " frames");
+    OOEY_LOG_INFO("Application", "Application run loop ended after " << frame_count_ << " frames");
+#endif
+}
+
+void Application::run_iteration() {
+    if (!running_) {
+        return;
+    }
+
+    if (window_backend_) {
+        if (!window_backend_->poll_events()) {
+            OOEY_LOG_INFO("Application", "Poll events returned false, shutting down");
+            running_ = false;
+        }
+
+        if (running_) {
+            if (controller_) {
+                controller_->process_events();
+            }
+
+            input_manager_.update(); // clear transient states
+
+            auto* target = window_backend_->get_render_target();
+            if (target) {
+                if (before_render_callback_) {
+                    before_render_callback_(target);
+                }
+
+                target->clear(clear_color_);
+
+                if (root_view_) {
+                    root_view_->draw(*target);
+                }
+
+                if (after_render_callback_) {
+                    after_render_callback_(target);
+                }
+
+                target->present();
+                
+                frame_count_++;
+                if (frame_count_ % 300 == 0) {
+                    OOEY_LOG_DEBUG("Application", "Rendered " << frame_count_ << " frames");
+                }
+            }
+        }
+    } else {
+        // Without a window backend, we'll just exit for now to avoid an infinite busy loop.
+        OOEY_LOG_WARNING("Application", "No window backend available, exiting run loop");
+        running_ = false; 
+    }
 }
 
 void Application::quit() {

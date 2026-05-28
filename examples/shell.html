@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOEY GUI Web Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top, #1e1e24 0%, #0c0c0e 100%);
+            color: #f0f0f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            margin: 0.5rem 0 0 0;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(30, 30, 35, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+        }
+
+        canvas {
+            display: block;
+            border-radius: 12px;
+            background-color: #0f0f11;
+            width: 800px;
+            height: 600px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .status-container {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+
+        .status-indicator.ready {
+            background-color: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .instructions {
+            margin-top: 2rem;
+            max-width: 600px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>OOEY WebAssembly App</h1>
+        <p>Retained-mode modern C++ GUI in WebGL</p>
+    </header>
+
+    <div class="canvas-container">
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+
+    <div class="status-container">
+        <div id="status-indicator" class="status-indicator"></div>
+        <span id="status-text">Downloading WebAssembly module...</span>
+    </div>
+
+    <div class="instructions">
+        Run the application interactively using mouse clicks and keyboard typing.<br>
+        Built with the OOEY C++20 retained-mode scene graph compiled via Emscripten.
+    </div>
+
+    <script type='text/javascript'>
+        var statusIndicator = document.getElementById('status-indicator');
+        var statusText = document.getElementById('status-text');
+
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (function() {
+                return function(text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                };
+            })(),
+            printErr: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                console.error(text);
+            },
+            canvas: (function() {
+                var canvas = document.getElementById('canvas');
+                canvas.addEventListener('click', function() {
+                    canvas.focus();
+                });
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+                if (text === Module.setStatus.last.text) return;
+                
+                var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+                var now = Date.now();
+                if (m && now - Module.setStatus.last.time < 30) return;
+                Module.setStatus.last.time = now;
+                Module.setStatus.last.text = text;
+                
+                if (text) {
+                    statusText.innerText = text;
+                    statusIndicator.className = 'status-indicator';
+                } else {
+                    statusText.innerText = 'Application Running';
+                    statusIndicator.className = 'status-indicator ready';
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+            }
+        };
+        Module.setStatus('Downloading...');
+        window.onerror = function(event) {
+            Module.setStatus('Exception thrown, see JavaScript console');
+            statusIndicator.style.backgroundColor = '#ef4444';
+            statusIndicator.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.5)';
+        };
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>
