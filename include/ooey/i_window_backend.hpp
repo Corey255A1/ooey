@@ -5,7 +5,10 @@
 
 namespace ooey {
 
+namespace renderer {
 class IRenderTarget;
+}
+using renderer::IRenderTarget;
 
 class IWindowBackend : public IInputProvider {
 public:
@@ -22,7 +25,7 @@ public:
     virtual bool poll_events() = 0;
 
     // Get the render target associated with this window
-    virtual IRenderTarget* get_render_target() = 0;
+    virtual renderer::IRenderTarget* get_render_target() = 0;
 };
 
 } // namespace ooey

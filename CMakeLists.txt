@@ -97,18 +97,18 @@ endif()
 set(OOEY_SRCS
     src/ooey.cpp
     src/application.cpp
-    src/primitives/rect_primitive.cpp
-    src/primitives/line_primitive.cpp
-    src/primitives/text_primitive.cpp
-    src/primitives/circle_primitive.cpp
-    src/primitives/rounded_rect_primitive.cpp
-    src/primitives/polygon_primitive.cpp
-    src/primitives/curve_primitive.cpp
-    src/primitives/sinusoid_primitive.cpp
-    src/view.cpp
+    src/renderer/primitives/rect_primitive.cpp
+    src/renderer/primitives/line_primitive.cpp
+    src/renderer/primitives/text_primitive.cpp
+    src/renderer/primitives/circle_primitive.cpp
+    src/renderer/primitives/rounded_rect_primitive.cpp
+    src/renderer/primitives/polygon_primitive.cpp
+    src/renderer/primitives/curve_primitive.cpp
+    src/renderer/primitives/sinusoid_primitive.cpp
+    src/mvvmc/view.cpp
     src/input.cpp
-    src/controller.cpp
-    src/bitmap_font.cpp
+    src/mvvmc/controller.cpp
+    src/renderer/bitmap_font.cpp
     src/platform/platform.cpp
     src/mvvmc/navigation_coordinator.cpp
 )

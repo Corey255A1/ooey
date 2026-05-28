@@ -1,9 +1,9 @@
-#include "ooey/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include <cmath>
 #include <vector>
 #include <algorithm>
 
-namespace ooey {
+namespace ooey::renderer {
 
 constexpr float PI = 3.14159265f;
 
@@ -106,4 +106,4 @@ void RoundedRectPrimitive::draw(IRenderTarget& target) const {
     }
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

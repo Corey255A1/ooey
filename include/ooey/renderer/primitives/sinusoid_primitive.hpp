@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ooey/i_drawable.hpp"
+#include "ooey/mvvmc/i_drawable.hpp"
 #include "ooey/types.hpp"
 
-namespace ooey {
+namespace ooey::renderer {
 
 class SinusoidPrimitive : public IDrawable {
 public:
@@ -42,4 +42,8 @@ private:
     float thickness_;
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+
+namespace ooey {
+using renderer::SinusoidPrimitive;
+}

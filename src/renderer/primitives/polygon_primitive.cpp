@@ -1,7 +1,7 @@
-#include "ooey/primitives/polygon_primitive.hpp"
+#include "ooey/renderer/primitives/polygon_primitive.hpp"
 #include <cmath>
 
-namespace ooey {
+namespace ooey::renderer {
 
 static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey, float thickness, Color color) {
     if (thickness <= 0.0f) {
@@ -72,4 +72,4 @@ void PolygonPrimitive::draw(IRenderTarget& target) const {
     }
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

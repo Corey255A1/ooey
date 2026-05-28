@@ -1,14 +1,14 @@
 #include <gtest/gtest.h>
 #include "ooey/types.hpp"
-#include "ooey/geometry.hpp"
-#include "ooey/i_render_target.hpp"
-#include "ooey/primitives/line_primitive.hpp"
-#include "ooey/primitives/rect_primitive.hpp"
-#include "ooey/primitives/circle_primitive.hpp"
-#include "ooey/primitives/rounded_rect_primitive.hpp"
-#include "ooey/primitives/polygon_primitive.hpp"
-#include "ooey/primitives/curve_primitive.hpp"
-#include "ooey/primitives/sinusoid_primitive.hpp"
+#include "ooey/renderer/geometry.hpp"
+#include "ooey/renderer/i_render_target.hpp"
+#include "ooey/renderer/primitives/line_primitive.hpp"
+#include "ooey/renderer/primitives/rect_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/polygon_primitive.hpp"
+#include "ooey/renderer/primitives/curve_primitive.hpp"
+#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
 #include <vector>
 
 class MockRenderTarget : public ooey::IRenderTarget {

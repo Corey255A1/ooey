@@ -1,14 +1,14 @@
 #pragma once
 
-#include "ooey/view.hpp"
-#include "ooey/i_interactive.hpp"
-#include "ooey/primitives/rounded_rect_primitive.hpp"
+#include "ooey/mvvmc/view.hpp"
+#include "ooey/mvvmc/i_interactive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "ooey/controls/label.hpp"
 #include <functional>
 #include <memory>
 #include <string>
 
-namespace ooey {
+namespace ooey::controls {
 
 class Button : public View, public IInteractive {
 public:
@@ -36,4 +36,7 @@ private:
     std::shared_ptr<Label> label_;
 };
 
-} // namespace ooey
+} // namespace ooey::controls
+namespace ooey {
+using controls::Button;
+}

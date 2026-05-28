@@ -1,12 +1,12 @@
 #pragma once
 
-#include "ooey/i_drawable.hpp"
+#include "ooey/mvvmc/i_drawable.hpp"
 #include "ooey/mvvmc/subscription_sink.hpp"
 #include "ooey/mvvmc/property.hpp"
 #include <vector>
 #include <memory>
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 class View : public IDrawable {
 public:
@@ -22,7 +22,7 @@ public:
         sink_.add(property.subscribe(std::move(listener)));
     }
 
-    void draw(IRenderTarget& target) const override;
+    void draw(renderer::IRenderTarget& target) const override;
     void clear_children();
 
 private:
@@ -30,4 +30,7 @@ private:
     SubscriptionSink sink_;
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+namespace ooey {
+using mvvmc::View;
+}

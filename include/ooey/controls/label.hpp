@@ -1,11 +1,11 @@
 #pragma once
 
-#include "ooey/view.hpp"
-#include "ooey/primitives/text_primitive.hpp"
+#include "ooey/mvvmc/view.hpp"
+#include "ooey/renderer/primitives/text_primitive.hpp"
 #include <memory>
 #include <string>
 
-namespace ooey {
+namespace ooey::controls {
 
 class Label : public View {
 public:
@@ -22,4 +22,7 @@ private:
     std::shared_ptr<TextPrimitive> text_primitive_;
 };
 
-} // namespace ooey
+} // namespace ooey::controls
+namespace ooey {
+using controls::Label;
+}

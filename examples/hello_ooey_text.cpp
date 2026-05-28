@@ -4,7 +4,7 @@
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
 #include "ooey/platform/platform.hpp"
-#include "ooey/view.hpp"
+#include "ooey/mvvmc/view.hpp"
 #include "ooey/controls/text_box.hpp"
 #include "ooey/controls/label.hpp"
 #include "ooey/mvvmc/property.hpp"

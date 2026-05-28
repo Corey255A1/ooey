@@ -1,7 +1,7 @@
-#include "ooey/primitives/rect_primitive.hpp"
+#include "ooey/renderer/primitives/rect_primitive.hpp"
 #include <cmath>
 
-namespace ooey {
+namespace ooey::renderer {
 
 static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey, float thickness, Color color) {
     if (thickness <= 0.0f) {
@@ -67,4 +67,4 @@ void RectPrimitive::draw(IRenderTarget& target) const {
     }
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

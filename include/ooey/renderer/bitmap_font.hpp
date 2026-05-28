@@ -4,7 +4,7 @@
 #include <string>
 #include <cstdint>
 
-namespace ooey {
+namespace ooey::renderer {
 
 class BitmapFont {
 public:
@@ -42,4 +42,8 @@ private:
     static int get_glyph_height(int font_size);
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+
+namespace ooey {
+using renderer::BitmapFont;
+}

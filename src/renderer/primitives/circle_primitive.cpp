@@ -1,8 +1,8 @@
-#include "ooey/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
 #include <cmath>
 #include <vector>
 
-namespace ooey {
+namespace ooey::renderer {
 
 constexpr float PI = 3.14159265f;
 
@@ -85,4 +85,4 @@ void CirclePrimitive::draw(IRenderTarget& target) const {
     }
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

@@ -1,7 +1,7 @@
-#include "ooey/bitmap_font.hpp"
+#include "ooey/renderer/bitmap_font.hpp"
 #include <algorithm>
 
-namespace ooey {
+namespace ooey::renderer {
 
 static const uint8_t kAsciiGlyphs[42][7] = {
     // Space, 0-9, A-Z, colon, comma, hyphen, period, question
@@ -90,4 +90,4 @@ Size BitmapFont::measure_text(const std::string& text, int font_size) {
     return Size{width, height};
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

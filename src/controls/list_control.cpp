@@ -1,7 +1,7 @@
 #include "ooey/controls/list_control.hpp"
 #include <algorithm>
 
-namespace ooey {
+namespace ooey::controls {
 
 ListControl::ListControl(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color)
     : bounds_(bounds), item_height_(item_height), font_(font), text_color_(text_color), bg_color_(bg_color),
@@ -144,4 +144,4 @@ void ListControl::update_children() {
     }
 }
 
-} // namespace ooey
+} // namespace ooey::controls

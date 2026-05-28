@@ -3,7 +3,7 @@
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
 #include "ooey/platform/platform.hpp"
-#include "ooey/view.hpp"
+#include "ooey/mvvmc/view.hpp"
 #include "ooey/controls/button.hpp"
 #include "ooey/mvvmc/property.hpp"
 

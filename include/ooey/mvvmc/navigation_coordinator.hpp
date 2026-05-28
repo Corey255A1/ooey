@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 class PageViewModelBase {
 public:
@@ -37,4 +37,9 @@ private:
     int current_index_{-1};
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+
+namespace ooey {
+using mvvmc::PageViewModelBase;
+using mvvmc::NavigationCoordinator;
+}

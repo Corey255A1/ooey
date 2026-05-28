@@ -3,7 +3,7 @@
 #include "ooey/types.hpp"
 #include "ooey/input.hpp"
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 class IInteractive {
 public:
@@ -18,4 +18,7 @@ public:
     virtual bool on_text_event(const TextEvent& e) { return false; }
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+namespace ooey {
+using mvvmc::IInteractive;
+}

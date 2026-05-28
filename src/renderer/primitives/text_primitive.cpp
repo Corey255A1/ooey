@@ -1,7 +1,7 @@
-#include "ooey/primitives/text_primitive.hpp"
-#include "ooey/i_render_target.hpp"
+#include "ooey/renderer/primitives/text_primitive.hpp"
+#include "ooey/renderer/i_render_target.hpp"
 
-namespace ooey {
+namespace ooey::renderer {
 
 TextPrimitive::TextPrimitive(std::string text, Font font, Point position, Color color)
     : text_(std::move(text)), font_(font), position_(position), color_(color) {}
@@ -42,4 +42,4 @@ Color TextPrimitive::get_color() const {
     return color_;
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

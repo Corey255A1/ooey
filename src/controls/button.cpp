@@ -1,7 +1,7 @@
 #include "ooey/controls/button.hpp"
-#include "ooey/bitmap_font.hpp"
+#include "ooey/renderer/bitmap_font.hpp"
 
-namespace ooey {
+namespace ooey::controls {
 
 Button::Button(Rect bounds, Color color) : bounds_(bounds), color_(color) {
     // Default modern button has 8px corner radius
@@ -94,4 +94,4 @@ bool Button::on_key_event(const KeyEvent& /*e*/) {
     return false;
 }
 
-} // namespace ooey
+} // namespace ooey::controls

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "ooey/types.hpp"
-#include "ooey/geometry.hpp"
+#include "ooey/renderer/geometry.hpp"
 #include <string>
 
-namespace ooey {
+namespace ooey::renderer {
 
 class IRenderTarget {
 public:
@@ -24,4 +24,8 @@ public:
     virtual void present() = 0;
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+
+namespace ooey {
+using renderer::IRenderTarget;
+}

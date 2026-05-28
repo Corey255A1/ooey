@@ -1,5 +1,5 @@
 #include "ooey/platform/x11/render_target.hpp"
-#include "ooey/bitmap_font.hpp"
+#include "ooey/renderer/bitmap_font.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <GL/glx.h>

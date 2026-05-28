@@ -1,18 +1,20 @@
 #pragma once
 
-#include "ooey/i_drawable.hpp"
+#include "ooey/mvvmc/i_drawable.hpp"
 #include "ooey/types.hpp"
 
-namespace ooey {
+namespace ooey::renderer {
 
-class RectPrimitive : public IDrawable {
+class RoundedRectPrimitive : public IDrawable {
 public:
-    RectPrimitive(Rect rect, Color fill_color, Color stroke_color = Color{0, 0, 0, 0}, float stroke_thickness = 0.0f);
+    RoundedRectPrimitive(Rect rect, int corner_radius, Color fill_color, Color stroke_color = Color{0, 0, 0, 0}, float stroke_thickness = 0.0f);
 
     void set_rect(Rect rect) { rect_ = rect; }
     Rect get_rect() const { return rect_; }
 
-    void set_color(Color color) { fill_color_ = color; } // Compatibility
+    void set_corner_radius(int radius) { corner_radius_ = radius; }
+    int get_corner_radius() const { return corner_radius_; }
+
     void set_fill_color(Color color) { fill_color_ = color; }
     Color get_fill_color() const { return fill_color_; }
 
@@ -26,9 +28,14 @@ public:
 
 private:
     Rect rect_;
+    int corner_radius_;
     Color fill_color_;
-    Color stroke_color_{0, 0, 0, 0};
-    float stroke_thickness_{0.0f};
+    Color stroke_color_;
+    float stroke_thickness_;
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+
+namespace ooey {
+using renderer::RoundedRectPrimitive;
+}

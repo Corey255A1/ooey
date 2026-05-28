@@ -1,7 +1,7 @@
-#include "ooey/primitives/line_primitive.hpp"
+#include "ooey/renderer/primitives/line_primitive.hpp"
 #include <cmath>
 
-namespace ooey {
+namespace ooey::renderer {
 
 LinePrimitive::LinePrimitive(Point start, Point end, Color color, float thickness)
     : start_(start), end_(end), color_(color), thickness_(thickness) {}
@@ -37,4 +37,4 @@ void LinePrimitive::draw(IRenderTarget& target) const {
     target.draw_geometry(geo);
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

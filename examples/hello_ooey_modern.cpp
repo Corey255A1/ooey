@@ -2,13 +2,13 @@
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
 #include "ooey/platform/platform.hpp"
-#include "ooey/view.hpp"
+#include "ooey/mvvmc/view.hpp"
 #include "ooey/controls/button.hpp"
 #include "ooey/controls/label.hpp"
 #include "ooey/controls/text_box.hpp"
-#include "ooey/primitives/circle_primitive.hpp"
-#include "ooey/primitives/rounded_rect_primitive.hpp"
-#include "ooey/primitives/curve_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/curve_primitive.hpp"
 
 int main() {
     std::cout << "Starting OOEY Modern GUI Demo...\n";

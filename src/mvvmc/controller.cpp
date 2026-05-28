@@ -1,7 +1,7 @@
-#include "ooey/controller.hpp"
-#include "ooey/i_drawable.hpp"
+#include "ooey/mvvmc/controller.hpp"
+#include "ooey/mvvmc/i_drawable.hpp"
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 Controller::Controller(InputManager& input_manager, std::shared_ptr<View> root_view)
     : input_manager_(input_manager), root_view_(std::move(root_view)) {}
@@ -59,4 +59,4 @@ bool Controller::route_pointer_event(const Pointer& pointer, const std::shared_p
     return false;
 }
 
-} // namespace ooey
+} // namespace ooey::mvvmc

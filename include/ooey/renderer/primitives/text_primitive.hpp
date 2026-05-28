@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ooey/i_drawable.hpp"
+#include "ooey/mvvmc/i_drawable.hpp"
 #include "ooey/types.hpp"
 #include <string>
 
-namespace ooey {
+namespace ooey::renderer {
 
 class TextPrimitive : public IDrawable {
 public:
@@ -32,4 +32,7 @@ private:
     Color color_;
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+namespace ooey {
+using renderer::TextPrimitive;
+}

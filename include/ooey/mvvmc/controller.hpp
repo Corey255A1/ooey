@@ -1,12 +1,12 @@
 #pragma once
 
-#include "ooey/i_controller.hpp"
+#include "ooey/mvvmc/i_controller.hpp"
 #include "ooey/input.hpp"
-#include "ooey/view.hpp"
-#include "ooey/i_interactive.hpp"
+#include "ooey/mvvmc/view.hpp"
+#include "ooey/mvvmc/i_interactive.hpp"
 #include <memory>
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 class Controller : public IController {
 public:
@@ -24,4 +24,7 @@ private:
     IInteractive* focused_element_{nullptr};
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+namespace ooey {
+using mvvmc::Controller;
+}

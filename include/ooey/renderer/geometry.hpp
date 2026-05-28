@@ -3,7 +3,7 @@
 #include "ooey/types.hpp"
 #include <vector>
 
-namespace ooey {
+namespace ooey::renderer {
 
 enum class PrimitiveType {
     Triangles,
@@ -22,4 +22,9 @@ struct Geometry {
     PrimitiveType type{PrimitiveType::Triangles};
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+namespace ooey {
+using renderer::Vertex;
+using renderer::Geometry;
+using renderer::PrimitiveType;
+}

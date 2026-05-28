@@ -1,6 +1,6 @@
 #include "ooey/controls/label.hpp"
 
-namespace ooey {
+namespace ooey::controls {
 
 Label::Label(std::string text, Font font, Point position, Color color) {
     text_primitive_ = std::make_shared<TextPrimitive>(std::move(text), font, position, color);
@@ -27,4 +27,4 @@ void Label::set_position(Point position) {
     text_primitive_->set_position(position);
 }
 
-} // namespace ooey
+} // namespace ooey::controls

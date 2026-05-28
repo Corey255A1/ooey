@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ooey/i_drawable.hpp"
+#include "ooey/mvvmc/i_drawable.hpp"
 #include "ooey/types.hpp"
 
-namespace ooey {
+namespace ooey::renderer {
 
 class CurvePrimitive : public IDrawable {
 public:
@@ -43,4 +43,8 @@ private:
     bool is_cubic_;
 };
 
-} // namespace ooey
+} // namespace ooey::renderer
+
+namespace ooey {
+using renderer::CurvePrimitive;
+}

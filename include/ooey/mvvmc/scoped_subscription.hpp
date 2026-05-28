@@ -2,7 +2,7 @@
 
 #include <functional>
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 class ScopedSubscription {
 public:
@@ -38,4 +38,4 @@ private:
     std::function<void()> unsubscribe_func_;
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc

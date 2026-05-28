@@ -1,16 +1,16 @@
 #pragma once
 
-#include "ooey/view.hpp"
-#include "ooey/i_interactive.hpp"
-#include "ooey/primitives/rounded_rect_primitive.hpp"
-#include "ooey/primitives/rect_primitive.hpp"
-#include "ooey/primitives/text_primitive.hpp"
+#include "ooey/mvvmc/view.hpp"
+#include "ooey/mvvmc/i_interactive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rect_primitive.hpp"
+#include "ooey/renderer/primitives/text_primitive.hpp"
 #include <vector>
 #include <string>
 #include <memory>
 #include <functional>
 
-namespace ooey {
+namespace ooey::controls {
 
 class ListControl : public View, public IInteractive {
 public:
@@ -53,4 +53,8 @@ private:
     std::vector<std::shared_ptr<TextPrimitive>> item_texts_;
 };
 
-} // namespace ooey
+} // namespace ooey::controls
+
+namespace ooey {
+using controls::ListControl;
+}

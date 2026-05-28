@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ooey/i_render_target.hpp"
+#include "ooey/renderer/i_render_target.hpp"
 
 typedef struct _XDisplay Display;
 

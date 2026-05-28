@@ -1,7 +1,7 @@
 #include "ooey/controls/text_box.hpp"
 #include <iostream>
 
-namespace ooey {
+namespace ooey::controls {
 
 TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     : bounds_(bounds) {
@@ -102,4 +102,4 @@ bool TextBox::on_text_event(const TextEvent& e) {
     return true;
 }
 
-} // namespace ooey
+} // namespace ooey::controls

@@ -1,6 +1,6 @@
 #include "ooey/mvvmc/navigation_coordinator.hpp"
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 void NavigationCoordinator::navigate_to(std::shared_ptr<PageViewModelBase> vm) {
     if (!vm) {
@@ -43,4 +43,4 @@ void NavigationCoordinator::update_states() {
     can_go_forward.set(current_index_ < static_cast<int>(history_.size()) - 1);
 }
 
-} // namespace ooey
+} // namespace ooey::mvvmc

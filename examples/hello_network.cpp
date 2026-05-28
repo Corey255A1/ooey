@@ -7,12 +7,12 @@
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
 #include "ooey/platform/platform.hpp"
-#include "ooey/view.hpp"
+#include "ooey/mvvmc/view.hpp"
 #include "ooey/controls/label.hpp"
 #include "ooey/controls/text_box.hpp"
 #include "ooey/controls/list_control.hpp"
-#include "ooey/primitives/rounded_rect_primitive.hpp"
-#include "ooey/i_controller.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/mvvmc/i_controller.hpp"
 
 using boost::asio::ip::tcp;
 

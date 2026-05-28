@@ -3,7 +3,7 @@
 #include "ooey/mvvmc/scoped_subscription.hpp"
 #include <vector>
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 // A helper container to hold multiple subscriptions, tying their lifetime
 // to the object that owns this sink.
@@ -21,4 +21,7 @@ private:
     std::vector<ScopedSubscription> subscriptions_;
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+namespace ooey {
+using mvvmc::SubscriptionSink;
+}

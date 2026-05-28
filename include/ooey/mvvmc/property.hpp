@@ -6,7 +6,7 @@
 #include <memory>
 #include "ooey/mvvmc/scoped_subscription.hpp"
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 template <typename T>
 class Property {
@@ -72,4 +72,8 @@ private:
     std::shared_ptr<bool> alive_flag_;
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+namespace ooey {
+using mvvmc::Property;
+using mvvmc::ScopedSubscription;
+}

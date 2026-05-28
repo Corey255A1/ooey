@@ -2,9 +2,9 @@
 #include "ooey/ooey.hpp"
 #include "ooey/application.hpp"
 #include "ooey/platform/platform.hpp"
-#include "ooey/view.hpp"
+#include "ooey/mvvmc/view.hpp"
 #include "ooey/controls/button.hpp"
-#include "ooey/primitives/line_primitive.hpp"
+#include "ooey/renderer/primitives/line_primitive.hpp"
 
 int main() {
     std::cout << "Welcome to OOEY GUI Engine v" << ooey::get_version() << "!\n";

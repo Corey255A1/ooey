@@ -1,8 +1,8 @@
-#include "ooey/primitives/curve_primitive.hpp"
+#include "ooey/renderer/primitives/curve_primitive.hpp"
 #include <cmath>
 #include <vector>
 
-namespace ooey {
+namespace ooey::renderer {
 
 static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey, float thickness, Color color) {
     if (thickness <= 0.0f) {
@@ -109,4 +109,4 @@ void CurvePrimitive::draw(IRenderTarget& target) const {
     }
 }
 
-} // namespace ooey
+} // namespace ooey::renderer

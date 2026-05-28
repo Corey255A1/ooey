@@ -1,5 +1,5 @@
 #include "ooey/platform/wayland/render_target.hpp"
-#include "ooey/bitmap_font.hpp"
+#include "ooey/renderer/bitmap_font.hpp"
 #include <wayland-client.h>
 #include <sys/mman.h>
 #include <sys/stat.h>

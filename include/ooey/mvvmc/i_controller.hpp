@@ -1,6 +1,6 @@
 #pragma once
 
-namespace ooey {
+namespace ooey::mvvmc {
 
 class IController {
 public:
@@ -8,4 +8,8 @@ public:
     virtual void process_events() = 0;
 };
 
-} // namespace ooey
+} // namespace ooey::mvvmc
+
+namespace ooey {
+using mvvmc::IController;
+}
