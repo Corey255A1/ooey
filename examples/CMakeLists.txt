@@ -1,3 +1,4 @@
+set(OOEY_BUILD_CONTROLS ON)
 add_executable(hello_ooey hello_ooey.cpp)
 target_link_libraries(hello_ooey PRIVATE ooey)
 

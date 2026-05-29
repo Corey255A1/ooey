@@ -6,15 +6,15 @@
 #include <iomanip>
 #include <sstream>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
-#include "ooey/platform/platform.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/label.hpp"
-#include "ooey/renderer/primitives/line_primitive.hpp"
-#include "ooey/renderer/primitives/circle_primitive.hpp"
-#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
-#include "ooey/mvvmc/property.hpp"
+#include "gooey/application.hpp"
+#include "ooey/platform.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/label.hpp"
+#include "gooey/renderer/primitives/line_primitive.hpp"
+#include "gooey/renderer/primitives/circle_primitive.hpp"
+#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "gooey/mvvmc/property.hpp"
 
 // ---------------------------------------------------------
 // 1. The ViewModel (Logic & State)
@@ -22,11 +22,11 @@
 class ClockSinusoidViewModel {
 public:
     // Properties observed by the View
-    ooey::Property<float> hour_angle{0.0f};
-    ooey::Property<float> minute_angle{0.0f};
-    ooey::Property<float> second_angle{0.0f};
-    ooey::Property<std::string> digital_time{"00:00:00"};
-    ooey::Property<float> sinusoid_phase{0.0f};
+    gooey::Property<float> hour_angle{0.0f};
+    gooey::Property<float> minute_angle{0.0f};
+    gooey::Property<float> second_angle{0.0f};
+    gooey::Property<std::string> digital_time{"00:00:00"};
+    gooey::Property<float> sinusoid_phase{0.0f};
 
     void update(float dt) {
         // Increment phase for scrolling sinusoid wave
@@ -69,7 +69,7 @@ public:
 // ---------------------------------------------------------
 // 2. The View (UI Construction & MVVM Bindings)
 // ---------------------------------------------------------
-class ClockSinusoidView : public ooey::View {
+class ClockSinusoidView : public gooey::View {
 public:
     ClockSinusoidView(std::shared_ptr<ClockSinusoidViewModel> view_model)
         : view_model_(std::move(view_model)) {
@@ -77,7 +77,7 @@ public:
         // --- Layout Design Elements ---
 
         // A card-like container for the clock and wave
-        auto card = std::make_shared<ooey::RoundedRectPrimitive>(
+        auto card = std::make_shared<gooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},
             16,
             ooey::Color{28, 28, 30},
@@ -92,7 +92,7 @@ public:
         float radius = 90.0f;
 
         // 1. Clock Face Outer Frame
-        auto clock_face = std::make_shared<ooey::CirclePrimitive>(
+        auto clock_face = std::make_shared<gooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             static_cast<int>(radius),
             ooey::Color{20, 20, 22},
@@ -102,7 +102,7 @@ public:
         add_child(std::move(clock_face));
 
         // 2. Center Dial Point
-        auto center_dial = std::make_shared<ooey::CirclePrimitive>(
+        auto center_dial = std::make_shared<gooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             5,
             ooey::Color{0, 120, 215},
@@ -115,21 +115,21 @@ public:
         float len_m = radius * 0.75f;
         float len_s = radius * 0.85f;
 
-        auto hour_hand = std::make_shared<ooey::LinePrimitive>(
+        auto hour_hand = std::make_shared<gooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_h)},
             ooey::Color{220, 220, 220},
             4.0f
         );
 
-        auto minute_hand = std::make_shared<ooey::LinePrimitive>(
+        auto minute_hand = std::make_shared<gooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_m)},
             ooey::Color{160, 160, 160},
             2.5f
         );
 
-        auto second_hand = std::make_shared<ooey::LinePrimitive>(
+        auto second_hand = std::make_shared<gooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_s)},
             ooey::Color{255, 80, 80},
@@ -162,7 +162,7 @@ public:
         add_child(std::move(center_dial));
 
         // 4. Digital Time Display Label
-        auto digital_label = std::make_shared<ooey::Label>(
+        auto digital_label = std::make_shared<gooey::Label>(
             "00:00:00",
             ooey::Font{"sans-serif", 20, ooey::FontWeight::Bold},
             ooey::Point{350, 310},
@@ -178,7 +178,7 @@ public:
         add_child(digital_label);
 
         // --- Sinusoid Wave Widget Layout ---
-        auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
+        auto sinusoid = std::make_shared<gooey::SinusoidPrimitive>(
             ooey::Point{100, 420},          // Start
             ooey::Point{700, 420},          // End
             30.0f,                          // Amplitude
@@ -205,7 +205,7 @@ private:
 int main() {
     std::cout << "Starting OOEY Sinusoid & Clock MVVM Demo...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
     if (!backend || !backend->create({800, 600}, "OOEY Sinusoid & Clock MVVM")) {

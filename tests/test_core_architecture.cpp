@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include "ooey/types.hpp"
-#include "ooey/application.hpp"
-#include "ooey/controls/text_box.hpp"
-#include "ooey/controls/list_control.hpp"
-#include "ooey/mvvmc/navigation_coordinator.hpp"
+#include "gooey/application.hpp"
+#include "gooey/controls/text_box.hpp"
+#include "gooey/controls/list_control.hpp"
+#include "gooey/mvvmc/navigation_coordinator.hpp"
 #include "ooey/input.hpp"
 
 TEST(OoeyTypes, ColorInitialization) {
@@ -58,7 +58,7 @@ public:
 };
 
 TEST(OoeyApplication, MainLoopExecution) {
-    ooey::Application app;
+    gooey::Application app;
     auto mock_backend = std::make_unique<MockWindowBackend>();
     auto* mock_ptr = mock_backend.get();
 
@@ -69,7 +69,7 @@ TEST(OoeyApplication, MainLoopExecution) {
 }
 
 TEST(OoeyApplication, HeadlessExit) {
-    ooey::Application app;
+    gooey::Application app;
     // Should exit immediately without an infinite loop if no backend
     app.run(); 
     SUCCEED();
@@ -77,7 +77,7 @@ TEST(OoeyApplication, HeadlessExit) {
 
 TEST(OoeyControls, TextBoxKeyboardInput) {
     ooey::Font font{"sans-serif", 16};
-    ooey::TextBox textBox{ooey::Rect{0, 0, 100, 100}, font, ooey::Color{0, 0, 0}, ooey::Color{255, 255, 255}};
+    gooey::TextBox textBox{ooey::Rect{0, 0, 100, 100}, font, ooey::Color{0, 0, 0}, ooey::Color{255, 255, 255}};
 
     // Text box needs to be focused to process key/text events
     textBox.on_pointer_event({0, 10, 10, ooey::PointerState::Pressed});
@@ -108,7 +108,7 @@ TEST(OoeyControls, ListControlNavigationAndScrolling) {
     ooey::Color highlight_bg{0, 120, 215};
     ooey::Color highlight_text{255, 255, 255};
 
-    ooey::ListControl listCtrl{bounds, 50, font, text_color, bg_color, highlight_bg, highlight_text};
+    gooey::ListControl listCtrl{bounds, 50, font, text_color, bg_color, highlight_bg, highlight_text};
 
     std::vector<std::string> items;
     for (int i = 1; i <= 200; ++i) {
@@ -152,7 +152,7 @@ TEST(OoeyControls, ListControlNavigationAndScrolling) {
     EXPECT_EQ(listCtrl.get_selected_index(), 3);
 }
 
-class TestPageViewModel : public ooey::PageViewModelBase {
+class TestPageViewModel : public gooey::PageViewModelBase {
 public:
     explicit TestPageViewModel(std::string name) : name_(std::move(name)) {}
     std::string get_title() const override { return name_; }
@@ -161,7 +161,7 @@ private:
 };
 
 TEST(OoeyMvvmc, NavigationCoordinatorTransitions) {
-    auto coordinator = std::make_shared<ooey::NavigationCoordinator>();
+    auto coordinator = std::make_shared<gooey::NavigationCoordinator>();
 
     auto p1 = std::make_shared<TestPageViewModel>("Page 1");
     auto p2 = std::make_shared<TestPageViewModel>("Page 2");
@@ -208,7 +208,7 @@ TEST(OoeyMvvmc, NavigationCoordinatorTransitions) {
     EXPECT_EQ(coordinator->current_viewmodel.get(), p3);
 }
 
-class MockController : public ooey::IController {
+class MockController : public gooey::IController {
 public:
     int process_count = 0;
     void process_events() override {
@@ -217,7 +217,7 @@ public:
 };
 
 TEST(OoeyApplication, CustomControllerExecution) {
-    ooey::Application app;
+    gooey::Application app;
     auto mock_backend = std::make_unique<MockWindowBackend>();
 
     auto mock_controller = std::make_unique<MockController>();

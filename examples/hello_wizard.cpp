@@ -5,17 +5,17 @@
 #include <chrono>
 #include <cmath>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
-#include "ooey/platform/platform.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/button.hpp"
-#include "ooey/controls/label.hpp"
-#include "ooey/controls/list_control.hpp"
-#include "ooey/renderer/primitives/line_primitive.hpp"
-#include "ooey/renderer/primitives/circle_primitive.hpp"
-#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
-#include "ooey/mvvmc/navigation_coordinator.hpp"
+#include "gooey/application.hpp"
+#include "ooey/platform.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/button.hpp"
+#include "gooey/controls/label.hpp"
+#include "gooey/controls/list_control.hpp"
+#include "gooey/renderer/primitives/line_primitive.hpp"
+#include "gooey/renderer/primitives/circle_primitive.hpp"
+#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "gooey/mvvmc/navigation_coordinator.hpp"
 
 // Forward declarations of ViewModels
 class Page1ViewModel;
@@ -27,9 +27,9 @@ class Page5ViewModel;
 // ---------------------------------------------------------
 // Page 1: Welcome & Start Button
 // ---------------------------------------------------------
-class Page1ViewModel : public ooey::PageViewModelBase {
+class Page1ViewModel : public gooey::PageViewModelBase {
 public:
-    explicit Page1ViewModel(std::shared_ptr<ooey::NavigationCoordinator> coordinator)
+    explicit Page1ViewModel(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {}
 
     std::string get_title() const override { return "Page 1: Welcome"; }
@@ -37,15 +37,15 @@ public:
     void on_start_clicked();
 
 private:
-    std::shared_ptr<ooey::NavigationCoordinator> coordinator_;
+    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
 };
 
 // ---------------------------------------------------------
 // Page 2: Animal List
 // ---------------------------------------------------------
-class Page2ViewModel : public ooey::PageViewModelBase {
+class Page2ViewModel : public gooey::PageViewModelBase {
 public:
-    explicit Page2ViewModel(std::shared_ptr<ooey::NavigationCoordinator> coordinator)
+    explicit Page2ViewModel(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {
         animals_ = {"Dog", "Cat", "Elephant", "Tiger", "Lion", "Zebra", "Giraffe"};
     }
@@ -54,27 +54,27 @@ public:
 
     const std::vector<std::string>& get_animals() const { return animals_; }
 
-    ooey::Property<int> selected_animal_index{-1};
+    gooey::Property<int> selected_animal_index{-1};
 
 private:
-    std::shared_ptr<ooey::NavigationCoordinator> coordinator_;
+    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
     std::vector<std::string> animals_;
 };
 
 // ---------------------------------------------------------
 // Page 3: Fancy Clock & Branch Buttons
 // ---------------------------------------------------------
-class Page3ViewModel : public ooey::PageViewModelBase {
+class Page3ViewModel : public gooey::PageViewModelBase {
 public:
-    explicit Page3ViewModel(std::shared_ptr<ooey::NavigationCoordinator> coordinator)
+    explicit Page3ViewModel(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {}
 
     std::string get_title() const override { return "Page 3: Fancy Clock"; }
 
-    ooey::Property<float> hour_angle{0.0f};
-    ooey::Property<float> minute_angle{0.0f};
-    ooey::Property<float> second_angle{0.0f};
-    ooey::Property<std::string> digital_time{"00:00:00"};
+    gooey::Property<float> hour_angle{0.0f};
+    gooey::Property<float> minute_angle{0.0f};
+    gooey::Property<float> second_angle{0.0f};
+    gooey::Property<std::string> digital_time{"00:00:00"};
 
     void update(float dt) override {
         auto now = std::chrono::system_clock::now();
@@ -108,20 +108,20 @@ public:
     void on_continue_clicked();
 
 private:
-    std::shared_ptr<ooey::NavigationCoordinator> coordinator_;
+    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
 };
 
 // ---------------------------------------------------------
 // Page 4: Cool Page (Sinusoid, back only)
 // ---------------------------------------------------------
-class Page4ViewModel : public ooey::PageViewModelBase {
+class Page4ViewModel : public gooey::PageViewModelBase {
 public:
-    explicit Page4ViewModel(std::shared_ptr<ooey::NavigationCoordinator> coordinator)
+    explicit Page4ViewModel(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {}
 
     std::string get_title() const override { return "Page 4: Something Cool"; }
 
-    ooey::Property<float> sinusoid_phase{0.0f};
+    gooey::Property<float> sinusoid_phase{0.0f};
 
     void update(float dt) override {
         float next_phase = sinusoid_phase.get() + dt * 3.0f;
@@ -133,20 +133,20 @@ public:
     }
 
 private:
-    std::shared_ptr<ooey::NavigationCoordinator> coordinator_;
+    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
 };
 
 // ---------------------------------------------------------
 // Page 5: End Screen (Fading Text & Exit)
 // ---------------------------------------------------------
-class Page5ViewModel : public ooey::PageViewModelBase {
+class Page5ViewModel : public gooey::PageViewModelBase {
 public:
-    explicit Page5ViewModel(std::shared_ptr<ooey::NavigationCoordinator> coordinator)
+    explicit Page5ViewModel(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {}
 
     std::string get_title() const override { return "Page 5: Finished"; }
 
-    ooey::Property<ooey::Color> fading_color{ooey::Color{255, 255, 255}};
+    gooey::Property<ooey::Color> fading_color{ooey::Color{255, 255, 255}};
     std::function<void()> on_exit_requested;
 
     void update(float dt) override {
@@ -170,7 +170,7 @@ public:
     }
 
 private:
-    std::shared_ptr<ooey::NavigationCoordinator> coordinator_;
+    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
     float time_elapsed_{0.0f};
 };
 
@@ -191,10 +191,10 @@ void Page3ViewModel::on_continue_clicked() {
 // Page Views
 // ---------------------------------------------------------
 
-class Page1View : public ooey::View {
+class Page1View : public gooey::View {
 public:
     explicit Page1View(std::shared_ptr<Page1ViewModel> vm) : vm_(vm) {
-        auto msg = std::make_shared<ooey::Label>(
+        auto msg = std::make_shared<gooey::Label>(
             "Welcome to the MVVMC Wizard!",
             ooey::Font{"sans-serif", 20, ooey::FontWeight::Bold},
             ooey::Point{100, 180},
@@ -202,7 +202,7 @@ public:
         );
         add_child(std::move(msg));
 
-        auto start_btn = std::make_shared<ooey::Button>(
+        auto start_btn = std::make_shared<gooey::Button>(
             ooey::Rect{300, 260, 200, 40},
             ooey::Color{0, 120, 215},
             ooey::Color{0, 0, 0, 0},
@@ -220,10 +220,10 @@ private:
     std::shared_ptr<Page1ViewModel> vm_;
 };
 
-class Page2View : public ooey::View {
+class Page2View : public gooey::View {
 public:
     explicit Page2View(std::shared_ptr<Page2ViewModel> vm) : vm_(vm) {
-        auto msg = std::make_shared<ooey::Label>(
+        auto msg = std::make_shared<gooey::Label>(
             "Please select an animal from the list:",
             ooey::Font{"sans-serif", 16},
             ooey::Point{100, 140},
@@ -231,7 +231,7 @@ public:
         );
         add_child(std::move(msg));
 
-        auto list = std::make_shared<ooey::ListControl>(
+        auto list = std::make_shared<gooey::ListControl>(
             ooey::Rect{100, 180, 350, 250},
             50,
             ooey::Font{"sans-serif", 16},
@@ -242,7 +242,7 @@ public:
         );
         list->set_items(vm->get_animals());
         
-        auto selection_info = std::make_shared<ooey::Label>(
+        auto selection_info = std::make_shared<gooey::Label>(
             "Selected: None",
             ooey::Font{"sans-serif", 16},
             ooey::Point{480, 250},
@@ -262,7 +262,7 @@ private:
     std::shared_ptr<Page2ViewModel> vm_;
 };
 
-class Page3View : public ooey::View {
+class Page3View : public gooey::View {
 public:
     explicit Page3View(std::shared_ptr<Page3ViewModel> vm) : vm_(vm) {
         float cx = 300.0f;
@@ -270,7 +270,7 @@ public:
         float radius = 70.0f;
 
         // Face outline
-        auto clock_face = std::make_shared<ooey::CirclePrimitive>(
+        auto clock_face = std::make_shared<gooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             static_cast<int>(radius),
             ooey::Color{20, 20, 22},
@@ -280,7 +280,7 @@ public:
         add_child(std::move(clock_face));
 
         // Dial
-        auto center_dial = std::make_shared<ooey::CirclePrimitive>(
+        auto center_dial = std::make_shared<gooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             5,
             ooey::Color{0, 120, 215},
@@ -293,21 +293,21 @@ public:
         float len_m = radius * 0.75f;
         float len_s = radius * 0.85f;
 
-        auto hour_hand = std::make_shared<ooey::LinePrimitive>(
+        auto hour_hand = std::make_shared<gooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_h)},
             ooey::Color{220, 220, 220},
             4.0f
         );
 
-        auto minute_hand = std::make_shared<ooey::LinePrimitive>(
+        auto minute_hand = std::make_shared<gooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_m)},
             ooey::Color{160, 160, 160},
             2.5f
         );
 
-        auto second_hand = std::make_shared<ooey::LinePrimitive>(
+        auto second_hand = std::make_shared<gooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_s)},
             ooey::Color{255, 80, 80},
@@ -337,7 +337,7 @@ public:
         add_child(second_hand);
         add_child(std::move(center_dial));
 
-        auto digital_label = std::make_shared<ooey::Label>(
+        auto digital_label = std::make_shared<gooey::Label>(
             "00:00:00",
             ooey::Font{"sans-serif", 20, ooey::FontWeight::Bold},
             ooey::Point{250, 350},
@@ -351,7 +351,7 @@ public:
         add_child(digital_label);
 
         // Buttons
-        auto check_out_btn = std::make_shared<ooey::Button>(
+        auto check_out_btn = std::make_shared<gooey::Button>(
             ooey::Rect{100, 440, 220, 40},
             ooey::Color{45, 45, 50},
             ooey::Color{100, 100, 110},
@@ -365,7 +365,7 @@ public:
         };
         add_child(std::move(check_out_btn));
 
-        auto continue_btn = std::make_shared<ooey::Button>(
+        auto continue_btn = std::make_shared<gooey::Button>(
             ooey::Rect{480, 440, 220, 40},
             ooey::Color{0, 120, 215},
             ooey::Color{0, 0, 0, 0},
@@ -383,10 +383,10 @@ private:
     std::shared_ptr<Page3ViewModel> vm_;
 };
 
-class Page4View : public ooey::View {
+class Page4View : public gooey::View {
 public:
     explicit Page4View(std::shared_ptr<Page4ViewModel> vm) : vm_(vm) {
-        auto label = std::make_shared<ooey::Label>(
+        auto label = std::make_shared<gooey::Label>(
             "Page 4: Scrolling Sinusoid!",
             ooey::Font{"sans-serif", 18, ooey::FontWeight::Bold},
             ooey::Point{100, 150},
@@ -394,7 +394,7 @@ public:
         );
         add_child(std::move(label));
 
-        auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
+        auto sinusoid = std::make_shared<gooey::SinusoidPrimitive>(
             ooey::Point{100, 280},
             ooey::Point{700, 280},
             40.0f,
@@ -408,7 +408,7 @@ public:
         });
         add_child(sinusoid);
 
-        auto back_btn = std::make_shared<ooey::Button>(
+        auto back_btn = std::make_shared<gooey::Button>(
             ooey::Rect{300, 420, 200, 40},
             ooey::Color{45, 45, 50},
             ooey::Color{100, 100, 110},
@@ -426,10 +426,10 @@ private:
     std::shared_ptr<Page4ViewModel> vm_;
 };
 
-class Page5View : public ooey::View {
+class Page5View : public gooey::View {
 public:
     explicit Page5View(std::shared_ptr<Page5ViewModel> vm) : vm_(vm) {
-        auto end_label = std::make_shared<ooey::Label>(
+        auto end_label = std::make_shared<gooey::Label>(
             "The End",
             ooey::Font{"sans-serif", 48, ooey::FontWeight::Bold},
             ooey::Point{280, 220},
@@ -440,7 +440,7 @@ public:
         });
         add_child(end_label);
 
-        auto exit_btn = std::make_shared<ooey::Button>(
+        auto exit_btn = std::make_shared<gooey::Button>(
             ooey::Rect{300, 400, 200, 40},
             ooey::Color{255, 80, 80},
             ooey::Color{0, 0, 0, 0},
@@ -462,13 +462,13 @@ private:
 // Navigation Shell (Root View)
 // ---------------------------------------------------------
 
-class NavigationShellView : public ooey::View {
+class NavigationShellView : public gooey::View {
 public:
-    explicit NavigationShellView(std::shared_ptr<ooey::NavigationCoordinator> coordinator)
+    explicit NavigationShellView(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {
         
         // Static frame card background
-        frame_ = std::make_shared<ooey::RoundedRectPrimitive>(
+        frame_ = std::make_shared<gooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},
             16,
             ooey::Color{30, 30, 35},
@@ -478,7 +478,7 @@ public:
         add_child(frame_);
 
         // Top navigation bar buttons
-        back_btn_ = std::make_shared<ooey::Button>(
+        back_btn_ = std::make_shared<gooey::Button>(
             ooey::Rect{70, 60, 100, 36},
             ooey::Color{45, 45, 50},
             ooey::Color{100, 100, 110},
@@ -488,7 +488,7 @@ public:
             ooey::Color{240, 240, 240}
         );
         
-        forward_btn_ = std::make_shared<ooey::Button>(
+        forward_btn_ = std::make_shared<gooey::Button>(
             ooey::Rect{180, 60, 100, 36},
             ooey::Color{45, 45, 50},
             ooey::Color{100, 100, 110},
@@ -498,7 +498,7 @@ public:
             ooey::Color{240, 240, 240}
         );
 
-        title_label_ = std::make_shared<ooey::Label>(
+        title_label_ = std::make_shared<gooey::Label>(
             "Title",
             ooey::Font{"sans-serif", 18, ooey::FontWeight::Bold},
             ooey::Point{320, 68},
@@ -510,7 +510,7 @@ public:
         add_child(title_label_);
 
         // Page Content container
-        page_container_ = std::make_shared<ooey::View>();
+        page_container_ = std::make_shared<gooey::View>();
         add_child(page_container_);
 
         // Set commands
@@ -551,7 +551,7 @@ public:
         });
 
         // The top forward button acts as "Next >" if we can proceed in the wizard
-        bind(coordinator_->current_viewmodel, [this](std::shared_ptr<ooey::PageViewModelBase> vm) {
+        bind(coordinator_->current_viewmodel, [this](std::shared_ptr<gooey::PageViewModelBase> vm) {
             rebuild_forward_btn(vm);
         });
         bind(coordinator_->can_go_forward, [this](bool /*can*/) {
@@ -559,13 +559,13 @@ public:
         });
 
         // Recreate the active view when the viewmodel changes
-        bind(coordinator_->current_viewmodel, [this](std::shared_ptr<ooey::PageViewModelBase> vm) {
+        bind(coordinator_->current_viewmodel, [this](std::shared_ptr<gooey::PageViewModelBase> vm) {
             recreate_page_view(vm);
         });
     }
 
 private:
-    void rebuild_forward_btn(std::shared_ptr<ooey::PageViewModelBase> vm) {
+    void rebuild_forward_btn(std::shared_ptr<gooey::PageViewModelBase> vm) {
         if (!vm) return;
         bool has_forward_history = coordinator_->can_go_forward.get();
         bool is_wizard_page = std::dynamic_pointer_cast<Page1ViewModel>(vm) ||
@@ -583,7 +583,7 @@ private:
         }
     }
 
-    void recreate_page_view(std::shared_ptr<ooey::PageViewModelBase> vm) {
+    void recreate_page_view(std::shared_ptr<gooey::PageViewModelBase> vm) {
         page_container_->clear_children();
         if (!vm) {
             return;
@@ -591,7 +591,7 @@ private:
 
         title_label_->set_text(vm->get_title());
 
-        std::shared_ptr<ooey::View> page_view = nullptr;
+        std::shared_ptr<gooey::View> page_view = nullptr;
         if (auto p1 = std::dynamic_pointer_cast<Page1ViewModel>(vm)) {
             page_view = std::make_shared<Page1View>(p1);
         } else if (auto p2 = std::dynamic_pointer_cast<Page2ViewModel>(vm)) {
@@ -609,12 +609,12 @@ private:
         }
     }
 
-    std::shared_ptr<ooey::NavigationCoordinator> coordinator_;
-    std::shared_ptr<ooey::RoundedRectPrimitive> frame_;
-    std::shared_ptr<ooey::Button> back_btn_;
-    std::shared_ptr<ooey::Button> forward_btn_;
-    std::shared_ptr<ooey::Label> title_label_;
-    std::shared_ptr<ooey::View> page_container_;
+    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
+    std::shared_ptr<gooey::RoundedRectPrimitive> frame_;
+    std::shared_ptr<gooey::Button> back_btn_;
+    std::shared_ptr<gooey::Button> forward_btn_;
+    std::shared_ptr<gooey::Label> title_label_;
+    std::shared_ptr<gooey::View> page_container_;
 };
 
 // ---------------------------------------------------------
@@ -624,7 +624,7 @@ private:
 int main() {
     std::cout << "Starting OOEY Navigation Wizard Demo...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
     if (!backend || !backend->create({800, 600}, "OOEY Page Navigation Wizard")) {
@@ -633,7 +633,7 @@ int main() {
     }
     app.set_window_backend(std::move(backend));
 
-    auto coordinator = std::make_shared<ooey::NavigationCoordinator>();
+    auto coordinator = std::make_shared<gooey::NavigationCoordinator>();
     auto root_view = std::make_shared<NavigationShellView>(coordinator);
 
     // Bind exiting app trigger from ViewModel to app quit
@@ -646,7 +646,7 @@ int main() {
     coordinator->navigate_to(initial_vm);
 
     // Setup color cycle exit hook on Page 5 Viewmodel when created
-    coordinator->current_viewmodel.subscribe([page5_on_exit](std::shared_ptr<ooey::PageViewModelBase> vm) {
+    coordinator->current_viewmodel.subscribe([page5_on_exit](std::shared_ptr<gooey::PageViewModelBase> vm) {
         if (auto p5 = std::dynamic_pointer_cast<Page5ViewModel>(vm)) {
             p5->on_exit_requested = page5_on_exit;
         }

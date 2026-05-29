@@ -1,19 +1,19 @@
 #include <iostream>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
-#include "ooey/platform/platform.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/button.hpp"
-#include "ooey/controls/label.hpp"
-#include "ooey/controls/text_box.hpp"
-#include "ooey/renderer/primitives/circle_primitive.hpp"
-#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/renderer/primitives/curve_primitive.hpp"
+#include "gooey/application.hpp"
+#include "ooey/platform.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/button.hpp"
+#include "gooey/controls/label.hpp"
+#include "gooey/controls/text_box.hpp"
+#include "gooey/renderer/primitives/circle_primitive.hpp"
+#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "gooey/renderer/primitives/curve_primitive.hpp"
 
 int main() {
     std::cout << "Starting OOEY Modern GUI Demo...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
     if (!backend || !backend->create({800, 600}, "OOEY Modern Shapes & Input")) {
@@ -23,10 +23,10 @@ int main() {
 
     app.set_window_backend(std::move(backend));
 
-    auto root_view = std::make_shared<ooey::View>();
+    auto root_view = std::make_shared<gooey::View>();
 
     // 1. Add a beautiful decorative dark frame using RoundedRectPrimitive
-    auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
+    auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
         ooey::Rect{60, 60, 680, 480},
         16,                              // corner radius
         ooey::Color{30, 30, 35},         // dark gray fill
@@ -36,7 +36,7 @@ int main() {
     root_view->add_child(std::move(frame));
 
     // 2. Add some decorative colorful shapes in the background to show off the primitives
-    auto glow_circle = std::make_shared<ooey::CirclePrimitive>(
+    auto glow_circle = std::make_shared<gooey::CirclePrimitive>(
         ooey::Point{650, 450},
         60,
         ooey::Color{0, 120, 215, 60},    // transparent accent blue
@@ -45,7 +45,7 @@ int main() {
     );
     root_view->add_child(std::move(glow_circle));
 
-    auto curve_deco = std::make_shared<ooey::CurvePrimitive>(
+    auto curve_deco = std::make_shared<gooey::CurvePrimitive>(
         ooey::Point{100, 400},
         ooey::Point{250, 500},
         ooey::Point{400, 450},
@@ -55,7 +55,7 @@ int main() {
     root_view->add_child(std::move(curve_deco));
 
     // 3. Add a Title Label
-    auto title = std::make_shared<ooey::Label>(
+    auto title = std::make_shared<gooey::Label>(
         "User Onboarding",
         ooey::Font{"sans-serif", 24, ooey::FontWeight::Bold},
         ooey::Point{100, 100},
@@ -64,7 +64,7 @@ int main() {
     root_view->add_child(std::move(title));
 
     // 4. Add the Name Label
-    auto label_name = std::make_shared<ooey::Label>(
+    auto label_name = std::make_shared<gooey::Label>(
         "Name:",
         ooey::Font{"sans-serif", 16},
         ooey::Point{100, 180},
@@ -73,7 +73,7 @@ int main() {
     root_view->add_child(std::move(label_name));
 
     // 5. Add the TextBox for entering the name
-    auto name_input = std::make_shared<ooey::TextBox>(
+    auto name_input = std::make_shared<gooey::TextBox>(
         ooey::Rect{180, 172, 300, 36},
         ooey::Font{"sans-serif", 16},
         ooey::Color{240, 240, 240},      // text color
@@ -82,7 +82,7 @@ int main() {
     root_view->add_child(name_input);
 
     // 6. Add a Label to display the greeting (initially empty)
-    auto greeting = std::make_shared<ooey::Label>(
+    auto greeting = std::make_shared<gooey::Label>(
         "",
         ooey::Font{"sans-serif", 20, ooey::FontWeight::Bold},
         ooey::Point{180, 280},
@@ -91,7 +91,7 @@ int main() {
     root_view->add_child(greeting);
 
     // 7. Add the Modern Button with rounded corners (6px) and text says "Submit"
-    auto submit_btn = std::make_shared<ooey::Button>(
+    auto submit_btn = std::make_shared<gooey::Button>(
         ooey::Rect{500, 172, 120, 36},
         ooey::Color{0, 120, 215},        // Accent blue fill
         ooey::Color{0, 0, 0, 0},         // Transparent stroke

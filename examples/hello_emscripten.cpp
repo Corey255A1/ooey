@@ -3,21 +3,21 @@
 #include <vector>
 #include <cmath>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
-#include "ooey/platform/platform.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/button.hpp"
-#include "ooey/controls/label.hpp"
-#include "ooey/controls/text_box.hpp"
-#include "ooey/controls/list_control.hpp"
-#include "ooey/renderer/primitives/circle_primitive.hpp"
-#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "gooey/application.hpp"
+#include "ooey/platform.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/button.hpp"
+#include "gooey/controls/label.hpp"
+#include "gooey/controls/text_box.hpp"
+#include "gooey/controls/list_control.hpp"
+#include "gooey/renderer/primitives/circle_primitive.hpp"
+#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
 
 int main() {
     std::cout << "Starting OOEY WebAssembly Application...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
     if (!backend || !backend->create({800, 600}, "OOEY WebAssembly Application")) {
@@ -27,10 +27,10 @@ int main() {
 
     app.set_window_backend(std::move(backend));
 
-    auto root_view = std::make_shared<ooey::View>();
+    auto root_view = std::make_shared<gooey::View>();
 
     // 1. Decorative background frame
-    auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
+    auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
         ooey::Rect{50, 50, 700, 500},
         16,
         ooey::Color{30, 30, 35},
@@ -40,7 +40,7 @@ int main() {
     root_view->add_child(std::move(frame));
 
     // 2. Title Label
-    auto title = std::make_shared<ooey::Label>(
+    auto title = std::make_shared<gooey::Label>(
         "OOEY WebAssembly Canvas",
         ooey::Font{"sans-serif", 24, ooey::FontWeight::Bold},
         ooey::Point{100, 90},
@@ -49,7 +49,7 @@ int main() {
     root_view->add_child(std::move(title));
 
     // 3. Name Input textbox
-    auto label_name = std::make_shared<ooey::Label>(
+    auto label_name = std::make_shared<gooey::Label>(
         "Name:",
         ooey::Font{"sans-serif", 16},
         ooey::Point{100, 160},
@@ -57,7 +57,7 @@ int main() {
     );
     root_view->add_child(std::move(label_name));
 
-    auto name_input = std::make_shared<ooey::TextBox>(
+    auto name_input = std::make_shared<gooey::TextBox>(
         ooey::Rect{180, 150, 280, 36},
         ooey::Font{"sans-serif", 16},
         ooey::Color{240, 240, 240},
@@ -66,7 +66,7 @@ int main() {
     root_view->add_child(name_input);
 
     // 4. Greeting label
-    auto greeting = std::make_shared<ooey::Label>(
+    auto greeting = std::make_shared<gooey::Label>(
         "",
         ooey::Font{"sans-serif", 18, ooey::FontWeight::Bold},
         ooey::Point{180, 210},
@@ -75,7 +75,7 @@ int main() {
     root_view->add_child(greeting);
 
     // 5. Submit Button
-    auto submit_btn = std::make_shared<ooey::Button>(
+    auto submit_btn = std::make_shared<gooey::Button>(
         ooey::Rect{480, 150, 100, 36},
         ooey::Color{0, 120, 215},
         ooey::Color{0, 0, 0, 0},
@@ -97,7 +97,7 @@ int main() {
     root_view->add_child(std::move(submit_btn));
 
     // 6. List Box Control
-    auto label_list = std::make_shared<ooey::Label>(
+    auto label_list = std::make_shared<gooey::Label>(
         "Selection List:",
         ooey::Font{"sans-serif", 16},
         ooey::Point{100, 270},
@@ -105,7 +105,7 @@ int main() {
     );
     root_view->add_child(std::move(label_list));
 
-    auto list_box = std::make_shared<ooey::ListControl>(
+    auto list_box = std::make_shared<gooey::ListControl>(
         ooey::Rect{100, 300, 240, 200},
         40,
         ooey::Font{"sans-serif", 14},
@@ -129,7 +129,7 @@ int main() {
     root_view->add_child(list_box);
 
     // 7. Decorative Circle shape
-    auto circle = std::make_shared<ooey::CirclePrimitive>(
+    auto circle = std::make_shared<gooey::CirclePrimitive>(
         ooey::Point{480, 340},
         50,
         ooey::Color{100, 50, 200, 60},
@@ -139,7 +139,7 @@ int main() {
     root_view->add_child(std::move(circle));
 
     // 8. Sinusoid Wave animation
-    auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
+    auto sinusoid = std::make_shared<gooey::SinusoidPrimitive>(
         ooey::Rect{400, 420, 300, 80},
         4.0f, // frequency
         20.0f, // amplitude

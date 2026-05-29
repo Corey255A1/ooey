@@ -2,35 +2,35 @@
 #include <memory>
 #include <string>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
+#include "gooey/application.hpp"
 #include "ooey/platform/x11/window_backend.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/text_box.hpp"
-#include "ooey/controls/label.hpp"
-#include "ooey/mvvmc/property.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/text_box.hpp"
+#include "gooey/controls/label.hpp"
+#include "gooey/mvvmc/property.hpp"
 
 class TextViewModel {
 public:
-    ooey::Property<std::string> user_text{"Type here..."};
+    gooey::Property<std::string> user_text{"Type here..."};
 
     void on_text_input(const std::string& new_text) {
         user_text.set(new_text);
     }
 };
 
-class TextView : public ooey::View {
+class TextView : public gooey::View {
 public:
     TextView(std::shared_ptr<TextViewModel> view_model) : view_model_(std::move(view_model)) {
         ooey::Font default_font{"sans-serif", 16};
 
-        auto text_box = std::make_shared<ooey::TextBox>(
+        auto text_box = std::make_shared<gooey::TextBox>(
             ooey::Rect{50, 50, 300, 30},
             default_font,
             ooey::Color{0, 0, 0},
             ooey::Color{255, 255, 255}
         );
 
-        auto label = std::make_shared<ooey::Label>(
+        auto label = std::make_shared<gooey::Label>(
             "Will reflect text here",
             default_font,
             ooey::Point{50, 100},
@@ -60,7 +60,7 @@ private:
 int main() {
     std::cout << "Starting OOEY X11 Text Example...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = std::make_unique<ooey::x11::WindowBackend>();
     if (!backend->create({400, 200}, "OOEY X11 Text Example")) {

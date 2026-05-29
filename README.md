@@ -60,9 +60,24 @@ Lets define and document how to make these objects interactive. With our base le
 
 All GUI frameworks have a way to display and edit text. We should be able to display the typical single line or multiline texts as well as having editable single line or multiline texts. I want it to be able to use system fonts, or just default to a built in text renderer for basic english texts. Fonts should be scaleable, colorable, bold, italic.
 
+## Library Architecture
+
+OOEY is divided into two separate libraries to maximize portability and keep core platform dependencies separated from the UI logic:
+
+1. **`ooey`** (Graphics & Platform Core)
+   - Encapsulates OS surface/window creation (X11, Wayland, Linux Framebuffer, Emscripten).
+   - Provides graphics API wrappers (`GlRenderTarget` for OpenGL-based systems, `SoftwareRenderTarget` for raw framebuffer/memory-block rasterization).
+   - Manages unified input manager and pointer tracking.
+   - All classes in this library reside under the `ooey` namespace.
+
+2. **`gooey`** (UI Toolkit & MVVMC)
+   - Dependent on the `ooey` library.
+   - Implements layout architecture (`Application`, `View`), interactive components (`Button`, `Label`, `TextBox`, `ListControl`), MVVMC bindings (`Controller`, `NavigationCoordinator`, `Property`), and primitive shape drawing.
+   - All classes in this library reside under the `gooey` namespace.
+
 ## Building and Running
 
-To compile and run the engine, especially the example that opens a native window, you'll need a few dependencies and a modern C++ compiler. 
+To compile and run the engine, especially the examples that open native windows, you'll need a few dependencies and a modern C++ compiler. 
 
 ### Dependencies (Debian/Ubuntu/ChromeOS Crostini)
 You need CMake, a C++20 compatible compiler, and the X11/OpenGL development libraries:
@@ -81,41 +96,26 @@ cmake -B build -S .
 cmake --build build -j$(nproc)
 ```
 
-### Running the Example
-Once compiled, you can run the `hello_ooey` example, which opens an 800x600 window with a red square rendered using OpenGL:
+This compiles:
+- `libooey.a`: The core graphics/platform library.
+- `libgooey.a`: The UI toolkit library.
+
+### Running Examples
+Once compiled, you can run various examples from the `build/examples` directory:
 ```bash
+# Run X11 OpenGL hello world
 ./build/examples/hello_ooey
+
+# Run the MVVM-C example
+./build/examples/hello_ooey_mvvmc
+
+# Run the Wizard application
+./build/examples/hello_wizard
 ```
 
 ### Running Tests
 To run the automated GoogleTest suite:
 ```bash
-cd build
-ctest --output-on-failure
+./build/tests/ooey_tests
 ```
 
-# Task List
-- Project Skeleton and Build System Setup
-    - Initialize CMake project (CMakeLists.txt) enforcing C++20.
-    - Create foundational directory structure (`src`, `include`, `tests`).
-- Core Architecture & Abstractions
-    - Define abstract interfaces for `RenderTarget` (Window, Memory, File).
-    - Define abstract interfaces for `WindowBackend` (Wayland, X11, Windows, macOS).
-    - Create basic data structures for rendering (e.g., `Color`, `Rect`, `Point`).
-- Initial Linux/Chromebook Implementation
-    - Implement a basic Window backend using Wayland or X11.
-    - Implement a basic RenderTarget for the Window (potentially using OpenGL or Vulkan).
-- Composable Scene Graph & Unified Input
-    - Refactor `IRenderTarget` to accept a base `Drawable` or geometry batches instead of fixed `draw_rect` functions.
-    - Create primitive drawables (`RectPrimitive`, `LinePrimitive`) and composable UI elements.
-    - Implement an `InputManager` with a universal `Pointer` struct (X, Y, State) capable of tracking multi-touch, mouse, or keyboard-driven cursors.
-    - Abstract input sources as plugins/providers feeding into the `InputManager`.
-- Expanded Rendering Capabilities
-    - Implement an in-memory RenderTarget for CPU-side rendering.
-    - Implement a File RenderTarget (e.g., outputting to a raw image file).
-- Strict MVVM-C Framework
-    - Implement the `Controller` layer responsible for processing raw system events.
-    - Implement View and ViewModel binding interfaces.
-- Media and Asset Integration (Future)
-    - Integrate `libpng`/`libjpeg` for image loading and display.
-    - Explore `alsa`/`pulseaudio` for sound and `ffmpeg` for video playback.

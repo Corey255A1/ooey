@@ -22,7 +22,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Define the ooey library target
 add_library(ooey)
 
-
 # Optional X11 backend
 option(OOEY_BUILD_X11 "Build the X11 backend (requires X11 and GLX)" ON)
 if(OOEY_BUILD_X11)
@@ -82,8 +81,8 @@ if(OOEY_BUILD_WAYLAND)
     pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
     # Add the wayland source files
     list(APPEND OOey_WAYLAND_SRCS
-        src/platform/wayland/window_backend.cpp
-        src/platform/wayland/render_target.cpp
+        ooey/src/platform/wayland/window_backend.cpp
+        ooey/src/platform/wayland/render_target.cpp
     )
     target_include_directories(ooey PUBLIC ${WAYLAND_INCLUDE_DIRS} ${XKBCOMMON_INCLUDE_DIRS} ${WAYLAND_PROTOCOLS_INCLUDE_DIRS})
     target_compile_options(ooey PUBLIC ${WAYLAND_CFLAGS_OTHER} ${XKBCOMMON_CFLAGS_OTHER} ${WAYLAND_PROTOCOLS_CFLAGS_OTHER})
@@ -94,42 +93,32 @@ endif()
 option(OOEY_BUILD_FRAMEBUFFER "Build the Framebuffer backend (requires Linux framebuffer /dev/fb0)" ON)
 if(OOEY_BUILD_FRAMEBUFFER)
     list(APPEND OOey_FRAMEBUFFER_SRCS
-        src/platform/framebuffer/window_backend.cpp
-        src/platform/framebuffer/render_target.cpp
+        ooey/src/platform/framebuffer/window_backend.cpp
+        ooey/src/platform/framebuffer/render_target.cpp
     )
 endif()
 
 # Add source files
 set(OOEY_SRCS
-    src/ooey.cpp
-    src/application.cpp
-    src/renderer/primitives/rect_primitive.cpp
-    src/renderer/primitives/line_primitive.cpp
-    src/renderer/primitives/text_primitive.cpp
-    src/renderer/primitives/circle_primitive.cpp
-    src/renderer/primitives/rounded_rect_primitive.cpp
-    src/renderer/primitives/polygon_primitive.cpp
-    src/renderer/primitives/curve_primitive.cpp
-    src/renderer/primitives/sinusoid_primitive.cpp
-    src/mvvmc/view.cpp
-    src/input.cpp
-    src/mvvmc/controller.cpp
-    src/renderer/bitmap_font.cpp
-    src/platform/platform.cpp
-    src/mvvmc/navigation_coordinator.cpp
+    ooey/src/ooey.cpp
+    ooey/src/input.cpp
+    ooey/src/platform.cpp
+    ooey/src/renderer/bitmap_font.cpp
+    ooey/src/renderer/gl_render_target.cpp
+    ooey/src/renderer/software_render_target.cpp
 )
 
 if(OOEY_BUILD_X11)
     list(APPEND OOEY_SRCS
-        src/platform/x11/window_backend.cpp
-        src/platform/x11/render_target.cpp
+        ooey/src/platform/x11/window_backend.cpp
+        ooey/src/platform/x11/render_target.cpp
     )
 endif()
 
 if(EMSCRIPTEN)
     list(APPEND OOEY_SRCS
-        src/platform/emscripten/window_backend.cpp
-        src/platform/emscripten/render_target.cpp
+        ooey/src/platform/emscripten/window_backend.cpp
+        ooey/src/platform/emscripten/render_target.cpp
     )
 endif()
 
@@ -142,7 +131,7 @@ target_sources(ooey PRIVATE ${OOEY_SRCS})
 
 # Setup include directories
 target_include_directories(ooey PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ooey/include>
     $<INSTALL_INTERFACE:include>
 )
 
@@ -166,19 +155,34 @@ else()
     )
 endif()
 
-# Option to build controls library
-option(OOEY_BUILD_CONTROLS "Build the OOEY controls library" ON)
+# Define the gooey library target
+add_library(gooey)
+target_sources(gooey PRIVATE
+    gooey/src/application.cpp
+    gooey/src/controls/button.cpp
+    gooey/src/controls/label.cpp
+    gooey/src/controls/text_box.cpp
+    gooey/src/controls/list_control.cpp
+    gooey/src/mvvmc/controller.cpp
+    gooey/src/mvvmc/navigation_coordinator.cpp
+    gooey/src/mvvmc/view.cpp
+    gooey/src/renderer/primitives/circle_primitive.cpp
+    gooey/src/renderer/primitives/curve_primitive.cpp
+    gooey/src/renderer/primitives/line_primitive.cpp
+    gooey/src/renderer/primitives/polygon_primitive.cpp
+    gooey/src/renderer/primitives/rect_primitive.cpp
+    gooey/src/renderer/primitives/rounded_rect_primitive.cpp
+    gooey/src/renderer/primitives/sinusoid_primitive.cpp
+    gooey/src/renderer/primitives/text_primitive.cpp
+)
+target_include_directories(gooey PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gooey/include>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(gooey PUBLIC ooey)
 
-if(OOEY_BUILD_CONTROLS)
-    add_library(ooey_controls)
-    target_sources(ooey_controls PRIVATE 
-        src/controls/button.cpp
-        src/controls/label.cpp
-        src/controls/text_box.cpp
-        src/controls/list_control.cpp
-    )
-    target_link_libraries(ooey_controls PUBLIC ooey)
-endif()
+# Create an alias target for backward compatibility
+add_library(ooey_controls ALIAS gooey)
 
 # Subdirectories
 add_subdirectory(examples)

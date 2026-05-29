@@ -5,14 +5,14 @@
 #include <chrono>
 #include <boost/asio.hpp>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
-#include "ooey/platform/platform.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/label.hpp"
-#include "ooey/controls/text_box.hpp"
-#include "ooey/controls/list_control.hpp"
-#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/mvvmc/i_controller.hpp"
+#include "gooey/application.hpp"
+#include "ooey/platform.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/label.hpp"
+#include "gooey/controls/text_box.hpp"
+#include "gooey/controls/list_control.hpp"
+#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "gooey/mvvmc/i_controller.hpp"
 
 using boost::asio::ip::tcp;
 
@@ -21,15 +21,15 @@ using boost::asio::ip::tcp;
 // ---------------------------------------------------------
 class NetworkViewModel {
 public:
-    ooey::Property<int> selected_index{0};
-    ooey::Property<std::string> text_content{""};
+    gooey::Property<int> selected_index{0};
+    gooey::Property<std::string> text_content{""};
     std::function<void()> on_exit_requested;
 };
 
 // ---------------------------------------------------------
 // 2. Custom Network Controller
 // ---------------------------------------------------------
-class NetworkController : public ooey::IController {
+class NetworkController : public gooey::IController {
 public:
     NetworkController(boost::asio::io_context& io_context, std::shared_ptr<NetworkViewModel> vm)
         : io_context_(io_context),
@@ -128,11 +128,11 @@ private:
 // ---------------------------------------------------------
 // 3. Network View
 // ---------------------------------------------------------
-class NetworkView : public ooey::View {
+class NetworkView : public gooey::View {
 public:
     explicit NetworkView(std::shared_ptr<NetworkViewModel> vm) : vm_(vm) {
         // Outer card frame
-        auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
+        auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},
             16,
             ooey::Color{30, 30, 35},
@@ -142,7 +142,7 @@ public:
         add_child(std::move(frame));
 
         // Title
-        auto title = std::make_shared<ooey::Label>(
+        auto title = std::make_shared<gooey::Label>(
             "TCP Network-Driven UI",
             ooey::Font{"sans-serif", 24, ooey::FontWeight::Bold},
             ooey::Point{100, 100},
@@ -151,7 +151,7 @@ public:
         add_child(std::move(title));
 
         // Info Label
-        auto info_lbl = std::make_shared<ooey::Label>(
+        auto info_lbl = std::make_shared<gooey::Label>(
             "This window ignores physics pointer/keyboard events.\n"
             "Connect via python script on port 12345 to drive interactions.",
             ooey::Font{"sans-serif", 14},
@@ -161,7 +161,7 @@ public:
         add_child(std::move(info_lbl));
 
         // List Control
-        auto list = std::make_shared<ooey::ListControl>(
+        auto list = std::make_shared<gooey::ListControl>(
             ooey::Rect{100, 200, 280, 250},
             50,
             ooey::Font{"sans-serif", 16},
@@ -186,7 +186,7 @@ public:
         add_child(list);
 
         // Text input field
-        auto input = std::make_shared<ooey::TextBox>(
+        auto input = std::make_shared<gooey::TextBox>(
             ooey::Rect{420, 200, 280, 40},
             ooey::Font{"sans-serif", 16},
             ooey::Color{240, 240, 240},
@@ -195,7 +195,7 @@ public:
         add_child(input);
 
         // Selection details label
-        auto details = std::make_shared<ooey::Label>(
+        auto details = std::make_shared<gooey::Label>(
             "Selected: Item 1: Debian",
             ooey::Font{"sans-serif", 16},
             ooey::Point{420, 270},
@@ -226,7 +226,7 @@ private:
 int main() {
     std::cout << "Starting OOEY Network Controlled UI Demo...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
     if (!backend || !backend->create({800, 600}, "OOEY Network Controlled UI")) {

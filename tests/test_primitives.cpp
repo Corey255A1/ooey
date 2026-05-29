@@ -2,13 +2,13 @@
 #include "ooey/types.hpp"
 #include "ooey/renderer/geometry.hpp"
 #include "ooey/renderer/i_render_target.hpp"
-#include "ooey/renderer/primitives/line_primitive.hpp"
-#include "ooey/renderer/primitives/rect_primitive.hpp"
-#include "ooey/renderer/primitives/circle_primitive.hpp"
-#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/renderer/primitives/polygon_primitive.hpp"
-#include "ooey/renderer/primitives/curve_primitive.hpp"
-#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "gooey/renderer/primitives/line_primitive.hpp"
+#include "gooey/renderer/primitives/rect_primitive.hpp"
+#include "gooey/renderer/primitives/circle_primitive.hpp"
+#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "gooey/renderer/primitives/polygon_primitive.hpp"
+#include "gooey/renderer/primitives/curve_primitive.hpp"
+#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
 #include <vector>
 
 class MockRenderTarget : public ooey::IRenderTarget {
@@ -34,7 +34,7 @@ TEST(PrimitivesTest, LinePrimitiveThickness) {
     MockRenderTarget target;
 
     // Thin line
-    ooey::LinePrimitive thin_line({10, 20}, {100, 200}, {255, 0, 0}, 1.0f);
+    gooey::LinePrimitive thin_line({10, 20}, {100, 200}, {255, 0, 0}, 1.0f);
     thin_line.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -45,7 +45,7 @@ TEST(PrimitivesTest, LinePrimitiveThickness) {
     target.geometries.clear();
 
     // Thick line
-    ooey::LinePrimitive thick_line({10, 20}, {100, 200}, {255, 0, 0}, 5.0f);
+    gooey::LinePrimitive thick_line({10, 20}, {100, 200}, {255, 0, 0}, 5.0f);
     thick_line.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -58,7 +58,7 @@ TEST(PrimitivesTest, RectPrimitiveFillAndStroke) {
     MockRenderTarget target;
 
     // Fill only
-    ooey::RectPrimitive fill_rect({10, 10, 100, 100}, {255, 0, 0});
+    gooey::RectPrimitive fill_rect({10, 10, 100, 100}, {255, 0, 0});
     fill_rect.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -68,7 +68,7 @@ TEST(PrimitivesTest, RectPrimitiveFillAndStroke) {
     target.geometries.clear();
 
     // Stroke only
-    ooey::RectPrimitive stroke_rect({10, 10, 100, 100}, {0, 0, 0, 0}, {0, 0, 255}, 4.0f);
+    gooey::RectPrimitive stroke_rect({10, 10, 100, 100}, {0, 0, 0, 0}, {0, 0, 255}, 4.0f);
     stroke_rect.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -80,7 +80,7 @@ TEST(PrimitivesTest, RectPrimitiveFillAndStroke) {
     target.geometries.clear();
 
     // Fill + Stroke
-    ooey::RectPrimitive complex_rect({10, 10, 100, 100}, {255, 0, 0}, {0, 0, 255}, 4.0f);
+    gooey::RectPrimitive complex_rect({10, 10, 100, 100}, {255, 0, 0}, {0, 0, 255}, 4.0f);
     complex_rect.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -92,7 +92,7 @@ TEST(PrimitivesTest, CirclePrimitiveRendering) {
     MockRenderTarget target;
 
     // Fill + Stroke
-    ooey::CirclePrimitive circle({50, 50}, 20, {255, 0, 0}, {0, 255, 0}, 3.0f);
+    gooey::CirclePrimitive circle({50, 50}, 20, {255, 0, 0}, {0, 255, 0}, 3.0f);
     circle.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -105,7 +105,7 @@ TEST(PrimitivesTest, CirclePrimitiveRendering) {
 TEST(PrimitivesTest, RoundedRectPrimitiveRendering) {
     MockRenderTarget target;
 
-    ooey::RoundedRectPrimitive rounded_rect({10, 10, 100, 100}, 10, {255, 0, 0}, {0, 0, 255}, 2.0f);
+    gooey::RoundedRectPrimitive rounded_rect({10, 10, 100, 100}, 10, {255, 0, 0}, {0, 0, 255}, 2.0f);
     rounded_rect.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -117,7 +117,7 @@ TEST(PrimitivesTest, PolygonPrimitiveRendering) {
     MockRenderTarget target;
 
     std::vector<ooey::Point> points = {{10, 10}, {50, 10}, {30, 40}};
-    ooey::PolygonPrimitive poly(points, {255, 0, 0}, {0, 255, 0}, 2.0f);
+    gooey::PolygonPrimitive poly(points, {255, 0, 0}, {0, 255, 0}, 2.0f);
     poly.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -129,7 +129,7 @@ TEST(PrimitivesTest, CurvePrimitiveBezier) {
     MockRenderTarget target;
 
     // Quadratic curve
-    ooey::CurvePrimitive quad_curve({10, 10}, {50, 100}, {90, 10}, {255, 0, 0}, 3.0f);
+    gooey::CurvePrimitive quad_curve({10, 10}, {50, 100}, {90, 10}, {255, 0, 0}, 3.0f);
     quad_curve.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -139,7 +139,7 @@ TEST(PrimitivesTest, CurvePrimitiveBezier) {
     target.geometries.clear();
 
     // Cubic curve
-    ooey::CurvePrimitive cubic_curve({10, 10}, {30, 100}, {70, -100}, {90, 10}, {255, 0, 0}, 3.0f);
+    gooey::CurvePrimitive cubic_curve({10, 10}, {30, 100}, {70, -100}, {90, 10}, {255, 0, 0}, 3.0f);
     cubic_curve.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -150,7 +150,7 @@ TEST(PrimitivesTest, SinusoidPrimitiveRendering) {
     MockRenderTarget target;
 
     // Thin sinusoid
-    ooey::SinusoidPrimitive thin_sine({10, 100}, {210, 100}, 20.0f, 2.0f, 0.0f, {255, 0, 0}, 1.0f);
+    gooey::SinusoidPrimitive thin_sine({10, 100}, {210, 100}, 20.0f, 2.0f, 0.0f, {255, 0, 0}, 1.0f);
     thin_sine.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);
@@ -161,7 +161,7 @@ TEST(PrimitivesTest, SinusoidPrimitiveRendering) {
     target.geometries.clear();
 
     // Thick sinusoid
-    ooey::SinusoidPrimitive thick_sine({10, 100}, {210, 100}, 20.0f, 2.0f, 0.0f, {255, 0, 0}, 4.0f);
+    gooey::SinusoidPrimitive thick_sine({10, 100}, {210, 100}, 20.0f, 2.0f, 0.0f, {255, 0, 0}, 4.0f);
     thick_sine.draw(target);
 
     ASSERT_EQ(target.geometries.size(), 1);

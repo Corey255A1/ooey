@@ -1,11 +1,11 @@
 #include <iostream>
 #include <memory>
 #include "ooey/ooey.hpp"
-#include "ooey/application.hpp"
-#include "ooey/platform/platform.hpp"
-#include "ooey/mvvmc/view.hpp"
-#include "ooey/controls/button.hpp"
-#include "ooey/mvvmc/property.hpp"
+#include "gooey/application.hpp"
+#include "ooey/platform.hpp"
+#include "gooey/mvvmc/view.hpp"
+#include "gooey/controls/button.hpp"
+#include "gooey/mvvmc/property.hpp"
 
 // ---------------------------------------------------------
 // 1. The ViewModel (Logic & State)
@@ -15,8 +15,8 @@
 class MainViewModel {
 public:
     // Properties that the View will observe
-    ooey::Property<ooey::Color> color_a{ooey::Color{255, 0, 0}};   // Starts Red
-    ooey::Property<ooey::Color> color_b{ooey::Color{0, 255, 0}}; // Starts Green
+    gooey::Property<ooey::Color> color_a{ooey::Color{255, 0, 0}};   // Starts Red
+    gooey::Property<ooey::Color> color_b{ooey::Color{0, 255, 0}}; // Starts Green
 
     // Commands/Methods triggered by the UI
     void on_box_a_clicked() {
@@ -43,12 +43,12 @@ public:
 // ---------------------------------------------------------
 // This class composes the visual elements and binds them
 // to the ViewModel properties and commands.
-class MainView : public ooey::View {
+class MainView : public gooey::View {
 public:
     MainView(std::shared_ptr<MainViewModel> view_model) : view_model_(std::move(view_model)) {
         // Construct visual elements
-        auto box_a = std::make_shared<ooey::Button>(ooey::Rect{100, 200, 200, 200}, ooey::Color{0, 0, 0});
-        auto box_b = std::make_shared<ooey::Button>(ooey::Rect{500, 200, 200, 200}, ooey::Color{0, 0, 0});
+        auto box_a = std::make_shared<gooey::Button>(ooey::Rect{100, 200, 200, 200}, ooey::Color{0, 0, 0});
+        auto box_b = std::make_shared<gooey::Button>(ooey::Rect{500, 200, 200, 200}, ooey::Color{0, 0, 0});
 
         // -- Data Binding: State (ViewModel) -> UI (View) --
         // When color_a changes, update box_a
@@ -88,7 +88,7 @@ private:
 int main() {
     std::cout << "Starting OOEY MVVM-C Example...\n";
 
-    ooey::Application app;
+    gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
     if (!backend || !backend->create({800, 600}, "OOEY MVVM-C Interaction")) {
