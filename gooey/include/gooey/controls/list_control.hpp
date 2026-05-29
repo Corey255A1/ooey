@@ -5,9 +5,9 @@ namespace ooey {}
 
 #include "gooey/mvvmc/view.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "gooey/renderer/primitives/rect_primitive.hpp"
-#include "gooey/renderer/primitives/text_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rect_primitive.hpp"
+#include "ooey/renderer/primitives/text_primitive.hpp"
 #include <vector>
 #include <string>
 #include <memory>

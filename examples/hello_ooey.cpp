@@ -4,7 +4,7 @@
 #include "ooey/platform.hpp"
 #include "gooey/mvvmc/view.hpp"
 #include "gooey/controls/button.hpp"
-#include "gooey/renderer/primitives/line_primitive.hpp"
+#include "ooey/renderer/primitives/line_primitive.hpp"
 
 int main() {
     std::cout << "Welcome to OOEY GUI Engine v" << ooey::get_version() << "!\n";
@@ -30,7 +30,7 @@ int main() {
     root_view->add_child(std::move(button));
 
     // Add a blue line across it
-    root_view->add_child(std::make_shared<gooey::LinePrimitive>(ooey::Point{300, 200}, ooey::Point{500, 400}, ooey::Color{0, 0, 255}));
+    root_view->add_child(std::make_shared<ooey::LinePrimitive>(ooey::Point{300, 200}, ooey::Point{500, 400}, ooey::Color{0, 0, 255}));
 
     // Inject the root view into the application
     app.set_root_view(std::move(root_view));

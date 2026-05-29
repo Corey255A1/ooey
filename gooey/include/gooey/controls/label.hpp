@@ -4,7 +4,7 @@ namespace ooey {}
 
 
 #include "gooey/mvvmc/view.hpp"
-#include "gooey/renderer/primitives/text_primitive.hpp"
+#include "ooey/renderer/primitives/text_primitive.hpp"
 #include <memory>
 #include <string>
 

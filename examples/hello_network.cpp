@@ -11,7 +11,7 @@
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/text_box.hpp"
 #include "gooey/controls/list_control.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "gooey/mvvmc/i_controller.hpp"
 
 using boost::asio::ip::tcp;
@@ -132,7 +132,7 @@ class NetworkView : public gooey::View {
 public:
     explicit NetworkView(std::shared_ptr<NetworkViewModel> vm) : vm_(vm) {
         // Outer card frame
-        auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
+        auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},
             16,
             ooey::Color{30, 30, 35},

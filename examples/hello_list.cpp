@@ -9,7 +9,7 @@
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/list_control.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 
 int main() {
     std::cout << "Starting OOEY List Control Demo...\n";
@@ -27,7 +27,7 @@ int main() {
     auto root_view = std::make_shared<gooey::View>();
 
     // Background Card
-    auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
+    auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
         ooey::Rect{50, 50, 700, 480},
         16,
         ooey::Color{30, 30, 35},

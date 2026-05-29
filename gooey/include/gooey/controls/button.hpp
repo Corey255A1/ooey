@@ -5,7 +5,7 @@ namespace ooey {}
 
 #include "gooey/mvvmc/view.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "gooey/controls/label.hpp"
 #include <functional>
 #include <memory>

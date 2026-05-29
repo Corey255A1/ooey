@@ -11,10 +11,10 @@
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/list_control.hpp"
-#include "gooey/renderer/primitives/line_primitive.hpp"
-#include "gooey/renderer/primitives/circle_primitive.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "ooey/renderer/primitives/line_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
 #include "gooey/mvvmc/navigation_coordinator.hpp"
 
 // Forward declarations of ViewModels
@@ -270,7 +270,7 @@ public:
         float radius = 70.0f;
 
         // Face outline
-        auto clock_face = std::make_shared<gooey::CirclePrimitive>(
+        auto clock_face = std::make_shared<ooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             static_cast<int>(radius),
             ooey::Color{20, 20, 22},
@@ -280,7 +280,7 @@ public:
         add_child(std::move(clock_face));
 
         // Dial
-        auto center_dial = std::make_shared<gooey::CirclePrimitive>(
+        auto center_dial = std::make_shared<ooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             5,
             ooey::Color{0, 120, 215},
@@ -293,21 +293,21 @@ public:
         float len_m = radius * 0.75f;
         float len_s = radius * 0.85f;
 
-        auto hour_hand = std::make_shared<gooey::LinePrimitive>(
+        auto hour_hand = std::make_shared<ooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_h)},
             ooey::Color{220, 220, 220},
             4.0f
         );
 
-        auto minute_hand = std::make_shared<gooey::LinePrimitive>(
+        auto minute_hand = std::make_shared<ooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_m)},
             ooey::Color{160, 160, 160},
             2.5f
         );
 
-        auto second_hand = std::make_shared<gooey::LinePrimitive>(
+        auto second_hand = std::make_shared<ooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_s)},
             ooey::Color{255, 80, 80},
@@ -394,7 +394,7 @@ public:
         );
         add_child(std::move(label));
 
-        auto sinusoid = std::make_shared<gooey::SinusoidPrimitive>(
+        auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
             ooey::Point{100, 280},
             ooey::Point{700, 280},
             40.0f,
@@ -468,7 +468,7 @@ public:
         : coordinator_(coordinator) {
         
         // Static frame card background
-        frame_ = std::make_shared<gooey::RoundedRectPrimitive>(
+        frame_ = std::make_shared<ooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},
             16,
             ooey::Color{30, 30, 35},
@@ -610,7 +610,7 @@ private:
     }
 
     std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
-    std::shared_ptr<gooey::RoundedRectPrimitive> frame_;
+    std::shared_ptr<ooey::RoundedRectPrimitive> frame_;
     std::shared_ptr<gooey::Button> back_btn_;
     std::shared_ptr<gooey::Button> forward_btn_;
     std::shared_ptr<gooey::Label> title_label_;

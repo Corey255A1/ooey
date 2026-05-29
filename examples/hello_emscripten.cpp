@@ -10,9 +10,9 @@
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/text_box.hpp"
 #include "gooey/controls/list_control.hpp"
-#include "gooey/renderer/primitives/circle_primitive.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
 
 int main() {
     std::cout << "Starting OOEY WebAssembly Application...\n";
@@ -30,7 +30,7 @@ int main() {
     auto root_view = std::make_shared<gooey::View>();
 
     // 1. Decorative background frame
-    auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
+    auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
         ooey::Rect{50, 50, 700, 500},
         16,
         ooey::Color{30, 30, 35},
@@ -129,7 +129,7 @@ int main() {
     root_view->add_child(list_box);
 
     // 7. Decorative Circle shape
-    auto circle = std::make_shared<gooey::CirclePrimitive>(
+    auto circle = std::make_shared<ooey::CirclePrimitive>(
         ooey::Point{480, 340},
         50,
         ooey::Color{100, 50, 200, 60},
@@ -139,7 +139,7 @@ int main() {
     root_view->add_child(std::move(circle));
 
     // 8. Sinusoid Wave animation
-    auto sinusoid = std::make_shared<gooey::SinusoidPrimitive>(
+    auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
         ooey::Rect{400, 420, 300, 80},
         4.0f, // frequency
         20.0f, // amplitude

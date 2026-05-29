@@ -6,9 +6,9 @@
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/text_box.hpp"
-#include "gooey/renderer/primitives/circle_primitive.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "gooey/renderer/primitives/curve_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/curve_primitive.hpp"
 
 int main() {
     std::cout << "Starting OOEY Modern GUI Demo...\n";
@@ -26,7 +26,7 @@ int main() {
     auto root_view = std::make_shared<gooey::View>();
 
     // 1. Add a beautiful decorative dark frame using RoundedRectPrimitive
-    auto frame = std::make_shared<gooey::RoundedRectPrimitive>(
+    auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
         ooey::Rect{60, 60, 680, 480},
         16,                              // corner radius
         ooey::Color{30, 30, 35},         // dark gray fill
@@ -36,7 +36,7 @@ int main() {
     root_view->add_child(std::move(frame));
 
     // 2. Add some decorative colorful shapes in the background to show off the primitives
-    auto glow_circle = std::make_shared<gooey::CirclePrimitive>(
+    auto glow_circle = std::make_shared<ooey::CirclePrimitive>(
         ooey::Point{650, 450},
         60,
         ooey::Color{0, 120, 215, 60},    // transparent accent blue
@@ -45,7 +45,7 @@ int main() {
     );
     root_view->add_child(std::move(glow_circle));
 
-    auto curve_deco = std::make_shared<gooey::CurvePrimitive>(
+    auto curve_deco = std::make_shared<ooey::CurvePrimitive>(
         ooey::Point{100, 400},
         ooey::Point{250, 500},
         ooey::Point{400, 450},

@@ -10,10 +10,10 @@
 #include "ooey/platform.hpp"
 #include "gooey/mvvmc/view.hpp"
 #include "gooey/controls/label.hpp"
-#include "gooey/renderer/primitives/line_primitive.hpp"
-#include "gooey/renderer/primitives/circle_primitive.hpp"
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "gooey/renderer/primitives/sinusoid_primitive.hpp"
+#include "ooey/renderer/primitives/line_primitive.hpp"
+#include "ooey/renderer/primitives/circle_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/sinusoid_primitive.hpp"
 #include "gooey/mvvmc/property.hpp"
 
 // ---------------------------------------------------------
@@ -29,40 +29,29 @@ public:
     gooey::Property<float> sinusoid_phase{0.0f};
 
     void update(float dt) {
-        // Increment phase for scrolling sinusoid wave
-        float next_phase = sinusoid_phase.get() + dt * 3.0f;
-        sinusoid_phase.set(next_phase);
-
-        // Get system time
         auto now = std::chrono::system_clock::now();
-        auto time_c = std::chrono::system_clock::to_time_t(now);
-        
-        // Thread-safe local time query
-        struct tm parts{};
-#if defined(_WIN32)
-        localtime_s(&parts, &time_c);
-#else
-        localtime_r(&time_c, &parts);
-#endif
+        std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+        std::tm* parts = std::localtime(&now_c);
 
-        int hour = parts.tm_hour;
-        int min = parts.tm_min;
-        int sec = parts.tm_sec;
+        auto duration = now.time_since_epoch();
+        auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() % 1000;
 
-        // Smooth time calculation for hands animation
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-        float smooth_sec = static_cast<float>(sec) + static_cast<float>(ms.count()) / 1000.0f;
-        float smooth_min = static_cast<float>(min) + smooth_sec / 60.0f;
-        float smooth_hour = static_cast<float>(hour % 12) + smooth_min / 60.0f;
+        float sec = static_cast<float>(parts->tm_sec) + static_cast<float>(milliseconds) / 1000.0f;
+        float min = static_cast<float>(parts->tm_min) + sec / 60.0f;
+        float hour = static_cast<float>(parts->tm_hour % 12) + min / 60.0f;
 
-        constexpr float PI = 3.14159265f;
-        second_angle.set(smooth_sec * (2.0f * PI / 60.0f));
-        minute_angle.set(smooth_min * (2.0f * PI / 60.0f));
-        hour_angle.set(smooth_hour * (2.0f * PI / 12.0f));
+        second_angle.set(sec * (2.0f * M_PI / 60.0f));
+        minute_angle.set(min * (2.0f * M_PI / 60.0f));
+        hour_angle.set(hour * (2.0f * M_PI / 12.0f));
 
-        char format_buf[32];
-        std::snprintf(format_buf, sizeof(format_buf), "%02d:%02d:%02d", hour, min, sec);
-        digital_time.set(format_buf);
+        std::stringstream ss;
+        ss << std::setw(2) << std::setfill('0') << parts->tm_hour << ":"
+           << std::setw(2) << std::setfill('0') << parts->tm_min << ":"
+           << std::setw(2) << std::setfill('0') << parts->tm_sec;
+        digital_time.set(ss.str());
+
+        // Increment phase for scrolling sinusoid wave
+        sinusoid_phase.set(sinusoid_phase.get() + dt * 3.0f);
     }
 };
 
@@ -77,7 +66,7 @@ public:
         // --- Layout Design Elements ---
 
         // A card-like container for the clock and wave
-        auto card = std::make_shared<gooey::RoundedRectPrimitive>(
+        auto card = std::make_shared<ooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},
             16,
             ooey::Color{28, 28, 30},
@@ -92,7 +81,7 @@ public:
         float radius = 90.0f;
 
         // 1. Clock Face Outer Frame
-        auto clock_face = std::make_shared<gooey::CirclePrimitive>(
+        auto clock_face = std::make_shared<ooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             static_cast<int>(radius),
             ooey::Color{20, 20, 22},
@@ -102,7 +91,7 @@ public:
         add_child(std::move(clock_face));
 
         // 2. Center Dial Point
-        auto center_dial = std::make_shared<gooey::CirclePrimitive>(
+        auto center_dial = std::make_shared<ooey::CirclePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             5,
             ooey::Color{0, 120, 215},
@@ -115,21 +104,21 @@ public:
         float len_m = radius * 0.75f;
         float len_s = radius * 0.85f;
 
-        auto hour_hand = std::make_shared<gooey::LinePrimitive>(
+        auto hour_hand = std::make_shared<ooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_h)},
             ooey::Color{220, 220, 220},
             4.0f
         );
 
-        auto minute_hand = std::make_shared<gooey::LinePrimitive>(
+        auto minute_hand = std::make_shared<ooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_m)},
             ooey::Color{160, 160, 160},
             2.5f
         );
 
-        auto second_hand = std::make_shared<gooey::LinePrimitive>(
+        auto second_hand = std::make_shared<ooey::LinePrimitive>(
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy)},
             ooey::Point{static_cast<int>(cx), static_cast<int>(cy - len_s)},
             ooey::Color{255, 80, 80},
@@ -178,7 +167,7 @@ public:
         add_child(digital_label);
 
         // --- Sinusoid Wave Widget Layout ---
-        auto sinusoid = std::make_shared<gooey::SinusoidPrimitive>(
+        auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
             ooey::Point{100, 420},          // Start
             ooey::Point{700, 420},          // End
             30.0f,                          // Amplitude
