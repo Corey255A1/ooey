@@ -117,6 +117,7 @@ set(OOEY_SRCS
     ooey/src/renderer/bitmap_font.cpp
     ooey/src/renderer/gl_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
+    ooey/src/renderer/window_chrome.cpp
     ooey/src/renderer/primitives/circle_primitive.cpp
     ooey/src/renderer/primitives/curve_primitive.cpp
     ooey/src/renderer/primitives/line_primitive.cpp

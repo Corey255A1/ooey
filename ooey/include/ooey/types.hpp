@@ -85,4 +85,17 @@ struct Font {
     }
 };
 
+enum class WindowResizeEdge {
+    None = 0,
+    Top = 1,
+    Bottom = 2,
+    Left = 3,
+    TopLeft = 4,
+    BottomLeft = 5,
+    Right = 6,
+    TopRight = 7,
+    BottomRight = 8
+};
+
 } // namespace ooey
+

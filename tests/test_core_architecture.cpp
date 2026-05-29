@@ -25,6 +25,8 @@ TEST(OoeyTypes, RectInitialization) {
     EXPECT_EQ(r.height, 200);
 }
 
+namespace {
+
 class MockWindowBackend : public ooey::IWindowBackend {
 public:
     int poll_count = 0;
@@ -55,7 +57,18 @@ public:
     ooey::IRenderTarget* get_render_target() override {
         return nullptr;
     }
+
+    void set_window_chrome(std::shared_ptr<ooey::WindowChrome> chrome) override { window_chrome_ = chrome; }
+    std::shared_ptr<ooey::WindowChrome> get_window_chrome() const override { return window_chrome_; }
+    void start_interactive_move() override {}
+    void start_interactive_resize(ooey::WindowResizeEdge /*edge*/) override {}
+    void request_close() override {}
+
+private:
+    std::shared_ptr<ooey::WindowChrome> window_chrome_;
 };
+
+} // namespace
 
 TEST(OoeyApplication, MainLoopExecution) {
     gooey::Application app;

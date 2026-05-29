@@ -6,6 +6,11 @@
 #include <vector>
 #include <linux/fb.h>
 
+namespace ooey {
+class WindowChrome;
+class ChromeRenderTarget;
+}
+
 namespace ooey::framebuffer {
 
 class WindowBackend : public IWindowBackend {
@@ -23,6 +28,13 @@ public:
     int get_logical_height() const { return logical_h_; }
 
     void set_input_manager(InputManager* manager) override { input_manager_ = manager; }
+
+    // Window chrome interface
+    void set_window_chrome(std::shared_ptr<WindowChrome> chrome) override;
+    std::shared_ptr<WindowChrome> get_window_chrome() const override { return window_chrome_; }
+    void start_interactive_move() override {}
+    void start_interactive_resize(WindowResizeEdge /*edge*/) override {}
+    void request_close() override { should_close_ = true; }
 
 private:
     int fd_{-1};
@@ -44,6 +56,10 @@ private:
 
     void map_coords(int lx, int ly, int& px, int& py) const;
     void present_framebuffer();
+
+    std::shared_ptr<ooey::WindowChrome> window_chrome_;
+    std::unique_ptr<ooey::ChromeRenderTarget> decorated_render_target_;
+    bool should_close_{false};
 };
 
 } // namespace ooey::framebuffer

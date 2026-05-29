@@ -20,6 +20,11 @@ struct wl_keyboard;
 struct wl_buffer;
 struct wl_egl_window;
 
+namespace ooey {
+class WindowChrome;
+class ChromeRenderTarget;
+}
+
 namespace ooey::wayland {
 
 struct PointerData;
@@ -37,6 +42,15 @@ public:
     IRenderTarget* get_render_target() override;
 
     void set_input_manager(InputManager* manager) override;
+
+    // Window chrome interface
+    void set_window_chrome(std::shared_ptr<WindowChrome> chrome) override;
+    std::shared_ptr<WindowChrome> get_window_chrome() const override { return window_chrome_; }
+    void start_interactive_move() override;
+    void start_interactive_resize(WindowResizeEdge edge) override;
+    void request_close() override { should_close_ = true; }
+
+    Size get_window_size() const { return Size{width_, height_}; }
 
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);
@@ -82,6 +96,10 @@ private:
     int width_{};
     int height_{};
     std::string title_;
+
+    std::shared_ptr<ooey::WindowChrome> window_chrome_;
+    std::unique_ptr<ooey::ChromeRenderTarget> decorated_render_target_;
+    bool should_close_{false};
 };
 
 } // namespace ooey::wayland

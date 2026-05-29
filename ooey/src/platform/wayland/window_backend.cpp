@@ -1,6 +1,7 @@
 #include "ooey/platform/wayland/window_backend.hpp"
 #include "ooey/renderer/software_render_target.hpp"
 #include "ooey/renderer/gl_render_target.hpp"
+#include "ooey/renderer/window_chrome.hpp"
 #ifdef OOEY_WAYLAND_HAS_EGL
 #include <wayland-egl.h>
 #include <EGL/egl.h>
@@ -22,8 +23,10 @@ namespace ooey::wayland {
 
 struct PointerData {
     InputManager* input_manager{};
+    WindowBackend* backend{};
     int last_x{0};
     int last_y{0};
+    uint32_t last_button_serial{0};
 };
 
 struct KeyboardData {
@@ -98,42 +101,76 @@ static const xdg_wm_base_listener g_xdg_wm_base_listener = {
 // Pointer and keyboard handling
 static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/, wl_fixed_t surface_x, wl_fixed_t surface_y) {
     PointerData* pointer_data = static_cast<PointerData*>(data);
-    if (!pointer_data) {
+    if (!pointer_data || !pointer_data->input_manager || !pointer_data->backend) {
         return;
     }
     int x = wl_fixed_to_int(surface_x);
     int y = wl_fixed_to_int(surface_y);
     pointer_data->last_x = x;
     pointer_data->last_y = y;
-    if (pointer_data->input_manager) {
-        ooey::Pointer p{0, x, y, ooey::PointerState::Moved};
-        pointer_data->input_manager->push_pointer_event(p);
+
+    ooey::Pointer p{0, x, y, PointerState::Moved};
+
+    if (pointer_data->backend->get_window_chrome()) {
+        auto chrome = pointer_data->backend->get_window_chrome();
+        Size window_size = pointer_data->backend->get_window_size();
+        if (chrome->handle_pointer_event(p, window_size, pointer_data->backend)) {
+            return;
+        }
+        p.x -= chrome->get_border_width();
+        p.y -= (chrome->get_border_width() + chrome->get_title_bar_height());
     }
+
+    pointer_data->input_manager->push_pointer_event(p);
 }
 
 static void pointer_leave(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/) {}
 
 static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*time*/, wl_fixed_t surface_x, wl_fixed_t surface_y) {
     PointerData* pointer_data = static_cast<PointerData*>(data);
-    if (!pointer_data || !pointer_data->input_manager) {
+    if (!pointer_data || !pointer_data->input_manager || !pointer_data->backend) {
         return;
     }
     int x = wl_fixed_to_int(surface_x);
     int y = wl_fixed_to_int(surface_y);
     pointer_data->last_x = x;
     pointer_data->last_y = y;
+
     ooey::Pointer p{0, x, y, PointerState::Moved};
+
+    if (pointer_data->backend->get_window_chrome()) {
+        auto chrome = pointer_data->backend->get_window_chrome();
+        Size window_size = pointer_data->backend->get_window_size();
+        if (chrome->handle_pointer_event(p, window_size, pointer_data->backend)) {
+            return;
+        }
+        p.x -= chrome->get_border_width();
+        p.y -= (chrome->get_border_width() + chrome->get_title_bar_height());
+    }
+
     pointer_data->input_manager->push_pointer_event(p);
 }
 
-static void pointer_button(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t button, uint32_t state) {
+static void pointer_button(void* data, wl_pointer* /*wl_pointer*/, uint32_t serial, uint32_t /*time*/, uint32_t button, uint32_t state) {
     PointerData* pointer_data = static_cast<PointerData*>(data);
-    if (!pointer_data || !pointer_data->input_manager) {
+    if (!pointer_data || !pointer_data->input_manager || !pointer_data->backend) {
         return;
     }
-    // Use last known pointer coordinates
+    pointer_data->last_button_serial = serial;
+
     PointerState pointer_state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? PointerState::Pressed : PointerState::Released;
     ooey::Pointer p{0, pointer_data->last_x, pointer_data->last_y, pointer_state};
+
+    if (pointer_data->backend->get_window_chrome()) {
+        auto chrome = pointer_data->backend->get_window_chrome();
+        Size window_size = pointer_data->backend->get_window_size();
+        if (chrome->handle_pointer_event(p, window_size, pointer_data->backend)) {
+            return;
+        }
+        p.x -= chrome->get_border_width();
+        p.y -= (chrome->get_border_width() + chrome->get_title_bar_height());
+    }
+
     pointer_data->input_manager->push_pointer_event(p);
 }
 
@@ -250,7 +287,9 @@ static void xdg_toplevel_configure(void* data, xdg_toplevel* /*toplevel*/, int32
     backend->handle_xdg_toplevel_configure(width, height);
 }
 
-WindowBackend::WindowBackend() = default;
+WindowBackend::WindowBackend() {
+    set_window_chrome(std::make_shared<WindowChrome>());
+}
 
 WindowBackend::~WindowBackend() {
     destroy();
@@ -328,6 +367,7 @@ bool WindowBackend::create(const Size& size, const char* title) {
         pointer_obj_ = wl_seat_get_pointer(seat_);
         auto pointer_data_ptr = std::make_unique<PointerData>();
         pointer_data_ptr->input_manager = input_manager_;
+        pointer_data_ptr->backend = this;
         pointer_data_ = std::move(pointer_data_ptr);
         wl_pointer_add_listener(pointer_obj_, &g_pointer_listener, pointer_data_.get());
 
@@ -405,7 +445,7 @@ void WindowBackend::destroy() {
 }
 
 bool WindowBackend::poll_events() {
-    if (!display_) {
+    if (!display_ || should_close_) {
         return false;
     }
     // Dispatch pending events; return true to keep running
@@ -430,7 +470,43 @@ void WindowBackend::set_input_manager(InputManager* manager) {
 }
 
 IRenderTarget* WindowBackend::get_render_target() {
+    if (decorated_render_target_) {
+        return decorated_render_target_.get();
+    }
     return render_target_.get();
+}
+
+void WindowBackend::set_window_chrome(std::shared_ptr<WindowChrome> chrome) {
+    window_chrome_ = chrome;
+    if (window_chrome_ && render_target_) {
+        decorated_render_target_ = std::make_unique<ooey::ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{width_, height_});
+    } else {
+        decorated_render_target_.reset();
+    }
+}
+
+void WindowBackend::start_interactive_move() {
+    if (xdg_toplevel_ && seat_ && pointer_data_) {
+        xdg_toplevel_move(xdg_toplevel_, seat_, pointer_data_->last_button_serial);
+    }
+}
+
+void WindowBackend::start_interactive_resize(WindowResizeEdge edge) {
+    if (xdg_toplevel_ && seat_ && pointer_data_) {
+        uint32_t wl_edge = 0;
+        switch (edge) {
+            case WindowResizeEdge::Top:          wl_edge = 1; break;
+            case WindowResizeEdge::Bottom:       wl_edge = 2; break;
+            case WindowResizeEdge::Left:         wl_edge = 4; break;
+            case WindowResizeEdge::TopLeft:      wl_edge = 5; break;
+            case WindowResizeEdge::BottomLeft:   wl_edge = 6; break;
+            case WindowResizeEdge::Right:        wl_edge = 8; break;
+            case WindowResizeEdge::TopRight:     wl_edge = 9; break;
+            case WindowResizeEdge::BottomRight:  wl_edge = 10; break;
+            default: return;
+        }
+        xdg_toplevel_resize(xdg_toplevel_, seat_, pointer_data_->last_button_serial, wl_edge);
+    }
 }
 
 static int create_shm_file(size_t size) {
@@ -507,6 +583,11 @@ void WindowBackend::recreate_render_target(int width, int height) {
                 }
             });
         }
+        if (window_chrome_) {
+            decorated_render_target_ = std::make_unique<ooey::ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{width, height});
+        } else {
+            decorated_render_target_.reset();
+        }
         return;
     }
 #endif
@@ -567,6 +648,11 @@ void WindowBackend::recreate_render_target(int width, int height) {
             }
         }
     });
+    if (window_chrome_) {
+        decorated_render_target_ = std::make_unique<ooey::ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{width, height});
+    } else {
+        decorated_render_target_.reset();
+    }
 }
 
 void WindowBackend::handle_xdg_surface_configure(uint32_t serial) {

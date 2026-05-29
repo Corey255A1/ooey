@@ -1,5 +1,6 @@
 #include "ooey/platform/framebuffer/window_backend.hpp"
 #include "ooey/renderer/software_render_target.hpp"
+#include "ooey/renderer/window_chrome.hpp"
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -109,6 +110,10 @@ bool WindowBackend::create(const Size& /*size*/, const char* /*title*/) {
         present_framebuffer();
     });
 
+    if (window_chrome_) {
+        decorated_render_target_ = std::make_unique<ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{logical_w_, logical_h_});
+    }
+
     std::cout << "Framebuffer initialized: physical " << phys_w_ << "x" << phys_h_
               << ", logical " << logical_w_ << "x" << logical_h_
               << ", bpp " << vinfo_.bits_per_pixel
@@ -130,6 +135,9 @@ void WindowBackend::destroy() {
 }
 
 bool WindowBackend::poll_events() {
+    if (should_close_) {
+        return false;
+    }
     return true;
 }
 
@@ -138,7 +146,19 @@ void WindowBackend::poll_input() {
 }
 
 IRenderTarget* WindowBackend::get_render_target() {
+    if (decorated_render_target_) {
+        return decorated_render_target_.get();
+    }
     return render_target_.get();
+}
+
+void WindowBackend::set_window_chrome(std::shared_ptr<WindowChrome> chrome) {
+    window_chrome_ = chrome;
+    if (window_chrome_ && render_target_) {
+        decorated_render_target_ = std::make_unique<ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{logical_w_, logical_h_});
+    } else {
+        decorated_render_target_.reset();
+    }
 }
 
 void WindowBackend::map_coords(int lx, int ly, int& px, int& py) const {

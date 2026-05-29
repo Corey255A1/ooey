@@ -1,5 +1,6 @@
 #include "ooey/platform/emscripten/window_backend.hpp"
 #include "ooey/renderer/gl_render_target.hpp"
+#include "ooey/renderer/window_chrome.hpp"
 #include <emscripten/html5.h>
 #include <iostream>
 #include <cstring>
@@ -8,8 +9,8 @@ namespace ooey::emscripten {
 
 // Static event handlers to map to input manager
 static EM_BOOL on_mouse_event(int event_type, const EmscriptenMouseEvent* mouse_event, void* user_data) {
-    auto* input_mgr = static_cast<InputManager*>(user_data);
-    if (!input_mgr) return EM_FALSE;
+    auto* backend = static_cast<WindowBackend*>(user_data);
+    if (!backend || !backend->get_input_manager()) return EM_FALSE;
 
     PointerState state;
     if (event_type == EMSCRIPTEN_EVENT_MOUSEDOWN) {
@@ -22,13 +23,26 @@ static EM_BOOL on_mouse_event(int event_type, const EmscriptenMouseEvent* mouse_
         return EM_FALSE;
     }
 
-    input_mgr->push_pointer_event({0, static_cast<int>(mouse_event->targetX), static_cast<int>(mouse_event->targetY), state});
+    ooey::Pointer p{0, static_cast<int>(mouse_event->targetX), static_cast<int>(mouse_event->targetY), state};
+
+    if (backend->get_window_chrome()) {
+        auto chrome = backend->get_window_chrome();
+        Size window_size{backend->get_width(), backend->get_height()};
+        if (chrome->handle_pointer_event(p, window_size, backend)) {
+            return EM_TRUE;
+        }
+        p.x -= chrome->get_border_width();
+        p.y -= (chrome->get_border_width() + chrome->get_title_bar_height());
+    }
+
+    backend->get_input_manager()->push_pointer_event(p);
     return EM_TRUE;
 }
 
 static EM_BOOL on_key_event(int event_type, const EmscriptenKeyboardEvent* key_event, void* user_data) {
-    auto* input_mgr = static_cast<InputManager*>(user_data);
-    if (!input_mgr) return EM_FALSE;
+    auto* backend = static_cast<WindowBackend*>(user_data);
+    if (!backend || !backend->get_input_manager()) return EM_FALSE;
+    auto* input_mgr = backend->get_input_manager();
 
     KeyState state = (event_type == EMSCRIPTEN_EVENT_KEYDOWN) ? KeyState::Pressed : KeyState::Released;
 
@@ -60,6 +74,9 @@ WindowBackend::~WindowBackend() {
 }
 
 bool WindowBackend::create(const Size& size, const char* /*title*/) {
+    width_ = size.width;
+    height_ = size.height;
+
     // Create Emscripten WebGL Context
     EmscriptenWebGLContextAttributes attr;
     emscripten_webgl_init_context_attributes(&attr);
@@ -74,26 +91,30 @@ bool WindowBackend::create(const Size& size, const char* /*title*/) {
     
     emscripten_webgl_make_context_current(ctx);
 
-    // Register mouse callbacks on canvas
-    emscripten_set_mousedown_callback("#canvas", &input_manager_, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
-        return on_mouse_event(type, ev, *static_cast<InputManager**>(data));
+    // Register mouse callbacks on canvas (passing this)
+    emscripten_set_mousedown_callback("#canvas", this, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
+        return on_mouse_event(type, ev, data);
     });
-    emscripten_set_mouseup_callback("#canvas", &input_manager_, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
-        return on_mouse_event(type, ev, *static_cast<InputManager**>(data));
+    emscripten_set_mouseup_callback("#canvas", this, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
+        return on_mouse_event(type, ev, data);
     });
-    emscripten_set_mousemove_callback("#canvas", &input_manager_, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
-        return on_mouse_event(type, ev, *static_cast<InputManager**>(data));
+    emscripten_set_mousemove_callback("#canvas", this, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
+        return on_mouse_event(type, ev, data);
     });
 
-    // Register keyboard callbacks globally (on window/document)
-    emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, &input_manager_, EM_FALSE, [](int type, const EmscriptenKeyboardEvent* ev, void* data) {
-        return on_key_event(type, ev, *static_cast<InputManager**>(data));
+    // Register keyboard callbacks globally (on window/document) (passing this)
+    emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, EM_FALSE, [](int type, const EmscriptenKeyboardEvent* ev, void* data) {
+        return on_key_event(type, ev, data);
     });
-    emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, &input_manager_, EM_FALSE, [](int type, const EmscriptenKeyboardEvent* ev, void* data) {
-        return on_key_event(type, ev, *static_cast<InputManager**>(data));
+    emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, EM_FALSE, [](int type, const EmscriptenKeyboardEvent* ev, void* data) {
+        return on_key_event(type, ev, data);
     });
 
     render_target_ = std::make_unique<GlRenderTarget>(size.width, size.height);
+
+    if (window_chrome_) {
+        decorated_render_target_ = std::make_unique<ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{width_, height_});
+    }
 
     return true;
 }
@@ -103,6 +124,9 @@ void WindowBackend::destroy() {
 }
 
 bool WindowBackend::poll_events() {
+    if (should_close_) {
+        return false;
+    }
     return true;
 }
 
@@ -110,7 +134,19 @@ void WindowBackend::poll_input() {
 }
 
 renderer::IRenderTarget* WindowBackend::get_render_target() {
+    if (decorated_render_target_) {
+        return decorated_render_target_.get();
+    }
     return render_target_.get();
+}
+
+void WindowBackend::set_window_chrome(std::shared_ptr<WindowChrome> chrome) {
+    window_chrome_ = chrome;
+    if (window_chrome_ && render_target_) {
+        decorated_render_target_ = std::make_unique<ChromeRenderTarget>(render_target_.get(), window_chrome_, Size{width_, height_});
+    } else {
+        decorated_render_target_.reset();
+    }
 }
 
 } // namespace ooey::emscripten

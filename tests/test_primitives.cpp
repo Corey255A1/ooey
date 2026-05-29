@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "ooey/i_window_backend.hpp"
 #include "ooey/types.hpp"
 #include "ooey/renderer/geometry.hpp"
 #include "ooey/renderer/i_render_target.hpp"
@@ -286,4 +287,98 @@ TEST(PrimitivesTest, GeometryCachingBehavior) {
         EXPECT_FALSE(sine.is_dirty());
     }
 }
+
+#include "ooey/renderer/window_chrome.hpp"
+
+namespace {
+
+class MockWindowBackend : public ooey::IWindowBackend {
+public:
+    bool create(const ooey::Size& /*size*/, const char* /*title*/) override { return true; }
+    void destroy() override {}
+    bool poll_events() override { return true; }
+    void poll_input() override {}
+    ooey::IRenderTarget* get_render_target() override { return nullptr; }
+    void set_input_manager(ooey::InputManager* /*manager*/) override {}
+    void set_window_chrome(std::shared_ptr<ooey::WindowChrome> /*chrome*/) override {}
+    std::shared_ptr<ooey::WindowChrome> get_window_chrome() const override { return nullptr; }
+    void start_interactive_move() override { move_called = true; }
+    void start_interactive_resize(ooey::WindowResizeEdge edge) override { resize_called = true; last_edge = edge; }
+    void request_close() override { close_called = true; }
+
+    bool move_called{false};
+    bool resize_called{false};
+    ooey::WindowResizeEdge last_edge{ooey::WindowResizeEdge::None};
+    bool close_called{false};
+};
+
+} // namespace
+
+TEST(WindowChromeTest, HitTesting) {
+    ooey::WindowChrome chrome;
+    ooey::Size win_size{800, 600};
+
+    // Assuming default: border_width = 4, title_bar_height = 30
+    // Test Top-Left Corner
+    EXPECT_EQ(chrome.hit_test(2, 2, win_size), ooey::ChromeHitTest::BorderTopLeft);
+    // Test Top Border
+    EXPECT_EQ(chrome.hit_test(100, 2, win_size), ooey::ChromeHitTest::BorderTop);
+    // Test Title Bar
+    EXPECT_EQ(chrome.hit_test(100, 15, win_size), ooey::ChromeHitTest::TitleBar);
+    // Test Close Button (right side of title bar)
+    // close_x starts at 800 - 4 - 30 = 766
+    EXPECT_EQ(chrome.hit_test(780, 15, win_size), ooey::ChromeHitTest::CloseButton);
+    // Test Minimize Button (starts at 736)
+    EXPECT_EQ(chrome.hit_test(750, 15, win_size), ooey::ChromeHitTest::MinimizeButton);
+    // Test Client Area
+    EXPECT_EQ(chrome.hit_test(400, 300, win_size), ooey::ChromeHitTest::Client);
+}
+
+TEST(WindowChromeTest, HandlePointerEventMoveResizeClose) {
+    auto chrome = std::make_shared<ooey::WindowChrome>();
+    ooey::Size win_size{800, 600};
+    MockWindowBackend backend;
+
+    // 1. Move test (click on title bar)
+    ooey::Pointer p_move{0, 100, 15, ooey::PointerState::Pressed};
+    EXPECT_TRUE(chrome->handle_pointer_event(p_move, win_size, &backend));
+    EXPECT_TRUE(backend.move_called);
+
+    // 2. Resize test (click on top-left corner)
+    ooey::Pointer p_resize{0, 2, 2, ooey::PointerState::Pressed};
+    EXPECT_TRUE(chrome->handle_pointer_event(p_resize, win_size, &backend));
+    EXPECT_TRUE(backend.resize_called);
+    EXPECT_EQ(backend.last_edge, ooey::WindowResizeEdge::TopLeft);
+
+    // 3. Close test (press and release on close button)
+    ooey::Pointer p_close_press{0, 780, 15, ooey::PointerState::Pressed};
+    EXPECT_TRUE(chrome->handle_pointer_event(p_close_press, win_size, &backend));
+    EXPECT_FALSE(backend.close_called); // only called on release
+
+    ooey::Pointer p_close_release{0, 780, 15, ooey::PointerState::Released};
+    EXPECT_TRUE(chrome->handle_pointer_event(p_close_release, win_size, &backend));
+    EXPECT_TRUE(backend.close_called);
+}
+
+TEST(ChromeRenderTargetTest, CoordinateShifting) {
+    MockRenderTarget mock_target;
+    auto chrome = std::make_shared<ooey::WindowChrome>();
+    chrome->set_border_width(5);
+    chrome->set_title_bar_height(25);
+    // client offset: dx = 5, dy = 30
+
+    ooey::ChromeRenderTarget decorated(&mock_target, chrome, {800, 600});
+
+    // Draw some geometry
+    ooey::Geometry geom;
+    geom.type = ooey::PrimitiveType::Lines;
+    geom.vertices.push_back({10.0f, 20.0f, {255, 0, 0}});
+    
+    decorated.draw_geometry(geom);
+
+    ASSERT_EQ(mock_target.geometries.size(), 1);
+    EXPECT_FLOAT_EQ(mock_target.geometries[0].vertices[0].x, 15.0f); // 10 + 5
+    EXPECT_FLOAT_EQ(mock_target.geometries[0].vertices[0].y, 50.0f); // 20 + 30
+}
+
 
