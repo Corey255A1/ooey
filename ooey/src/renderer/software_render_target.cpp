@@ -5,14 +5,15 @@
 
 namespace ooey {
 
-SoftwareRenderTarget::SoftwareRenderTarget(uint8_t* data, int width, int height, int stride)
-    : data_(data), width_(width), height_(height), stride_(stride) {}
+SoftwareRenderTarget::SoftwareRenderTarget(uint8_t* data, int width, int height, int stride, std::function<void()>&& present_callback)
+    : data_(data), width_(width), height_(height), stride_(stride), present_callback_(std::move(present_callback)) {}
 
-void SoftwareRenderTarget::initialize_buffer(uint8_t* data, int width, int height, int stride) {
+void SoftwareRenderTarget::initialize_buffer(uint8_t* data, int width, int height, int stride, std::function<void()>&& present_callback) {
     data_ = data;
     width_ = width;
     height_ = height;
     stride_ = stride;
+    present_callback_ = std::move(present_callback);
 }
 
 void SoftwareRenderTarget::clear(Color color) {
@@ -84,7 +85,9 @@ void SoftwareRenderTarget::draw_text(const std::string& text, const Font& font, 
 }
 
 void SoftwareRenderTarget::present() {
-    // Default implementation does nothing (NOP). Overridden by platforms.
+    if (present_callback_) {
+        present_callback_();
+    }
 }
 
 void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color color) {

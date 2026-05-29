@@ -1,5 +1,5 @@
 #include "ooey/platform/emscripten/window_backend.hpp"
-#include "ooey/platform/emscripten/render_target.hpp"
+#include "ooey/renderer/gl_render_target.hpp"
 #include <emscripten/html5.h>
 #include <iostream>
 #include <cstring>
@@ -93,7 +93,7 @@ bool WindowBackend::create(const Size& size, const char* /*title*/) {
         return on_key_event(type, ev, *static_cast<InputManager**>(data));
     });
 
-    render_target_ = std::make_unique<RenderTarget>(size.width, size.height);
+    render_target_ = std::make_unique<GlRenderTarget>(size.width, size.height);
 
     return true;
 }

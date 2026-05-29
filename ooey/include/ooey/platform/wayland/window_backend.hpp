@@ -3,6 +3,7 @@
 #include "ooey/i_window_backend.hpp"
 #include <memory>
 #include <string>
+#include <cstdint>
 
 // Forward declare Wayland types to keep header lightweight
 struct wl_display;
@@ -16,6 +17,7 @@ struct xdg_surface;
 struct xdg_toplevel;
 struct wl_pointer;
 struct wl_keyboard;
+struct wl_buffer;
 
 namespace ooey::wayland {
 
@@ -33,7 +35,7 @@ public:
     void poll_input() override;
     IRenderTarget* get_render_target() override;
 
-    void set_input_manager(InputManager* manager) override;
+    void set_input_manager(InputManager* manager) override { input_manager_ = manager; }
 
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);
@@ -54,7 +56,13 @@ private:
     int pending_height_{};
 
     std::unique_ptr<IRenderTarget> render_target_;
+    struct wl_buffer* wl_buffer_{nullptr};
+    uint8_t* mapped_data_{nullptr};
+    size_t mapped_size_{0};
+    bool released_{false};
     InputManager* input_manager_{nullptr};
+
+    void recreate_render_target(int width, int height);
     
     std::unique_ptr<PointerData> pointer_data_;
     std::unique_ptr<KeyboardData> keyboard_data_;

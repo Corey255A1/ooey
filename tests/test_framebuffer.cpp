@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "ooey/platform/framebuffer/render_target.hpp"
 #include "ooey/platform/framebuffer/window_backend.hpp"
+#include "ooey/renderer/software_render_target.hpp"
 #include <fcntl.h>
 #include <unistd.h>
 #include <vector>
@@ -38,15 +38,18 @@ TEST(FramebufferRenderTarget, RotationMapping0) {
     TempFile temp(1536000);
     ASSERT_GE(temp.fd, 0);
 
-    ooey::framebuffer::RenderTarget target(temp.fd, 0);
-    ASSERT_TRUE(target.initialize());
+    ooey::framebuffer::WindowBackend backend(0, temp.path);
+    ASSERT_TRUE(backend.create({480, 800}, "Test"));
 
-    EXPECT_EQ(target.get_logical_width(), 480);
-    EXPECT_EQ(target.get_logical_height(), 800);
+    EXPECT_EQ(backend.get_logical_width(), 480);
+    EXPECT_EQ(backend.get_logical_height(), 800);
+
+    auto* target = backend.get_render_target();
+    ASSERT_NE(target, nullptr);
 
     ooey::Color clear_color{10, 20, 30, 255};
-    target.clear(clear_color);
-    target.present();
+    target->clear(clear_color);
+    target->present();
 
     uint32_t expected_pixel = (255 << 24) | (10 << 16) | (20 << 8) | 30;
 
@@ -61,16 +64,19 @@ TEST(FramebufferRenderTarget, RotationMapping90) {
     TempFile temp(1536000);
     ASSERT_GE(temp.fd, 0);
 
-    ooey::framebuffer::RenderTarget target(temp.fd, 90);
-    ASSERT_TRUE(target.initialize());
+    ooey::framebuffer::WindowBackend backend(90, temp.path);
+    ASSERT_TRUE(backend.create({800, 480}, "Test"));
 
-    EXPECT_EQ(target.get_logical_width(), 800);
-    EXPECT_EQ(target.get_logical_height(), 480);
+    EXPECT_EQ(backend.get_logical_width(), 800);
+    EXPECT_EQ(backend.get_logical_height(), 480);
 
-    target.clear(ooey::Color{0, 0, 0, 0});
+    auto* target = backend.get_render_target();
+    ASSERT_NE(target, nullptr);
+
+    target->clear(ooey::Color{0, 0, 0, 0});
 
     ooey::Color draw_color{255, 128, 64, 255};
-    target.draw_geometry({
+    target->draw_geometry({
         {
             {10.0f, 20.0f, draw_color},
             {11.0f, 20.0f, draw_color},
@@ -80,7 +86,7 @@ TEST(FramebufferRenderTarget, RotationMapping90) {
         {0, 1, 2, 0, 2, 3},
         ooey::PrimitiveType::Triangles
     });
-    target.present();
+    target->present();
 
     std::vector<uint32_t> buffer(480 * 800);
     lseek(temp.fd, 0, SEEK_SET);
@@ -94,16 +100,19 @@ TEST(FramebufferRenderTarget, RotationMapping180) {
     TempFile temp(1536000);
     ASSERT_GE(temp.fd, 0);
 
-    ooey::framebuffer::RenderTarget target(temp.fd, 180);
-    ASSERT_TRUE(target.initialize());
+    ooey::framebuffer::WindowBackend backend(180, temp.path);
+    ASSERT_TRUE(backend.create({480, 800}, "Test"));
 
-    EXPECT_EQ(target.get_logical_width(), 480);
-    EXPECT_EQ(target.get_logical_height(), 800);
+    EXPECT_EQ(backend.get_logical_width(), 480);
+    EXPECT_EQ(backend.get_logical_height(), 800);
 
-    target.clear(ooey::Color{0, 0, 0, 0});
+    auto* target = backend.get_render_target();
+    ASSERT_NE(target, nullptr);
+
+    target->clear(ooey::Color{0, 0, 0, 0});
 
     ooey::Color draw_color{255, 128, 64, 255};
-    target.draw_geometry({
+    target->draw_geometry({
         {
             {10.0f, 20.0f, draw_color},
             {11.0f, 20.0f, draw_color},
@@ -113,7 +122,7 @@ TEST(FramebufferRenderTarget, RotationMapping180) {
         {0, 1, 2, 0, 2, 3},
         ooey::PrimitiveType::Triangles
     });
-    target.present();
+    target->present();
 
     std::vector<uint32_t> buffer(480 * 800);
     lseek(temp.fd, 0, SEEK_SET);
@@ -127,16 +136,19 @@ TEST(FramebufferRenderTarget, RotationMapping270) {
     TempFile temp(1536000);
     ASSERT_GE(temp.fd, 0);
 
-    ooey::framebuffer::RenderTarget target(temp.fd, 270);
-    ASSERT_TRUE(target.initialize());
+    ooey::framebuffer::WindowBackend backend(270, temp.path);
+    ASSERT_TRUE(backend.create({800, 480}, "Test"));
 
-    EXPECT_EQ(target.get_logical_width(), 800);
-    EXPECT_EQ(target.get_logical_height(), 480);
+    EXPECT_EQ(backend.get_logical_width(), 800);
+    EXPECT_EQ(backend.get_logical_height(), 480);
 
-    target.clear(ooey::Color{0, 0, 0, 0});
+    auto* target = backend.get_render_target();
+    ASSERT_NE(target, nullptr);
+
+    target->clear(ooey::Color{0, 0, 0, 0});
 
     ooey::Color draw_color{255, 128, 64, 255};
-    target.draw_geometry({
+    target->draw_geometry({
         {
             {10.0f, 20.0f, draw_color},
             {11.0f, 20.0f, draw_color},
@@ -146,7 +158,7 @@ TEST(FramebufferRenderTarget, RotationMapping270) {
         {0, 1, 2, 0, 2, 3},
         ooey::PrimitiveType::Triangles
     });
-    target.present();
+    target->present();
 
     std::vector<uint32_t> buffer(480 * 800);
     lseek(temp.fd, 0, SEEK_SET);

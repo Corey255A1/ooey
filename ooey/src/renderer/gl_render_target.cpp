@@ -4,8 +4,8 @@
 
 namespace ooey {
 
-GlRenderTarget::GlRenderTarget(int width, int height)
-    : width_(width), height_(height) {
+GlRenderTarget::GlRenderTarget(int width, int height, std::function<void()>&& present_callback)
+    : width_(width), height_(height), present_callback_(std::move(present_callback)) {
     // Enable blending for transparent primitives
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -76,7 +76,9 @@ void GlRenderTarget::draw_text(const std::string& text, const Font& font, const 
 }
 
 void GlRenderTarget::present() {
-    // Default implementation does nothing (NOP). Swapping is handled by windowing wrapper.
+    if (present_callback_) {
+        present_callback_();
+    }
 }
 
 } // namespace ooey

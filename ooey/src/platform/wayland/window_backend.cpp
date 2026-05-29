@@ -1,5 +1,5 @@
 #include "ooey/platform/wayland/window_backend.hpp"
-#include "ooey/platform/wayland/render_target.hpp"
+#include "ooey/renderer/software_render_target.hpp"
 #include "ooey/input.hpp"
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
@@ -343,6 +343,14 @@ void WindowBackend::destroy() {
     if (render_target_) {
         render_target_.reset();
     }
+    if (mapped_data_) {
+        munmap(mapped_data_, mapped_size_);
+        mapped_data_ = nullptr;
+    }
+    if (wl_buffer_) {
+        wl_buffer_destroy(wl_buffer_);
+        wl_buffer_ = nullptr;
+    }
     if (xdg_toplevel_) {
         xdg_toplevel_destroy(xdg_toplevel_);
         xdg_toplevel_ = nullptr;
@@ -412,12 +420,102 @@ IRenderTarget* WindowBackend::get_render_target() {
     return render_target_.get();
 }
 
+static int create_shm_file(size_t size) {
+#if defined(__linux__)
+    int fd = -1;
+#ifdef MFD_CLOEXEC
+    fd = memfd_create("ooey_shm", MFD_CLOEXEC);
+#endif
+    if (fd >= 0) {
+        if (ftruncate(fd, size) < 0) {
+            close(fd);
+            return -1;
+        }
+        return fd;
+    }
+#endif
+    static int counter = 0;
+    std::string name = "/ooey_shm_" + std::to_string(getpid()) + "_" + std::to_string(counter++);
+    fd = shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fd < 0) {
+        return -1;
+    }
+    shm_unlink(name.c_str());
+    long page = sysconf(_SC_PAGESIZE);
+    if (page > 0) {
+        size_t pages = (size + page - 1) / page;
+        size = pages * page;
+    }
+    if (ftruncate(fd, size) < 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+
+void WindowBackend::recreate_render_target(int width, int height) {
+    if (mapped_data_) {
+        munmap(mapped_data_, mapped_size_);
+        mapped_data_ = nullptr;
+    }
+    if (wl_buffer_) {
+        wl_buffer_destroy(wl_buffer_);
+        wl_buffer_ = nullptr;
+    }
+
+    int stride = width * 4;
+    mapped_size_ = stride * height;
+    int fd = create_shm_file(mapped_size_);
+    if (fd < 0) {
+        std::cerr << "Wayland error: Failed to create shm file\n";
+        return;
+    }
+
+    mapped_data_ = static_cast<uint8_t*>(mmap(nullptr, mapped_size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+    if (mapped_data_ == MAP_FAILED) {
+        std::cerr << "Wayland error: mmap failed\n";
+        mapped_data_ = nullptr;
+        close(fd);
+        return;
+    }
+
+    wl_shm_pool* pool = wl_shm_create_pool(shm_, fd, static_cast<int>(mapped_size_));
+    wl_buffer_ = wl_shm_pool_create_buffer(pool, 0, width, height, stride, WL_SHM_FORMAT_XRGB8888);
+    wl_shm_pool_destroy(pool);
+    close(fd);
+
+    released_ = false;
+    static const wl_buffer_listener buffer_listener = {
+        [](void* data, wl_buffer* /*buffer*/) {
+            WindowBackend* self = static_cast<WindowBackend*>(data);
+            self->released_ = true;
+        }
+    };
+    wl_buffer_add_listener(wl_buffer_, &buffer_listener, this);
+
+    render_target_ = std::make_unique<SoftwareRenderTarget>(mapped_data_, width, height, stride, [this, width, height]() {
+        if (!surface_ || !wl_buffer_ || !display_) {
+            return;
+        }
+        released_ = false;
+        wl_surface_attach(surface_, wl_buffer_, 0, 0);
+        wl_surface_damage(surface_, 0, 0, width, height);
+        wl_surface_commit(surface_);
+        wl_display_flush(display_);
+
+        // Wait for the compositor to release the buffer before returning
+        while (!released_) {
+            if (wl_display_dispatch(display_) < 0) {
+                break;
+            }
+        }
+    });
+}
+
 void WindowBackend::handle_xdg_surface_configure(uint32_t serial) {
-    // If we were waiting for configure, create our render target now
     if (waiting_for_configure_) {
-        render_target_ = std::make_unique<RenderTarget>(display_, shm_, surface_, width_, height_);
+        recreate_render_target(width_, height_);
         waiting_for_configure_ = false;
-        // Present initial empty frame
         if (render_target_) {
             render_target_->clear(Color{0, 0, 0, 255});
             render_target_->present();
@@ -434,10 +532,8 @@ void WindowBackend::handle_xdg_toplevel_configure(int32_t width, int32_t height)
         pending_height_ = height;
         this->width_ = width;
         this->height_ = height;
-        // If render target exists, recreate it with new size
         if (render_target_) {
-            render_target_.reset();
-            render_target_ = std::make_unique<RenderTarget>(display_, shm_, surface_, this->width_, this->height_);
+            recreate_render_target(this->width_, this->height_);
         }
     }
 }

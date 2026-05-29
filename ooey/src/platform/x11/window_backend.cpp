@@ -1,5 +1,5 @@
 #include "ooey/platform/x11/window_backend.hpp"
-#include "ooey/platform/x11/render_target.hpp"
+#include "ooey/renderer/gl_render_target.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
@@ -54,7 +54,9 @@ bool WindowBackend::create(const Size& size, const char* title) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    render_target_ = std::make_unique<RenderTarget>(display_, window_);
+    render_target_ = std::make_unique<GlRenderTarget>(size.width, size.height, [this]() {
+        glXSwapBuffers(display_, window_);
+    });
 
     return true;
 }
@@ -88,6 +90,10 @@ bool WindowBackend::poll_events() {
             }
         } else if (event.type == DestroyNotify) {
             return false;
+        } else if (event.type == ConfigureNotify) {
+            if (render_target_) {
+                render_target_->resize(event.xconfigure.width, event.xconfigure.height);
+            }
         } else if (input_manager_) {
             if (event.type == MotionNotify) {
                 input_manager_->push_pointer_event({0, event.xmotion.x, event.xmotion.y, PointerState::Moved});

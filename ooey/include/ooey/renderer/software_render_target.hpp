@@ -2,16 +2,17 @@
 
 #include "ooey/renderer/i_render_target.hpp"
 #include <cstdint>
+#include <functional>
 
 namespace ooey {
 
 class SoftwareRenderTarget : public IRenderTarget {
 public:
     SoftwareRenderTarget() = default;
-    SoftwareRenderTarget(uint8_t* data, int width, int height, int stride);
+    SoftwareRenderTarget(uint8_t* data, int width, int height, int stride, std::function<void()>&& present_callback = nullptr);
     ~SoftwareRenderTarget() override = default;
 
-    void initialize_buffer(uint8_t* data, int width, int height, int stride);
+    void initialize_buffer(uint8_t* data, int width, int height, int stride, std::function<void()>&& present_callback = nullptr);
 
     // IRenderTarget implementation
     void clear(Color color) override;
@@ -25,6 +26,7 @@ protected:
     int width_{0};
     int height_{0};
     int stride_{0};
+    std::function<void()> present_callback_;
 
     void draw_pixel(int x, int y, Color color);
     void draw_line(int start_x, int start_y, int end_x, int end_y, Color color);

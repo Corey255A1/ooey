@@ -1,12 +1,13 @@
 #pragma once
 
 #include "ooey/renderer/i_render_target.hpp"
+#include <functional>
 
 namespace ooey {
 
 class GlRenderTarget : public IRenderTarget {
 public:
-    GlRenderTarget(int width, int height);
+    GlRenderTarget(int width, int height, std::function<void()>&& present_callback = nullptr);
     ~GlRenderTarget() override = default;
 
     void resize(int width, int height);
@@ -21,6 +22,7 @@ public:
 protected:
     int width_{0};
     int height_{0};
+    std::function<void()> present_callback_;
 };
 
 } // namespace ooey

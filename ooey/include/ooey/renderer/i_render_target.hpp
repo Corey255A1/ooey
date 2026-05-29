@@ -20,6 +20,9 @@ public:
     virtual Size measure_text(const std::string& text, const Font& font) = 0;
     virtual void draw_text(const std::string& text, const Font& font, const Point& position, Color color) = 0;
 
+    // Resize the render target
+    virtual void resize(int width, int height) {}
+
     // Swap the frame buffers or present the render output
     virtual void present() = 0;
 };

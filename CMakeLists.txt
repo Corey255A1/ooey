@@ -82,7 +82,6 @@ if(OOEY_BUILD_WAYLAND)
     # Add the wayland source files
     list(APPEND OOey_WAYLAND_SRCS
         ooey/src/platform/wayland/window_backend.cpp
-        ooey/src/platform/wayland/render_target.cpp
     )
     target_include_directories(ooey PUBLIC ${WAYLAND_INCLUDE_DIRS} ${XKBCOMMON_INCLUDE_DIRS} ${WAYLAND_PROTOCOLS_INCLUDE_DIRS})
     target_compile_options(ooey PUBLIC ${WAYLAND_CFLAGS_OTHER} ${XKBCOMMON_CFLAGS_OTHER} ${WAYLAND_PROTOCOLS_CFLAGS_OTHER})
@@ -94,7 +93,6 @@ option(OOEY_BUILD_FRAMEBUFFER "Build the Framebuffer backend (requires Linux fra
 if(OOEY_BUILD_FRAMEBUFFER)
     list(APPEND OOey_FRAMEBUFFER_SRCS
         ooey/src/platform/framebuffer/window_backend.cpp
-        ooey/src/platform/framebuffer/render_target.cpp
     )
 endif()
 
@@ -111,14 +109,12 @@ set(OOEY_SRCS
 if(OOEY_BUILD_X11)
     list(APPEND OOEY_SRCS
         ooey/src/platform/x11/window_backend.cpp
-        ooey/src/platform/x11/render_target.cpp
     )
 endif()
 
 if(EMSCRIPTEN)
     list(APPEND OOEY_SRCS
         ooey/src/platform/emscripten/window_backend.cpp
-        ooey/src/platform/emscripten/render_target.cpp
     )
 endif()
 
