@@ -169,3 +169,121 @@ TEST(PrimitivesTest, SinusoidPrimitiveRendering) {
     // 100 segments * 4 vertices = 400 vertices
     EXPECT_EQ(target.geometries[0].vertices.size(), 400);
 }
+
+TEST(PrimitivesTest, GeometryCachingBehavior) {
+    MockRenderTarget target;
+
+    // 1. LinePrimitive
+    {
+        ooey::LinePrimitive line({0, 0}, {10, 10}, {255, 0, 0});
+        EXPECT_TRUE(line.is_dirty());
+        line.draw(target);
+        EXPECT_FALSE(line.is_dirty());
+        line.draw(target);
+        EXPECT_FALSE(line.is_dirty());
+        line.set_start({0, 0}); // same value
+        EXPECT_FALSE(line.is_dirty());
+        line.set_start({5, 5}); // different value
+        EXPECT_TRUE(line.is_dirty());
+        line.draw(target);
+        EXPECT_FALSE(line.is_dirty());
+    }
+
+    // 2. CirclePrimitive
+    {
+        ooey::CirclePrimitive circle({0, 0}, 10, {255, 0, 0});
+        EXPECT_TRUE(circle.is_dirty());
+        circle.draw(target);
+        EXPECT_FALSE(circle.is_dirty());
+        circle.draw(target);
+        EXPECT_FALSE(circle.is_dirty());
+        circle.set_radius(10); // same value
+        EXPECT_FALSE(circle.is_dirty());
+        circle.set_radius(15); // different value
+        EXPECT_TRUE(circle.is_dirty());
+        circle.draw(target);
+        EXPECT_FALSE(circle.is_dirty());
+    }
+
+    // 3. CurvePrimitive (Quadratic)
+    {
+        ooey::CurvePrimitive curve({0, 0}, {5, 10}, {10, 0}, {255, 0, 0});
+        EXPECT_TRUE(curve.is_dirty());
+        curve.draw(target);
+        EXPECT_FALSE(curve.is_dirty());
+        curve.draw(target);
+        EXPECT_FALSE(curve.is_dirty());
+        curve.set_p0({0, 0}); // same value
+        EXPECT_FALSE(curve.is_dirty());
+        curve.set_p0({1, 1}); // different value
+        EXPECT_TRUE(curve.is_dirty());
+        curve.draw(target);
+        EXPECT_FALSE(curve.is_dirty());
+    }
+
+    // 4. PolygonPrimitive
+    {
+        std::vector<ooey::Point> points = {{0, 0}, {10, 0}, {5, 10}};
+        ooey::PolygonPrimitive poly(points, {255, 0, 0});
+        EXPECT_TRUE(poly.is_dirty());
+        poly.draw(target);
+        EXPECT_FALSE(poly.is_dirty());
+        poly.draw(target);
+        EXPECT_FALSE(poly.is_dirty());
+        poly.set_points(points); // same value
+        EXPECT_FALSE(poly.is_dirty());
+        poly.set_points({{0, 0}, {20, 0}, {10, 20}}); // different value
+        EXPECT_TRUE(poly.is_dirty());
+        poly.draw(target);
+        EXPECT_FALSE(poly.is_dirty());
+    }
+
+    // 5. RectPrimitive
+    {
+        ooey::RectPrimitive rect({0, 0, 10, 10}, {255, 0, 0});
+        EXPECT_TRUE(rect.is_dirty());
+        rect.draw(target);
+        EXPECT_FALSE(rect.is_dirty());
+        rect.draw(target);
+        EXPECT_FALSE(rect.is_dirty());
+        rect.set_rect({0, 0, 10, 10}); // same value
+        EXPECT_FALSE(rect.is_dirty());
+        rect.set_rect({0, 0, 20, 20}); // different value
+        EXPECT_TRUE(rect.is_dirty());
+        rect.draw(target);
+        EXPECT_FALSE(rect.is_dirty());
+    }
+
+    // 6. RoundedRectPrimitive
+    {
+        ooey::RoundedRectPrimitive rrect({0, 0, 10, 10}, 2, {255, 0, 0});
+        EXPECT_TRUE(rrect.is_dirty());
+        rrect.draw(target);
+        EXPECT_FALSE(rrect.is_dirty());
+        rrect.draw(target);
+        EXPECT_FALSE(rrect.is_dirty());
+        rrect.set_corner_radius(2); // same value
+        EXPECT_FALSE(rrect.is_dirty());
+        rrect.set_corner_radius(4); // different value
+        EXPECT_TRUE(rrect.is_dirty());
+        rrect.draw(target);
+        EXPECT_FALSE(rrect.is_dirty());
+    }
+
+    // 7. SinusoidPrimitive
+    {
+        ooey::SinusoidPrimitive sine({0, 0}, {10, 0}, 2.0f, 1.0f, 0.0f, {255, 0, 0});
+        EXPECT_TRUE(sine.is_dirty());
+        sine.draw(target);
+        EXPECT_FALSE(sine.is_dirty());
+        sine.draw(target);
+        EXPECT_FALSE(sine.is_dirty());
+        sine.set_amplitude(2.0f); // same value
+        EXPECT_FALSE(sine.is_dirty());
+        sine.set_amplitude(4.0f); // different value
+        EXPECT_TRUE(sine.is_dirty());
+        sine.draw(target);
+        EXPECT_FALSE(sine.is_dirty());
+    }
+}
+

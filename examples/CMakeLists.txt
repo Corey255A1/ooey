@@ -27,7 +27,7 @@ if(OOEY_BUILD_CONTROLS)
     target_link_libraries(hello_wizard PRIVATE ooey ooey_controls)
 
     if(NOT EMSCRIPTEN)
-        find_package(Boost REQUIRED)
+        find_package(Boost)
         find_package(Threads REQUIRED)
         if(Boost_FOUND)
             add_executable(hello_network hello_network.cpp)

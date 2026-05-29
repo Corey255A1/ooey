@@ -1,23 +1,13 @@
 #pragma once
 
-namespace ooey {}
-
-
-#include "ooey/renderer/i_render_target.hpp"
+#include "ooey/renderer/i_drawable.hpp"
 
 namespace gooey::mvvmc {
-    using namespace ooey;
 
-class IDrawable {
-public:
-    virtual ~IDrawable() = default;
-
-    // Draw this drawable to the target
-    virtual void draw(ooey::IRenderTarget& target) const = 0;
-};
+using IDrawable = ooey::IDrawable;
 
 } // namespace gooey::mvvmc
+
 namespace gooey {
-    using namespace ooey;
-using gooey::mvvmc::IDrawable;
+using IDrawable = ooey::IDrawable;
 }

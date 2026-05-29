@@ -1,12 +1,10 @@
-namespace ooey {}
-
-#include "gooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
+#include "ooey/renderer/i_render_target.hpp"
 #include <cmath>
 #include <vector>
 #include <algorithm>
 
-namespace gooey::renderer {
-    using namespace ooey;
+namespace ooey {
 
 constexpr float PI = 3.14159265f;
 
@@ -49,11 +47,71 @@ static void add_corner_arc(std::vector<Vertex>& points, float cx, float cy, floa
 }
 
 RoundedRectPrimitive::RoundedRectPrimitive(Rect rect, int corner_radius, Color fill_color, Color stroke_color, float stroke_thickness)
-    : rect_(rect), corner_radius_(corner_radius), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness) {}
+    : rect_(rect), corner_radius_(corner_radius), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness), is_dirty_(true) {}
 
-void RoundedRectPrimitive::draw(IRenderTarget& target) const {
-    Geometry geo;
-    geo.type = PrimitiveType::Triangles;
+void RoundedRectPrimitive::set_rect(Rect rect) {
+    if (rect_ != rect) {
+        rect_ = rect;
+        is_dirty_ = true;
+    }
+}
+
+Rect RoundedRectPrimitive::get_rect() const {
+    return rect_;
+}
+
+void RoundedRectPrimitive::set_corner_radius(int radius) {
+    if (corner_radius_ != radius) {
+        corner_radius_ = radius;
+        is_dirty_ = true;
+    }
+}
+
+int RoundedRectPrimitive::get_corner_radius() const {
+    return corner_radius_;
+}
+
+void RoundedRectPrimitive::set_fill_color(Color color) {
+    if (fill_color_ != color) {
+        fill_color_ = color;
+        is_dirty_ = true;
+    }
+}
+
+Color RoundedRectPrimitive::get_fill_color() const {
+    return fill_color_;
+}
+
+void RoundedRectPrimitive::set_stroke_color(Color color) {
+    if (stroke_color_ != color) {
+        stroke_color_ = color;
+        is_dirty_ = true;
+    }
+}
+
+Color RoundedRectPrimitive::get_stroke_color() const {
+    return stroke_color_;
+}
+
+void RoundedRectPrimitive::set_stroke_thickness(float thickness) {
+    if (stroke_thickness_ != thickness) {
+        stroke_thickness_ = thickness;
+        is_dirty_ = true;
+    }
+}
+
+float RoundedRectPrimitive::get_stroke_thickness() const {
+    return stroke_thickness_;
+}
+
+bool RoundedRectPrimitive::is_dirty() const {
+    return is_dirty_;
+}
+
+void RoundedRectPrimitive::rebuild_geometry() const {
+    cached_geometry_.vertices.clear();
+    cached_geometry_.indices.clear();
+    cached_geometry_.type = PrimitiveType::Triangles;
 
     float x = static_cast<float>(rect_.x);
     float y = static_cast<float>(rect_.y);
@@ -79,19 +137,19 @@ void RoundedRectPrimitive::draw(IRenderTarget& target) const {
     add_corner_arc(perimeter, x + r, y + h - r, r, 0.5f * PI, PI, fill_color_);
 
     if (fill_color_.a > 0) {
-        unsigned int center_index = static_cast<unsigned int>(geo.vertices.size());
-        geo.vertices.push_back({x + w * 0.5f, y + h * 0.5f, fill_color_});
+        unsigned int center_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
+        cached_geometry_.vertices.push_back({x + w * 0.5f, y + h * 0.5f, fill_color_});
 
-        unsigned int start_index = static_cast<unsigned int>(geo.vertices.size());
+        unsigned int start_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
         for (const auto& v : perimeter) {
-            geo.vertices.push_back(v);
+            cached_geometry_.vertices.push_back(v);
         }
 
         size_t n = perimeter.size();
         for (size_t i = 0; i < n; ++i) {
-            geo.indices.push_back(center_index);
-            geo.indices.push_back(start_index + static_cast<unsigned int>(i));
-            geo.indices.push_back(start_index + static_cast<unsigned int>((i + 1) % n));
+            cached_geometry_.indices.push_back(center_index);
+            cached_geometry_.indices.push_back(start_index + static_cast<unsigned int>(i));
+            cached_geometry_.indices.push_back(start_index + static_cast<unsigned int>((i + 1) % n));
         }
     }
 
@@ -100,13 +158,19 @@ void RoundedRectPrimitive::draw(IRenderTarget& target) const {
         for (size_t i = 0; i < n; ++i) {
             const auto& p0 = perimeter[i];
             const auto& p1 = perimeter[(i + 1) % n];
-            add_thick_line(geo, p0.x, p0.y, p1.x, p1.y, stroke_thickness_, stroke_color_);
+            add_thick_line(cached_geometry_, p0.x, p0.y, p1.x, p1.y, stroke_thickness_, stroke_color_);
         }
-    }
-
-    if (!geo.vertices.empty()) {
-        target.draw_geometry(geo);
     }
 }
 
-} // namespace gooey::renderer
+void RoundedRectPrimitive::draw(IRenderTarget& target) const {
+    if (is_dirty_) {
+        rebuild_geometry();
+        is_dirty_ = false;
+    }
+    if (!cached_geometry_.vertices.empty()) {
+        target.draw_geometry(cached_geometry_);
+    }
+}
+
+} // namespace ooey

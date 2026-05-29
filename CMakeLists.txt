@@ -4,6 +4,10 @@ if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
 
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
+
 project(ooey VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -113,6 +117,14 @@ set(OOEY_SRCS
     ooey/src/renderer/bitmap_font.cpp
     ooey/src/renderer/gl_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
+    ooey/src/renderer/primitives/circle_primitive.cpp
+    ooey/src/renderer/primitives/curve_primitive.cpp
+    ooey/src/renderer/primitives/line_primitive.cpp
+    ooey/src/renderer/primitives/polygon_primitive.cpp
+    ooey/src/renderer/primitives/rect_primitive.cpp
+    ooey/src/renderer/primitives/rounded_rect_primitive.cpp
+    ooey/src/renderer/primitives/sinusoid_primitive.cpp
+    ooey/src/renderer/primitives/text_primitive.cpp
 )
 
 if(OOEY_BUILD_X11)
@@ -171,14 +183,6 @@ target_sources(gooey PRIVATE
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
     gooey/src/mvvmc/view.cpp
-    gooey/src/renderer/primitives/circle_primitive.cpp
-    gooey/src/renderer/primitives/curve_primitive.cpp
-    gooey/src/renderer/primitives/line_primitive.cpp
-    gooey/src/renderer/primitives/polygon_primitive.cpp
-    gooey/src/renderer/primitives/rect_primitive.cpp
-    gooey/src/renderer/primitives/rounded_rect_primitive.cpp
-    gooey/src/renderer/primitives/sinusoid_primitive.cpp
-    gooey/src/renderer/primitives/text_primitive.cpp
 )
 target_include_directories(gooey PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gooey/include>

@@ -1,11 +1,9 @@
-namespace ooey {}
-
-#include "gooey/renderer/primitives/curve_primitive.hpp"
+#include "ooey/renderer/primitives/curve_primitive.hpp"
+#include "ooey/renderer/i_render_target.hpp"
 #include <cmath>
 #include <vector>
 
-namespace gooey::renderer {
-    using namespace ooey;
+namespace ooey {
 
 static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey, float thickness, Color color) {
     if (thickness <= 0.0f) {
@@ -38,14 +36,84 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
 }
 
 CurvePrimitive::CurvePrimitive(Point p0, Point control, Point p1, Color color, float thickness)
-    : p0_(p0), control1_(control), control2_(control), p1_(p1), color_(color), thickness_(thickness), is_cubic_(false) {}
+    : p0_(p0), control1_(control), control2_(control), p1_(p1), color_(color), thickness_(thickness), is_cubic_(false), is_dirty_(true) {}
 
 CurvePrimitive::CurvePrimitive(Point p0, Point control1, Point control2, Point p1, Color color, float thickness)
-    : p0_(p0), control1_(control1), control2_(control2), p1_(p1), color_(color), thickness_(thickness), is_cubic_(true) {}
+    : p0_(p0), control1_(control1), control2_(control2), p1_(p1), color_(color), thickness_(thickness), is_cubic_(true), is_dirty_(true) {}
 
-void CurvePrimitive::draw(IRenderTarget& target) const {
-    Geometry geo;
-    geo.type = PrimitiveType::Triangles;
+void CurvePrimitive::set_p0(Point p0) {
+    if (p0_ != p0) {
+        p0_ = p0;
+        is_dirty_ = true;
+    }
+}
+
+Point CurvePrimitive::get_p0() const {
+    return p0_;
+}
+
+void CurvePrimitive::set_control1(Point control) {
+    if (control1_ != control) {
+        control1_ = control;
+        is_dirty_ = true;
+    }
+}
+
+Point CurvePrimitive::get_control1() const {
+    return control1_;
+}
+
+void CurvePrimitive::set_control2(Point control) {
+    if (control2_ != control) {
+        control2_ = control;
+        is_dirty_ = true;
+    }
+}
+
+Point CurvePrimitive::get_control2() const {
+    return control2_;
+}
+
+void CurvePrimitive::set_p1(Point p1) {
+    if (p1_ != p1) {
+        p1_ = p1;
+        is_dirty_ = true;
+    }
+}
+
+Point CurvePrimitive::get_p1() const {
+    return p1_;
+}
+
+void CurvePrimitive::set_color(Color color) {
+    if (color_ != color) {
+        color_ = color;
+        is_dirty_ = true;
+    }
+}
+
+Color CurvePrimitive::get_color() const {
+    return color_;
+}
+
+void CurvePrimitive::set_thickness(float thickness) {
+    if (thickness_ != thickness) {
+        thickness_ = thickness;
+        is_dirty_ = true;
+    }
+}
+
+float CurvePrimitive::get_thickness() const {
+    return thickness_;
+}
+
+bool CurvePrimitive::is_dirty() const {
+    return is_dirty_;
+}
+
+void CurvePrimitive::rebuild_geometry() const {
+    cached_geometry_.vertices.clear();
+    cached_geometry_.indices.clear();
 
     constexpr int num_segments = 30;
     std::vector<Point> curve_points;
@@ -89,27 +157,33 @@ void CurvePrimitive::draw(IRenderTarget& target) const {
     }
 
     if (thickness_ <= 1.0f) {
-        geo.type = PrimitiveType::Lines;
+        cached_geometry_.type = PrimitiveType::Lines;
         for (int i = 0; i < num_segments; ++i) {
-            unsigned int base = static_cast<unsigned int>(geo.vertices.size());
-            geo.vertices.push_back({static_cast<float>(curve_points[i].x), static_cast<float>(curve_points[i].y), color_});
-            geo.vertices.push_back({static_cast<float>(curve_points[i + 1].x), static_cast<float>(curve_points[i + 1].y), color_});
-            geo.indices.push_back(base);
-            geo.indices.push_back(base + 1);
+            unsigned int base = static_cast<unsigned int>(cached_geometry_.vertices.size());
+            cached_geometry_.vertices.push_back({static_cast<float>(curve_points[i].x), static_cast<float>(curve_points[i].y), color_});
+            cached_geometry_.vertices.push_back({static_cast<float>(curve_points[i + 1].x), static_cast<float>(curve_points[i + 1].y), color_});
+            cached_geometry_.indices.push_back(base);
+            cached_geometry_.indices.push_back(base + 1);
         }
     } else {
-        geo.type = PrimitiveType::Triangles;
+        cached_geometry_.type = PrimitiveType::Triangles;
         for (int i = 0; i < num_segments; ++i) {
-            add_thick_line(geo,
+            add_thick_line(cached_geometry_,
                            static_cast<float>(curve_points[i].x), static_cast<float>(curve_points[i].y),
                            static_cast<float>(curve_points[i + 1].x), static_cast<float>(curve_points[i + 1].y),
                            thickness_, color_);
         }
     }
+}
 
-    if (!geo.vertices.empty()) {
-        target.draw_geometry(geo);
+void CurvePrimitive::draw(IRenderTarget& target) const {
+    if (is_dirty_) {
+        rebuild_geometry();
+        is_dirty_ = false;
+    }
+    if (!cached_geometry_.vertices.empty()) {
+        target.draw_geometry(cached_geometry_);
     }
 }
 
-} // namespace gooey::renderer
+} // namespace ooey

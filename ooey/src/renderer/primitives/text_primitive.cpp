@@ -1,17 +1,10 @@
-namespace ooey {}
-
-#include "gooey/renderer/primitives/text_primitive.hpp"
+#include "ooey/renderer/primitives/text_primitive.hpp"
 #include "ooey/renderer/i_render_target.hpp"
 
-namespace gooey::renderer {
-    using namespace ooey;
+namespace ooey {
 
 TextPrimitive::TextPrimitive(std::string text, Font font, Point position, Color color)
     : text_(std::move(text)), font_(font), position_(position), color_(color) {}
-
-void TextPrimitive::draw(IRenderTarget& target) const {
-    target.draw_text(text_, font_, position_, color_);
-}
 
 void TextPrimitive::set_text(const std::string& text) {
     text_ = text;
@@ -45,4 +38,8 @@ Color TextPrimitive::get_color() const {
     return color_;
 }
 
-} // namespace gooey::renderer
+void TextPrimitive::draw(IRenderTarget& target) const {
+    target.draw_text(text_, font_, position_, color_);
+}
+
+} // namespace ooey
