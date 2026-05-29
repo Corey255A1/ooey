@@ -306,7 +306,7 @@ bool WindowBackend::create(const Size& size, const char* title) {
 
     // If no xdg (older compositor?), create shm target immediately
     if (!xdg_surface_) {
-        render_target_ = std::make_unique<RenderTarget>(display_, shm_, surface_, width_, height_);
+        recreate_render_target(width_, height_);
     }
 
     // Setup seat for input if available

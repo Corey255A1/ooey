@@ -35,7 +35,7 @@ public:
     void poll_input() override;
     IRenderTarget* get_render_target() override;
 
-    void set_input_manager(InputManager* manager) override { input_manager_ = manager; }
+    void set_input_manager(InputManager* manager) override;
 
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);
