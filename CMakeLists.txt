@@ -86,6 +86,15 @@ if(OOEY_BUILD_WAYLAND)
     target_include_directories(ooey PUBLIC ${WAYLAND_INCLUDE_DIRS} ${XKBCOMMON_INCLUDE_DIRS} ${WAYLAND_PROTOCOLS_INCLUDE_DIRS})
     target_compile_options(ooey PUBLIC ${WAYLAND_CFLAGS_OTHER} ${XKBCOMMON_CFLAGS_OTHER} ${WAYLAND_PROTOCOLS_CFLAGS_OTHER})
     target_link_libraries(ooey PUBLIC ${WAYLAND_LIBRARIES} ${XKBCOMMON_LIBRARIES})
+
+    pkg_check_modules(EGL egl)
+    pkg_check_modules(WAYLAND_EGL wayland-egl)
+    if(EGL_FOUND AND WAYLAND_EGL_FOUND)
+        target_compile_definitions(ooey PUBLIC OOEY_WAYLAND_HAS_EGL)
+        target_include_directories(ooey PUBLIC ${EGL_INCLUDE_DIRS} ${WAYLAND_EGL_INCLUDE_DIRS})
+        target_compile_options(ooey PUBLIC ${EGL_CFLAGS_OTHER} ${WAYLAND_EGL_CFLAGS_OTHER})
+        target_link_libraries(ooey PUBLIC ${EGL_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
+    endif()
 endif()
 
 # Optional Framebuffer backend

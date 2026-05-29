@@ -1,5 +1,11 @@
 #include "ooey/platform/wayland/window_backend.hpp"
 #include "ooey/renderer/software_render_target.hpp"
+#include "ooey/renderer/gl_render_target.hpp"
+#ifdef OOEY_WAYLAND_HAS_EGL
+#include <wayland-egl.h>
+#include <EGL/egl.h>
+#include <GL/gl.h>
+#endif
 #include "ooey/input.hpp"
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
@@ -261,6 +267,10 @@ bool WindowBackend::create(const Size& size, const char* title) {
         return false;
     }
 
+#ifdef OOEY_WAYLAND_HAS_EGL
+    init_egl();
+#endif
+
     WaylandState state{};
     registry_ = wl_display_get_registry(display_);
     wl_registry_add_listener(registry_, &g_registry_listener, &state);
@@ -343,6 +353,9 @@ void WindowBackend::destroy() {
     if (render_target_) {
         render_target_.reset();
     }
+#ifdef OOEY_WAYLAND_HAS_EGL
+    cleanup_egl();
+#endif
     if (mapped_data_) {
         munmap(mapped_data_, mapped_size_);
         mapped_data_ = nullptr;
@@ -454,6 +467,50 @@ static int create_shm_file(size_t size) {
 }
 
 void WindowBackend::recreate_render_target(int width, int height) {
+#ifdef OOEY_WAYLAND_HAS_EGL
+    if (use_egl_) {
+        if (egl_window_) {
+            wl_egl_window_resize(egl_window_, width, height, 0, 0);
+            if (render_target_) {
+                render_target_->resize(width, height);
+            }
+        } else {
+            egl_window_ = wl_egl_window_create(surface_, width, height);
+            if (!egl_window_) {
+                std::cerr << "Wayland EGL error: Failed to create wl_egl_window. Falling back to software.\n";
+                use_egl_ = false;
+                recreate_render_target(width, height);
+                return;
+            }
+            egl_surface_ = eglCreateWindowSurface(egl_display_, egl_config_, reinterpret_cast<EGLNativeWindowType>(egl_window_), nullptr);
+            if (egl_surface_ == EGL_NO_SURFACE) {
+                std::cerr << "Wayland EGL error: Failed to create EGL surface. Falling back to software.\n";
+                wl_egl_window_destroy(egl_window_);
+                egl_window_ = nullptr;
+                use_egl_ = false;
+                recreate_render_target(width, height);
+                return;
+            }
+            if (!eglMakeCurrent(egl_display_, egl_surface_, egl_surface_, egl_context_)) {
+                std::cerr << "Wayland EGL error: Failed to make EGL context current. Falling back to software.\n";
+                eglDestroySurface(egl_display_, egl_surface_);
+                egl_surface_ = nullptr;
+                wl_egl_window_destroy(egl_window_);
+                egl_window_ = nullptr;
+                use_egl_ = false;
+                recreate_render_target(width, height);
+                return;
+            }
+            render_target_ = std::make_unique<GlRenderTarget>(width, height, [this]() {
+                if (egl_display_ && egl_surface_) {
+                    eglSwapBuffers(egl_display_, egl_surface_);
+                }
+            });
+        }
+        return;
+    }
+#endif
+
     if (mapped_data_) {
         munmap(mapped_data_, mapped_size_);
         mapped_data_ = nullptr;
@@ -537,5 +594,91 @@ void WindowBackend::handle_xdg_toplevel_configure(int32_t width, int32_t height)
         }
     }
 }
+
+#ifdef OOEY_WAYLAND_HAS_EGL
+bool WindowBackend::init_egl() {
+    egl_display_ = eglGetDisplay(reinterpret_cast<EGLNativeDisplayType>(display_));
+    if (egl_display_ == EGL_NO_DISPLAY) {
+        std::cerr << "Wayland EGL: eglGetDisplay failed\n";
+        return false;
+    }
+
+    EGLint major, minor;
+    if (!eglInitialize(egl_display_, &major, &minor)) {
+        std::cerr << "Wayland EGL: eglInitialize failed\n";
+        egl_display_ = nullptr;
+        return false;
+    }
+
+    std::cout << "Wayland EGL initialized: version " << major << "." << minor << "\n";
+
+    if (!eglBindAPI(EGL_OPENGL_API)) {
+        std::cerr << "Wayland EGL: eglBindAPI failed\n";
+        eglTerminate(egl_display_);
+        egl_display_ = nullptr;
+        return false;
+    }
+
+    EGLint attribs[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+        EGL_NONE
+    };
+
+    EGLint num_configs;
+    if (!eglChooseConfig(egl_display_, attribs, &egl_config_, 1, &num_configs) || num_configs < 1) {
+        std::cerr << "Wayland EGL: eglChooseConfig failed\n";
+        eglTerminate(egl_display_);
+        egl_display_ = nullptr;
+        return false;
+    }
+
+    EGLint context_attribs[] = {
+        EGL_CONTEXT_MAJOR_VERSION, 3,
+        EGL_CONTEXT_MINOR_VERSION, 0,
+        EGL_NONE
+    };
+
+    egl_context_ = eglCreateContext(egl_display_, egl_config_, EGL_NO_CONTEXT, context_attribs);
+    if (egl_context_ == EGL_NO_CONTEXT) {
+        egl_context_ = eglCreateContext(egl_display_, egl_config_, EGL_NO_CONTEXT, nullptr);
+    }
+
+    if (egl_context_ == EGL_NO_CONTEXT) {
+        std::cerr << "Wayland EGL: eglCreateContext failed\n";
+        eglTerminate(egl_display_);
+        egl_display_ = nullptr;
+        return false;
+    }
+
+    use_egl_ = true;
+    return true;
+}
+
+void WindowBackend::cleanup_egl() {
+    if (egl_display_) {
+        eglMakeCurrent(egl_display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (egl_surface_) {
+            eglDestroySurface(egl_display_, egl_surface_);
+            egl_surface_ = nullptr;
+        }
+        if (egl_context_) {
+            eglDestroyContext(egl_display_, egl_context_);
+            egl_context_ = nullptr;
+        }
+        if (egl_window_) {
+            wl_egl_window_destroy(egl_window_);
+            egl_window_ = nullptr;
+        }
+        eglTerminate(egl_display_);
+        egl_display_ = nullptr;
+    }
+    use_egl_ = false;
+}
+#endif
 
 } // namespace ooey::wayland

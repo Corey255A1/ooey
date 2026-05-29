@@ -18,6 +18,7 @@ struct xdg_toplevel;
 struct wl_pointer;
 struct wl_keyboard;
 struct wl_buffer;
+struct wl_egl_window;
 
 namespace ooey::wayland {
 
@@ -63,11 +64,20 @@ private:
     InputManager* input_manager_{nullptr};
 
     void recreate_render_target(int width, int height);
+    bool init_egl();
+    void cleanup_egl();
     
     std::unique_ptr<PointerData> pointer_data_;
     std::unique_ptr<KeyboardData> keyboard_data_;
     wl_pointer* pointer_obj_{nullptr};
     wl_keyboard* keyboard_obj_{nullptr};
+
+    void* egl_display_{nullptr};
+    void* egl_context_{nullptr};
+    void* egl_surface_{nullptr};
+    void* egl_config_{nullptr};
+    wl_egl_window* egl_window_{nullptr};
+    bool use_egl_{false};
 
     int width_{};
     int height_{};
