@@ -176,25 +176,44 @@ Size VulkanRenderTarget::measure_text(const std::string& text, const Font& font)
 }
 
 void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
-    BitmapFont::draw_text(text, font.size, position, [this, color](int x, int y, int w, int h) {
-        Geometry geom;
-        geom.type = PrimitiveType::Triangles;
-        
+    size_t start_vertices = frame_vertices_.size();
+    size_t start_indices = frame_indices_.size();
+
+    DrawCall call;
+    call.first_index = static_cast<uint32_t>(start_indices);
+    call.vertex_offset = static_cast<int32_t>(start_vertices);
+    call.type = PrimitiveType::Triangles;
+
+    uint32_t quad_count = 0;
+
+    BitmapFont::draw_text(text, font.size, position, [&](int x, int y, int w, int h) {
         float fx = static_cast<float>(x);
         float fy = static_cast<float>(y);
         float fw = static_cast<float>(w);
         float fh = static_cast<float>(h);
-        
-        geom.vertices = {
-            Vertex{fx, fy, color},
-            Vertex{fx + fw, fy, color},
-            Vertex{fx + fw, fy + fh, color},
-            Vertex{fx, fy + fh, color}
-        };
-        geom.indices = { 0, 1, 2, 2, 3, 0 };
-        draw_geometry(geom);
+
+        uint32_t base = quad_count * 4;
+        frame_vertices_.push_back(Vertex{fx, fy, color});
+        frame_vertices_.push_back(Vertex{fx + fw, fy, color});
+        frame_vertices_.push_back(Vertex{fx + fw, fy + fh, color});
+        frame_vertices_.push_back(Vertex{fx, fy + fh, color});
+
+        frame_indices_.push_back(base + 0);
+        frame_indices_.push_back(base + 1);
+        frame_indices_.push_back(base + 2);
+        frame_indices_.push_back(base + 2);
+        frame_indices_.push_back(base + 3);
+        frame_indices_.push_back(base + 0);
+
+        quad_count++;
     });
+
+    if (quad_count > 0) {
+        call.index_count = quad_count * 6;
+        draw_calls_.push_back(call);
+    }
 }
+
 
 void VulkanRenderTarget::present_headless() {
     frame_vertices_.clear();
@@ -223,16 +242,47 @@ bool VulkanRenderTarget::acquire_next_image(uint32_t& image_index) {
 
 void VulkanRenderTarget::copy_vertex_and_index_data() {
     if (!frame_vertices_.empty()) {
+        VkDeviceSize needed_vertex_size = frame_vertices_.size() * sizeof(Vertex);
+        if (needed_vertex_size > vertex_buffer_size_) {
+            if (vertex_buffer_ != VK_NULL_HANDLE) {
+                vkDestroyBuffer(device_, vertex_buffer_, nullptr);
+            }
+            if (vertex_buffer_memory_ != VK_NULL_HANDLE) {
+                vkFreeMemory(device_, vertex_buffer_memory_, nullptr);
+            }
+            // Round up to next MB boundary to reduce future reallocations
+            vertex_buffer_size_ = ((needed_vertex_size + (1024 * 1024) - 1) / (1024 * 1024)) * (1024 * 1024);
+            create_buffer(device_, physical_device_, vertex_buffer_size_, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                          vertex_buffer_, vertex_buffer_memory_);
+        }
+
+        VkDeviceSize needed_index_size = frame_indices_.size() * sizeof(uint32_t);
+        if (needed_index_size > index_buffer_size_) {
+            if (index_buffer_ != VK_NULL_HANDLE) {
+                vkDestroyBuffer(device_, index_buffer_, nullptr);
+            }
+            if (index_buffer_memory_ != VK_NULL_HANDLE) {
+                vkFreeMemory(device_, index_buffer_memory_, nullptr);
+            }
+            // Round up to next MB boundary
+            index_buffer_size_ = ((needed_index_size + (1024 * 1024) - 1) / (1024 * 1024)) * (1024 * 1024);
+            create_buffer(device_, physical_device_, index_buffer_size_, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                          index_buffer_, index_buffer_memory_);
+        }
+
         void* data;
-        vkMapMemory(device_, vertex_buffer_memory_, 0, frame_vertices_.size() * sizeof(Vertex), 0, &data);
-        std::memcpy(data, frame_vertices_.data(), frame_vertices_.size() * sizeof(Vertex));
+        vkMapMemory(device_, vertex_buffer_memory_, 0, needed_vertex_size, 0, &data);
+        std::memcpy(data, frame_vertices_.data(), needed_vertex_size);
         vkUnmapMemory(device_, vertex_buffer_memory_);
 
-        vkMapMemory(device_, index_buffer_memory_, 0, frame_indices_.size() * sizeof(uint32_t), 0, &data);
-        std::memcpy(data, frame_indices_.data(), frame_indices_.size() * sizeof(uint32_t));
+        vkMapMemory(device_, index_buffer_memory_, 0, needed_index_size, 0, &data);
+        std::memcpy(data, frame_indices_.data(), needed_index_size);
         vkUnmapMemory(device_, index_buffer_memory_);
     }
 }
+
 
 void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t image_index) {
     VkCommandBufferBeginInfo begin_info{};
@@ -741,39 +791,87 @@ void VulkanRenderTarget::create_pipelines() {
 }
 
 void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
-    // Render the image by downsampling it to max 32x32 colored quads
-    int ds_w = std::min(image.width(), 32);
-    int ds_h = std::min(image.height(), 32);
-    float qw = static_cast<float>(dest_rect.width) / ds_w;
-    float qh = static_cast<float>(dest_rect.height) / ds_h;
-    const uint8_t* pixels = image.data().data();
-    int orig_w = image.width();
-    int orig_h = image.height();
+    auto it = image_geometry_cache_.find(&image);
+    if (it == image_geometry_cache_.end()) {
+        CachedImageGeometry cached;
+        cached.orig_width = image.width();
+        cached.orig_height = image.height();
 
-    for (int y = 0; y < ds_h; ++y) {
-        int src_y = (y * orig_h) / ds_h;
-        for (int x = 0; x < ds_w; ++x) {
-            int src_x = (x * orig_w) / ds_w;
-            int src_idx = (src_y * orig_w + src_x) * 4;
-            Color color{pixels[src_idx], pixels[src_idx+1], pixels[src_idx+2], pixels[src_idx+3]};
-            
-            if (color.a == 0) continue; // skip fully transparent
+        int ds_w = std::min(image.width(), 32);
+        int ds_h = std::min(image.height(), 32);
+        float qw = 1.0f / ds_w; // Unit coordinates relative to dest_rect size
+        float qh = 1.0f / ds_h;
+        const uint8_t* pixels = image.data().data();
+        int orig_w = image.width();
+        int orig_h = image.height();
 
-            float fx = static_cast<float>(dest_rect.x) + x * qw;
-            float fy = static_cast<float>(dest_rect.y) + y * qh;
-            
-            Geometry geom;
-            geom.type = PrimitiveType::Triangles;
-            geom.vertices = {
-                Vertex{fx, fy, color},
-                Vertex{fx + qw, fy, color},
-                Vertex{fx + qw, fy + qh, color},
-                Vertex{fx, fy + qh, color}
-            };
-            geom.indices = { 0, 1, 2, 2, 3, 0 };
-            draw_geometry(geom);
+        uint32_t quad_count = 0;
+        for (int y = 0; y < ds_h; ++y) {
+            int src_y = (y * orig_h) / ds_h;
+            for (int x = 0; x < ds_w; ++x) {
+                int src_x = (x * orig_w) / ds_w;
+                int src_idx = (src_y * orig_w + src_x) * 4;
+                Color color{pixels[src_idx], pixels[src_idx+1], pixels[src_idx+2], pixels[src_idx+3]};
+                
+                if (color.a == 0) continue; // skip fully transparent
+
+                float fx = x * qw;
+                float fy = y * qh;
+
+                uint32_t base = quad_count * 4;
+                cached.vertices.push_back(Vertex{fx, fy, color});
+                cached.vertices.push_back(Vertex{fx + qw, fy, color});
+                cached.vertices.push_back(Vertex{fx + qw, fy + qh, color});
+                cached.vertices.push_back(Vertex{fx, fy + qh, color});
+
+                cached.indices.push_back(base + 0);
+                cached.indices.push_back(base + 1);
+                cached.indices.push_back(base + 2);
+                cached.indices.push_back(base + 2);
+                cached.indices.push_back(base + 3);
+                cached.indices.push_back(base + 0);
+
+                quad_count++;
+            }
         }
+        image_geometry_cache_[&image] = std::move(cached);
+        it = image_geometry_cache_.find(&image);
     }
+
+    const auto& cached = it->second;
+    if (cached.vertices.empty()) {
+        return;
+    }
+
+    size_t start_vertices = frame_vertices_.size();
+    size_t start_indices = frame_indices_.size();
+
+    DrawCall call;
+    call.first_index = static_cast<uint32_t>(start_indices);
+    call.vertex_offset = static_cast<int32_t>(start_vertices);
+    call.type = PrimitiveType::Triangles;
+    call.index_count = static_cast<uint32_t>(cached.indices.size());
+
+    // Copy indices direct with offset adjustments
+    frame_indices_.insert(frame_indices_.end(), cached.indices.begin(), cached.indices.end());
+
+    // Scale and shift vertices to dest_rect
+    float rx = static_cast<float>(dest_rect.x);
+    float ry = static_cast<float>(dest_rect.y);
+    float rw = static_cast<float>(dest_rect.width);
+    float rh = static_cast<float>(dest_rect.height);
+
+    for (const auto& v : cached.vertices) {
+        frame_vertices_.push_back(Vertex{
+            rx + v.x * rw,
+            ry + v.y * rh,
+            v.color
+        });
+    }
+
+    draw_calls_.push_back(call);
 }
+
+
 
 } // namespace ooey

@@ -71,16 +71,17 @@ Size GlRenderTarget::measure_text(const std::string& text, const Font& font) {
 }
 
 void GlRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
-    BitmapFont::draw_text(text, font.size, position, [color](int x, int y, int w, int h) {
-        glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
-        glBegin(GL_QUADS);
+    glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+    glBegin(GL_QUADS);
+    BitmapFont::draw_text(text, font.size, position, [](int x, int y, int w, int h) {
         glVertex2f(static_cast<float>(x), static_cast<float>(y));
         glVertex2f(static_cast<float>(x + w), static_cast<float>(y));
         glVertex2f(static_cast<float>(x + w), static_cast<float>(y + h));
         glVertex2f(static_cast<float>(x), static_cast<float>(y + h));
-        glEnd();
     });
+    glEnd();
 }
+
 
 void GlRenderTarget::present() {
     if (present_callback_) {

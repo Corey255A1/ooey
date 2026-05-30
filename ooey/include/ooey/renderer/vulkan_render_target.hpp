@@ -4,6 +4,8 @@
 #include <vulkan/vulkan.h>
 #include <functional>
 #include <vector>
+#include <unordered_map>
+
 
 namespace ooey {
 
@@ -95,8 +97,20 @@ private:
     // Vertex & Index buffers
     VkBuffer vertex_buffer_{VK_NULL_HANDLE};
     VkDeviceMemory vertex_buffer_memory_{VK_NULL_HANDLE};
+    VkDeviceSize vertex_buffer_size_{1024 * 1024};
     VkBuffer index_buffer_{VK_NULL_HANDLE};
     VkDeviceMemory index_buffer_memory_{VK_NULL_HANDLE};
+    VkDeviceSize index_buffer_size_{1024 * 1024};
+
+    struct CachedImageGeometry {
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        int orig_width{0};
+        int orig_height{0};
+    };
+    std::unordered_map<const Image*, CachedImageGeometry> image_geometry_cache_;
+
+
 
     struct DrawCall {
         uint32_t first_index;

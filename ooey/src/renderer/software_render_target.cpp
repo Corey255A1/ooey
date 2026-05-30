@@ -6,6 +6,11 @@
 
 namespace ooey {
 
+static inline uint8_t div255(uint32_t val) {
+    return (val + 1 + (val >> 8)) >> 8;
+}
+
+
 SoftwareRenderTarget::SoftwareRenderTarget(uint8_t* data, int width, int height, int stride, std::function<void()>&& present_callback)
     : data_(data), width_(width), height_(height), stride_(stride), present_callback_(std::move(present_callback)) {}
 
@@ -95,16 +100,17 @@ void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color co
     if (!data_) {
         return;
     }
+    int start_y = std::max(0, y);
+    int end_y = std::min(height_, y + h);
+    int start_x = std::max(0, x);
+    int end_x = std::min(width_, x + w);
+    if (start_x >= end_x || start_y >= end_y) {
+        return;
+    }
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
-    for (int yy = y; yy < y + h; ++yy) {
-        if (yy < 0 || yy >= height_) {
-            continue;
-        }
+    for (int yy = start_y; yy < end_y; ++yy) {
         uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
-        for (int xx = x; xx < x + w; ++xx) {
-            if (xx < 0 || xx >= width_) {
-                continue;
-            }
+        for (int xx = start_x; xx < end_x; ++xx) {
             row[xx] = pixel;
         }
     }
@@ -165,14 +171,23 @@ void SoftwareRenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Ver
     int y_start = static_cast<int>(std::round(v0.y));
     int y_end = static_cast<int>(std::round(v1.y));
 
+    uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
+
     for (int scanline_y = y_start; scanline_y < y_end; scanline_y++) {
-        int x1 = static_cast<int>(std::round(curx1));
-        int x2 = static_cast<int>(std::round(curx2));
-        if (x1 > x2) {
-            std::swap(x1, x2);
-        }
-        for (int x = x1; x <= x2; ++x) {
-            draw_pixel(x, scanline_y, color);
+        if (scanline_y >= 0 && scanline_y < height_) {
+            int x1 = static_cast<int>(std::round(curx1));
+            int x2 = static_cast<int>(std::round(curx2));
+            if (x1 > x2) {
+                std::swap(x1, x2);
+            }
+            int start_x = std::max(0, x1);
+            int end_x = std::min(width_ - 1, x2);
+            if (start_x <= end_x) {
+                uint32_t* row = reinterpret_cast<uint32_t*>(data_ + scanline_y * stride_);
+                for (int x = start_x; x <= end_x; ++x) {
+                    row[x] = pixel;
+                }
+            }
         }
         curx1 += invslope1;
         curx2 += invslope2;
@@ -192,14 +207,23 @@ void SoftwareRenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex
     int y_start = static_cast<int>(std::round(v2.y));
     int y_end = static_cast<int>(std::round(v0.y));
 
+    uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
+
     for (int scanline_y = y_start; scanline_y > y_end; scanline_y--) {
-        int x1 = static_cast<int>(std::round(curx1));
-        int x2 = static_cast<int>(std::round(curx2));
-        if (x1 > x2) {
-            std::swap(x1, x2);
-        }
-        for (int x = x1; x <= x2; ++x) {
-            draw_pixel(x, scanline_y, color);
+        if (scanline_y >= 0 && scanline_y < height_) {
+            int x1 = static_cast<int>(std::round(curx1));
+            int x2 = static_cast<int>(std::round(curx2));
+            if (x1 > x2) {
+                std::swap(x1, x2);
+            }
+            int start_x = std::max(0, x1);
+            int end_x = std::min(width_ - 1, x2);
+            if (start_x <= end_x) {
+                uint32_t* row = reinterpret_cast<uint32_t*>(data_ + scanline_y * stride_);
+                for (int x = start_x; x <= end_x; ++x) {
+                    row[x] = pixel;
+                }
+            }
         }
         curx1 -= invslope1;
         curx2 -= invslope2;
@@ -244,23 +268,24 @@ void SoftwareRenderTarget::draw_image(const Image& image, const Rect& dest_rect)
     int img_w = image.width();
     int img_h = image.height();
 
-    for (int y = 0; y < dest_rect.height; ++y) {
-        int yy = dest_rect.y + y;
-        if (yy < 0 || yy >= height_) {
-            continue;
-        }
+    int start_y = std::max(0, -dest_rect.y);
+    int end_y = std::min(dest_rect.height, height_ - dest_rect.y);
+    int start_x = std::max(0, -dest_rect.x);
+    int end_x = std::min(dest_rect.width, width_ - dest_rect.x);
 
+    if (start_x >= end_x || start_y >= end_y) {
+        return;
+    }
+
+    for (int y = start_y; y < end_y; ++y) {
+        int yy = dest_rect.y + y;
         int src_y = (y * img_h) / dest_rect.height;
         if (src_y < 0 || src_y >= img_h) continue;
 
         uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
 
-        for (int x = 0; x < dest_rect.width; ++x) {
+        for (int x = start_x; x < end_x; ++x) {
             int xx = dest_rect.x + x;
-            if (xx < 0 || xx >= width_) {
-                continue;
-            }
-
             int src_x = (x * img_w) / dest_rect.width;
             if (src_x < 0 || src_x >= img_w) continue;
 
@@ -282,10 +307,11 @@ void SoftwareRenderTarget::draw_image(const Image& image, const Rect& dest_rect)
                 uint8_t dest_r = (dest_pixel >> 16) & 0xFF;
                 uint8_t dest_a = (dest_pixel >> 24) & 0xFF;
 
-                uint8_t r = (src_r * src_a + dest_r * (255 - src_a)) / 255;
-                uint8_t g = (src_g * src_a + dest_g * (255 - src_a)) / 255;
-                uint8_t b = (src_b * src_a + dest_b * (255 - src_a)) / 255;
-                uint8_t a = src_a + (dest_a * (255 - src_a)) / 255;
+                uint32_t inv_a = 255 - src_a;
+                uint8_t r = div255(src_r * src_a + dest_r * inv_a);
+                uint8_t g = div255(src_g * src_a + dest_g * inv_a);
+                uint8_t b = div255(src_b * src_a + dest_b * inv_a);
+                uint8_t a = div255(src_a * 255 + dest_a * inv_a);
 
                 row[xx] = (static_cast<uint32_t>(a) << 24) |
                           (static_cast<uint32_t>(r) << 16) |

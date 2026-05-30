@@ -1,11 +1,10 @@
-namespace ooey {}
-
 #include "gooey/controls/label.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/bitmap_font.hpp"
 
 namespace gooey::controls {
     using namespace ooey;
+
 
 Label::Label(std::string text, Font font, Point position, Color color) {
     text_primitive_ = std::make_shared<TextPrimitive>(std::move(text), font, position, color);
@@ -27,6 +26,7 @@ void Label::set_text(const std::string& text) {
         absolute_bounds.height = text_size.height;
     }
 }
+
 
 const std::string& Label::get_text() const {
     return text_primitive_->get_text();
@@ -78,6 +78,7 @@ void Label::layout(Rect bounds) {
         text_primitive_->set_position(Point{bounds.x + padding_left, bounds.y + padding_top});
     }
 }
+
 
 void Label::apply_style(const mvvmc::Style& style) {
     set_color(style.text_color);

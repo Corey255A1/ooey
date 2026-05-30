@@ -129,6 +129,7 @@ public:
             Point{0, 0},
             Color{255, 255, 255}
         );
+        title->set_absolute(false);
         title->set_margin(0, 0, 0, 5);
         title->set_style_name("title-text");
         header->add_child(title);
@@ -139,6 +140,7 @@ public:
             Point{0, 0},
             Color{150, 150, 160}
         );
+        subtitle->set_absolute(false);
         subtitle->set_margin(0, 0, 0, 15);
         subtitle->set_style_name("subtitle-text");
         header->add_child(subtitle);
@@ -160,6 +162,7 @@ public:
             "Cycle Theme",
             Color{255, 255, 255}
         );
+        cycle_theme_btn->set_absolute(false);
         cycle_theme_btn->set_margin(0, 5, 10, 5);
         cycle_theme_btn->set_style_name("primary-btn");
         button_row->add_child(cycle_theme_btn);
@@ -173,6 +176,7 @@ public:
             "Clicks: 0",
             Color{220, 220, 230}
         );
+        counter_btn->set_absolute(false);
         counter_btn->set_margin(0, 5, 10, 5);
         counter_btn->set_style_name("secondary-btn");
         button_row->add_child(counter_btn);
@@ -188,10 +192,12 @@ public:
         auto card1 = std::make_shared<CardView>(Color{35, 35, 40});
         card1->set_style_name("card-bg");
         auto card1_title = std::make_shared<Label>("Theme Status", Font{"sans-serif", 16, FontWeight::Bold}, Point{0, 0}, Color{0, 180, 240});
+        card1_title->set_absolute(false);
         card1_title->set_margin(0, 0, 0, 5);
         card1_title->set_style_name("card-title-accent");
         card1->add_child(card1_title);
         auto card1_lbl = std::make_shared<Label>("Dynamic card styling accent", Font{"sans-serif", 12}, Point{0, 0}, Color{180, 180, 190});
+        card1_lbl->set_absolute(false);
         card1_lbl->set_style_name("card-muted-text");
         card1->add_child(card1_lbl);
         grid->add_child(card1);
@@ -199,10 +205,12 @@ public:
         auto card2 = std::make_shared<CardView>(Color{35, 35, 40});
         card2->set_style_name("card-bg");
         auto card2_title = std::make_shared<Label>("Console Output", Font{"sans-serif", 16, FontWeight::Bold}, Point{0, 0}, Color{0, 200, 100});
+        card2_title->set_absolute(false);
         card2_title->set_margin(0, 0, 0, 5);
         card2_title->set_style_name("card-title-accent-green");
         card2->add_child(card2_title);
         auto card2_lbl = std::make_shared<Label>("CPU Load: 42%\nRAM usage: 5.4 GB / 16 GB", Font{"sans-serif", 12}, Point{0, 0}, Color{180, 180, 190});
+        card2_lbl->set_absolute(false);
         card2_lbl->set_style_name("card-muted-text");
         card2->add_child(card2_lbl);
         grid->add_child(card2);
@@ -210,10 +218,12 @@ public:
         auto card3 = std::make_shared<CardView>(Color{35, 35, 40});
         card3->set_style_name("card-bg");
         auto card3_title = std::make_shared<Label>("Interactive Console", Font{"sans-serif", 16, FontWeight::Bold}, Point{0, 0}, Color{235, 160, 0});
+        card3_title->set_absolute(false);
         card3_title->set_margin(0, 0, 0, 5);
         card3_title->set_style_name("card-title-accent-orange");
         card3->add_child(card3_title);
         auto card3_lbl = std::make_shared<Label>("Layout positions auto flow", Font{"sans-serif", 12}, Point{0, 0}, Color{180, 180, 190});
+        card3_lbl->set_absolute(false);
         card3_lbl->set_style_name("card-muted-text");
         card3->add_child(card3_lbl);
         grid->add_child(card3);
@@ -221,10 +231,12 @@ public:
         auto card4 = std::make_shared<CardView>(Color{35, 35, 40});
         card4->set_style_name("card-bg");
         auto card4_title = std::make_shared<Label>("System Details", Font{"sans-serif", 16, FontWeight::Bold}, Point{0, 0}, Color{180, 100, 240});
+        card4_title->set_absolute(false);
         card4_title->set_margin(0, 0, 0, 5);
         card4_title->set_style_name("card-title-accent-purple");
         card4->add_child(card4_title);
         auto card4_lbl = std::make_shared<Label>("Mode: Retained MVVMC\nTheme: Cycle Modern", Font{"sans-serif", 12}, Point{0, 0}, Color{180, 180, 190});
+        card4_lbl->set_absolute(false);
         card4_lbl->set_style_name("card-muted-text");
         card4->add_child(card4_lbl);
         grid->add_child(card4);
@@ -238,6 +250,7 @@ public:
         footer_row->set_margin(0, 0, 0, 10);
 
         auto name_lbl = std::make_shared<Label>("Enter Name:", Font{"sans-serif", 16}, Point{0, 0}, Color{200, 200, 200});
+        name_lbl->set_absolute(false);
         name_lbl->set_margin(0, 5, 10, 0);
         name_lbl->set_style_name("default-text");
         footer_row->add_child(name_lbl);
@@ -248,11 +261,13 @@ public:
             Color{255, 255, 255},
             Color{35, 35, 40}
         );
+        name_box->set_absolute(false);
         name_box->set_style_name("text-input");
         footer_row->add_child(name_box);
         add_child(footer_row);
 
         auto greeting_lbl = std::make_shared<Label>("", Font{"sans-serif", 16, FontWeight::Bold}, Point{0, 0}, Color{0, 200, 100});
+        greeting_lbl->set_absolute(false);
         greeting_lbl->set_width(SizePolicy::MatchParent);
         greeting_lbl->set_margin(0, 5, 0, 15);
         greeting_lbl->set_style_name("card-title-accent-green");

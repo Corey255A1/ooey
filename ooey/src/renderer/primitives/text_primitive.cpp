@@ -3,6 +3,7 @@
 
 namespace ooey {
 
+
 TextPrimitive::TextPrimitive(std::string text, Font font, Point position, Color color)
     : text_(std::move(text)), font_(font), position_(position), color_(color) {}
 
@@ -41,5 +42,6 @@ Color TextPrimitive::get_color() const {
 void TextPrimitive::draw(IRenderTarget& target) const {
     target.draw_text(text_, font_, position_, color_);
 }
+
 
 } // namespace ooey
