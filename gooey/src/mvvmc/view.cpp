@@ -39,7 +39,9 @@ Size View::measure(Size constraints) {
             auto* child_view = dynamic_cast<View*>(child.get());
             if (child_view) {
                 Size child_size = child_view->measure(child_constraints);
-                max_child_w = std::max(max_child_w, child_size.width + child_view->margin_left + child_view->margin_right);
+                int child_w = child_view->is_absolute ? (child_view->absolute_bounds.x + child_view->absolute_bounds.width)
+                                                      : (child_size.width + child_view->margin_left + child_view->margin_right);
+                max_child_w = std::max(max_child_w, child_w);
             }
         }
         w = max_child_w + padding_left + padding_right;
@@ -59,7 +61,9 @@ Size View::measure(Size constraints) {
             auto* child_view = dynamic_cast<View*>(child.get());
             if (child_view) {
                 Size child_size = child_view->measure(child_constraints);
-                max_child_h = std::max(max_child_h, child_size.height + child_view->margin_top + child_view->margin_bottom);
+                int child_h = child_view->is_absolute ? (child_view->absolute_bounds.y + child_view->absolute_bounds.height)
+                                                      : (child_size.height + child_view->margin_top + child_view->margin_bottom);
+                max_child_h = std::max(max_child_h, child_h);
             }
         }
         h = max_child_h + padding_top + padding_bottom;
@@ -81,6 +85,13 @@ void View::layout(Rect bounds) {
     for (const auto& child : children_) {
         auto* child_view = dynamic_cast<View*>(child.get());
         if (child_view) {
+            if (child_view->is_absolute) {
+                int cx = bounds.x + padding_left + child_view->absolute_bounds.x;
+                int cy = bounds.y + padding_top + child_view->absolute_bounds.y;
+                child_view->layout(Rect{cx, cy, child_view->absolute_bounds.width, child_view->absolute_bounds.height});
+                continue;
+            }
+
             Size child_size = child_view->measure(child_constraints);
 
             // Default (Overlay layout): align child in top-left with margin

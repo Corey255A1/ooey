@@ -62,7 +62,18 @@ This guarantees that whenever the window changes size (e.g. Wayland configuratio
 
 ---
 
-## 5. Verification & Demos
+## 5. Absolute Positioning Coexistence
+To preserve backwards compatibility with older examples using absolute positioning (such as `hello_ooey_modern` and `hello_wizard`), widgets can be positioned absolutely:
+*   **Opt-in Mechanism:** The `View` class includes `is_absolute` and `absolute_bounds` properties.
+*   **Constructor Defaults:** Widgets constructed with explicit bounds (like `Button`, `TextBox`, and `ListControl`) default to `is_absolute = true` and cache their constructor boundaries.
+*   **Overlay vs. Flow layouts:**
+    *   During a parent `View` layout pass (overlay), absolute children layout exactly at their cached `absolute_bounds` relative to the parent client area.
+    *   During container layout passes (`Column`, `Row`, `Grid`), absolute flags are ignored, arranging children dynamically within the flow.
+*   **Persistent Measurement Fix:** Standard widgets resolve measurement sizing fallbacks using their persistent `absolute_bounds` rather than the dynamically mutating `bounds_` rect, resolving shrinking/collapsing bugs during window resizing.
+
+---
+
+## 6. Verification & Demos
 *   **Unit Tests:** Configured in `tests/test_layout.cpp` validating constraint calculations for Column, Row, and Grid layouts.
 *   **Examples:** Created `examples/hello_layout.cpp` displaying:
     *   A main Column matching the window.

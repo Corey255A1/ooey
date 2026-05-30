@@ -8,6 +8,11 @@ namespace gooey::controls {
 
 TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     : bounds_(bounds) {
+    width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};
+    height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
+    is_absolute = true;
+    absolute_bounds = bounds;
+
     // Modern inputs have rounded corners (6px), subtle gray border (1.5px)
     bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, 6, bg_color, Color{200, 200, 200}, 1.5f);
     text_primitive_ = std::make_shared<TextPrimitive>("", font, Point{bounds_.x + 5, bounds_.y + 5}, text_color);
@@ -112,7 +117,7 @@ Size TextBox::measure(Size constraints) {
     } else if (width.policy == SizePolicy::MatchParent) {
         w = constraints.width;
     } else {
-        w = bounds_.width;
+        w = absolute_bounds.width;
     }
 
     int h = 0;
@@ -121,7 +126,7 @@ Size TextBox::measure(Size constraints) {
     } else if (height.policy == SizePolicy::MatchParent) {
         h = constraints.height;
     } else {
-        h = bounds_.height;
+        h = absolute_bounds.height;
     }
 
     w = std::max(0, std::min(w, constraints.width));

@@ -9,6 +9,10 @@ namespace gooey::controls {
 ListControl::ListControl(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color)
     : bounds_(bounds), item_height_(item_height), font_(font), text_color_(text_color), bg_color_(bg_color),
       highlight_bg_color_(highlight_bg_color), highlight_text_color_(highlight_text_color) {
+    width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};
+    height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
+    is_absolute = true;
+    absolute_bounds = bounds;
     
     // Calculate how many items can be displayed based on list height and item height
     visible_count_ = item_height_ > 0 ? bounds_.height / item_height_ : 1;
@@ -154,7 +158,7 @@ Size ListControl::measure(Size constraints) {
     } else if (width.policy == SizePolicy::MatchParent) {
         w = constraints.width;
     } else {
-        w = bounds_.width;
+        w = absolute_bounds.width;
     }
 
     int h = 0;
@@ -163,7 +167,7 @@ Size ListControl::measure(Size constraints) {
     } else if (height.policy == SizePolicy::MatchParent) {
         h = constraints.height;
     } else {
-        h = bounds_.height;
+        h = absolute_bounds.height;
     }
 
     w = std::max(0, std::min(w, constraints.width));

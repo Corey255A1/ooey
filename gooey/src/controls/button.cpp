@@ -7,6 +7,11 @@ namespace gooey::controls {
     using namespace ooey;
 
 Button::Button(Rect bounds, Color color) : bounds_(bounds), color_(color) {
+    width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};
+    height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
+    is_absolute = true;
+    absolute_bounds = bounds;
+
     // Default modern button has 8px corner radius
     bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, 8, color_);
     add_child(bg_);
@@ -14,6 +19,11 @@ Button::Button(Rect bounds, Color color) : bounds_(bounds), color_(color) {
 
 Button::Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_thickness, int corner_radius, const std::string& label_text, Color label_color)
     : bounds_(bounds), color_(fill_color) {
+    width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};
+    height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
+    is_absolute = true;
+    absolute_bounds = bounds;
+
     bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, corner_radius, fill_color, stroke_color, stroke_thickness);
     add_child(bg_);
 
@@ -108,7 +118,7 @@ Size Button::measure(Size constraints) {
             Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
             w = text_size.width + padding_left + padding_right + 30;
         } else {
-            w = bounds_.width;
+            w = absolute_bounds.width;
         }
     }
 
@@ -122,7 +132,7 @@ Size Button::measure(Size constraints) {
             Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
             h = text_size.height + padding_top + padding_bottom + 20;
         } else {
-            h = bounds_.height;
+            h = absolute_bounds.height;
         }
     }
 

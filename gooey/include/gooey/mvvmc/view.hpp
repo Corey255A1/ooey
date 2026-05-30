@@ -50,6 +50,9 @@ public:
     // Laido-out absolute boundaries
     Rect layout_bounds{0, 0, 0, 0};
 
+    bool is_absolute{false};
+    Rect absolute_bounds{0, 0, 0, 0};
+
     // Builder setters for chaining configuration
     View& set_width(SizePolicy policy, float value = 0.0f) { width = {policy, value}; return *this; }
     View& set_height(SizePolicy policy, float value = 0.0f) { height = {policy, value}; return *this; }
@@ -58,6 +61,8 @@ public:
     View& set_padding(int padding) { padding_left = padding_top = padding_right = padding_bottom = padding; return *this; }
     View& set_padding(int left, int top, int right, int bottom) { padding_left = left; padding_top = top; padding_right = right; padding_bottom = bottom; return *this; }
     View& set_align_self(Align align) { align_self = align; return *this; }
+    View& set_absolute(bool absolute) { is_absolute = absolute; return *this; }
+    View& set_absolute_bounds(Rect bounds) { absolute_bounds = bounds; return *this; }
 
     // Two-pass reactive layout system
     virtual Size measure(Size constraints);

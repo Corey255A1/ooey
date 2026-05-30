@@ -208,3 +208,62 @@ TEST(LayoutTest, GridLayout2x2) {
     EXPECT_EQ(child4->layout_bounds.width, 80);
     EXPECT_EQ(child4->layout_bounds.height, 30);
 }
+
+TEST(LayoutTest, AbsolutePositioningWithinView) {
+    auto parent = std::make_shared<View>();
+    parent->set_width(SizePolicy::WrapContent);
+    parent->set_height(SizePolicy::WrapContent);
+    parent->set_padding(10);
+
+    auto child = std::make_shared<View>();
+    child->set_absolute(true);
+    child->set_absolute_bounds(Rect{100, 50, 120, 80});
+
+    parent->add_child(child);
+
+    Size measured = parent->measure(Size{500, 500});
+
+    // Width should encompass child absolute bounds X (100) + width (120) + padding (10 left + 10 right) = 240
+    EXPECT_EQ(measured.width, 240);
+    // Height should encompass child absolute bounds Y (50) + height (80) + padding (10 top + 10 bottom) = 150
+    EXPECT_EQ(measured.height, 150);
+
+    parent->layout(Rect{0, 0, measured.width, measured.height});
+
+    // Check laid-out position is bounds.x + padding_left + absolute_bounds.x = 0 + 10 + 100 = 110
+    EXPECT_EQ(child->layout_bounds.x, 110);
+    EXPECT_EQ(child->layout_bounds.y, 60);
+    EXPECT_EQ(child->layout_bounds.width, 120);
+    EXPECT_EQ(child->layout_bounds.height, 80);
+}
+
+TEST(LayoutTest, LabelLayoutDynamicAndAbsolute) {
+    // 1. Dynamic positioning in Column
+    auto col = std::make_shared<Column>();
+    col->set_width(SizePolicy::WrapContent);
+    col->set_height(SizePolicy::WrapContent);
+
+    auto label1 = std::make_shared<Label>("Hello", Font{"sans-serif", 14}, Point{10, 10}, Color{255, 255, 255});
+    label1->set_absolute(false); // opt-into Column's flow
+    label1->set_margin(5);
+
+    col->add_child(label1);
+
+    Size size = col->measure(Size{500, 500});
+    col->layout(Rect{0, 0, size.width, size.height});
+
+    // Check label positioning under flow layout (margin 5)
+    EXPECT_EQ(label1->layout_bounds.x, 5);
+    EXPECT_EQ(label1->layout_bounds.y, 5);
+
+    // 2. Absolute positioning
+    auto parent = std::make_shared<View>();
+    auto label2 = std::make_shared<Label>("Hello World", Font{"sans-serif", 14}, Point{50, 60}, Color{255, 255, 255});
+    parent->add_child(label2);
+
+    Size p_size = parent->measure(Size{500, 500});
+    parent->layout(Rect{0, 0, p_size.width, p_size.height});
+
+    EXPECT_EQ(label2->layout_bounds.x, 50);
+    EXPECT_EQ(label2->layout_bounds.y, 60);
+}
