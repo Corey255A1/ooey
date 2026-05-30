@@ -4,6 +4,7 @@ namespace ooey {}
 
 
 #include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/primitives/text_primitive.hpp"
 #include <memory>
 #include <string>
@@ -30,6 +31,7 @@ public:
     // Layout support
     Size measure(Size constraints) override;
     void layout(Rect bounds) override;
+    void apply_style(const mvvmc::Style& style) override;
 
 private:
     std::shared_ptr<TextPrimitive> text_primitive_;

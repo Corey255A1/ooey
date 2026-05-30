@@ -4,6 +4,7 @@ namespace ooey {}
 
 
 #include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "gooey/controls/label.hpp"
@@ -36,6 +37,7 @@ public:
     // Layout support
     Size measure(Size constraints) override;
     void layout(Rect bounds) override;
+    void apply_style(const mvvmc::Style& style) override;
 
 private:
     Rect bounds_;

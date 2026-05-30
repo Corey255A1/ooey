@@ -1,6 +1,7 @@
 namespace ooey {}
 
 #include "gooey/controls/button.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/bitmap_font.hpp"
 
 namespace gooey::controls {
@@ -135,6 +136,19 @@ void Button::layout(Rect bounds) {
         label_->set_position(Point{lx, ly});
         label_->layout(Rect{lx, ly, text_size.width, text_size.height});
     }
+}
+
+void Button::apply_style(const mvvmc::Style& style) {
+    if (bg_) {
+        bg_->set_fill_color(style.fill_color);
+        bg_->set_stroke_color(style.stroke_color);
+        bg_->set_stroke_thickness(style.stroke_thickness);
+        bg_->set_corner_radius(style.corner_radius);
+    }
+    if (label_) {
+        label_->set_color(style.text_color);
+    }
+    View::apply_style(style);
 }
 
 } // namespace gooey::controls

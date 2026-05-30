@@ -13,9 +13,13 @@ namespace ooey {}
 namespace gooey::mvvmc {
     using namespace ooey;
 
+    struct Theme;
+    class ThemeManager;
+    struct Style;
+
 class View : public IDrawable {
 public:
-    View() = default;
+    View();
     virtual ~View() override = default;
 
     void add_child(std::shared_ptr<IDrawable>&& child);
@@ -72,10 +76,22 @@ public:
     int resolve_width(int constraint_w, int content_w) const;
     int resolve_height(int constraint_h, int content_h) const;
 
+    // Styling and Theme support
+    void set_style_name(const std::string& name);
+    const std::string& get_style_name() const { return style_name_; }
+
+    virtual void set_theme_manager(std::shared_ptr<ThemeManager> manager);
+    std::shared_ptr<ThemeManager> get_theme_manager() const { return theme_manager_.lock(); }
+
+    virtual void apply_style(const Style& style);
+
 private:
     int calculate_content_width(Size child_constraints);
     int calculate_content_height(Size child_constraints);
 
+    std::string style_name_;
+    std::weak_ptr<ThemeManager> theme_manager_;
+    ScopedSubscription theme_subscription_;
     std::vector<std::shared_ptr<IDrawable>> children_;
     SubscriptionSink sink_;
 };

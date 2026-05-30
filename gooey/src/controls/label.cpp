@@ -1,6 +1,7 @@
 namespace ooey {}
 
 #include "gooey/controls/label.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/bitmap_font.hpp"
 
 namespace gooey::controls {
@@ -76,6 +77,11 @@ void Label::layout(Rect bounds) {
     if (text_primitive_) {
         text_primitive_->set_position(Point{bounds.x + padding_left, bounds.y + padding_top});
     }
+}
+
+void Label::apply_style(const mvvmc::Style& style) {
+    set_color(style.text_color);
+    View::apply_style(style);
 }
 
 } // namespace gooey::controls

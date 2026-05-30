@@ -1,12 +1,19 @@
 namespace ooey {}
 
 #include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include <algorithm>
 
 namespace gooey::mvvmc {
     using namespace ooey;
 
+View::View() = default;
+
 void View::add_child(std::shared_ptr<IDrawable>&& child) {
+    auto* child_view = dynamic_cast<View*>(child.get());
+    if (child_view) {
+        child_view->set_theme_manager(get_theme_manager());
+    }
     children_.push_back(std::move(child));
 }
 
@@ -122,6 +129,46 @@ int View::resolve_height(int constraint_h, int content_h) const {
         h = content_h;
     }
     return std::max(0, std::min(h, constraint_h));
+}
+
+void View::set_style_name(const std::string& name) {
+    style_name_ = name;
+    auto manager = get_theme_manager();
+    if (manager) {
+        auto theme = manager->active_theme.get();
+        if (theme) {
+            Style style;
+            if (theme->get_style(style_name_, style)) {
+                apply_style(style);
+            }
+        }
+    }
+}
+
+void View::set_theme_manager(std::shared_ptr<ThemeManager> manager) {
+    theme_manager_ = manager;
+    if (manager) {
+        theme_subscription_ = manager->active_theme.subscribe([this](const std::shared_ptr<Theme>& theme) {
+            if (theme && !style_name_.empty()) {
+                Style style;
+                if (theme->get_style(style_name_, style)) {
+                    apply_style(style);
+                }
+            }
+        });
+    } else {
+        theme_subscription_ = {};
+    }
+
+    for (const auto& child : children_) {
+        auto* child_view = dynamic_cast<View*>(child.get());
+        if (child_view) {
+            child_view->set_theme_manager(manager);
+        }
+    }
+}
+
+void View::apply_style(const Style& /*style*/) {
 }
 
 } // namespace gooey::mvvmc

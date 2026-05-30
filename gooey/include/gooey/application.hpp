@@ -12,6 +12,7 @@ namespace ooey {}
 #include "gooey/mvvmc/view.hpp"
 #include "gooey/mvvmc/i_controller.hpp"
 #include "gooey/mvvmc/i_drawable.hpp"
+#include "gooey/mvvmc/scoped_subscription.hpp"
 
 namespace gooey {
     using namespace ooey;
@@ -32,6 +33,9 @@ public:
 
     // Set a custom controller
     void set_controller(std::unique_ptr<mvvmc::IController>&& controller);
+
+    // Set the theme manager
+    void set_theme_manager(std::shared_ptr<mvvmc::ThemeManager> manager);
 
     // Get the global controller
     mvvmc::IController* get_controller() { return controller_.get(); }
@@ -64,6 +68,8 @@ private:
     InputManager input_manager_;
     int frame_count_{0};
     bool running_{false};
+    std::shared_ptr<mvvmc::ThemeManager> theme_manager_;
+    mvvmc::ScopedSubscription theme_subscription_;
 };
 
 } // namespace gooey

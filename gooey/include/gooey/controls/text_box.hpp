@@ -4,6 +4,7 @@ namespace ooey {}
 
 
 #include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "ooey/renderer/primitives/text_primitive.hpp"
@@ -32,6 +33,7 @@ public:
     // Layout support
     Size measure(Size constraints) override;
     void layout(Rect bounds) override;
+    void apply_style(const mvvmc::Style& style) override;
 
 private:
     Rect bounds_;
@@ -39,6 +41,7 @@ private:
     std::shared_ptr<TextPrimitive> text_primitive_;
     std::string text_;
     bool is_focused_{false};
+    mvvmc::Style current_style_;
 };
 
 } // namespace gooey::controls

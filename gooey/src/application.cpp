@@ -2,6 +2,7 @@ namespace ooey {}
 
 #include "gooey/application.hpp"
 #include "gooey/mvvmc/controller.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "ooey/logging.hpp"
 #include "ooey/renderer/window_chrome.hpp"
 
@@ -35,12 +36,34 @@ void Application::set_window_backend(std::unique_ptr<IWindowBackend>&& backend) 
 void Application::set_root_view(std::shared_ptr<mvvmc::View>&& root_view) {
     root_view_ = std::move(root_view);
     controller_ = std::make_unique<mvvmc::Controller>(input_manager_, root_view_);
+    if (root_view_ && theme_manager_) {
+        root_view_->set_theme_manager(theme_manager_);
+    }
     OOEY_LOG_INFO("Application", "Root view and controller initialized");
 }
 
 void Application::set_controller(std::unique_ptr<mvvmc::IController>&& controller) {
     controller_ = std::move(controller);
     OOEY_LOG_INFO("Application", "Custom controller set");
+}
+
+void Application::set_theme_manager(std::shared_ptr<mvvmc::ThemeManager> manager) {
+    theme_manager_ = manager;
+    if (manager) {
+        theme_subscription_ = manager->active_theme.subscribe([this](const std::shared_ptr<mvvmc::Theme>& theme) {
+            if (theme) {
+                mvvmc::Style window_style;
+                if (theme->get_style("window", window_style)) {
+                    set_clear_color(window_style.fill_color);
+                }
+            }
+        });
+        if (root_view_) {
+            root_view_->set_theme_manager(manager);
+        }
+    } else {
+        theme_subscription_ = {};
+    }
 }
 
 void Application::set_clear_color(Color color) {

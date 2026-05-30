@@ -1,6 +1,7 @@
 namespace ooey {}
 
 #include "gooey/controls/text_box.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include <iostream>
 
 namespace gooey::controls {
@@ -13,9 +14,15 @@ TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     is_absolute = true;
     absolute_bounds = bounds;
 
+    current_style_.fill_color = bg_color;
+    current_style_.stroke_color = Color{200, 200, 200};
+    current_style_.stroke_thickness = 1.5f;
+    current_style_.corner_radius = 6;
+    current_style_.text_color = text_color;
+
     // Modern inputs have rounded corners (6px), subtle gray border (1.5px)
-    bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, 6, bg_color, Color{200, 200, 200}, 1.5f);
-    text_primitive_ = std::make_shared<TextPrimitive>("", font, Point{bounds_.x + 5, bounds_.y + 5}, text_color);
+    bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, current_style_.corner_radius, current_style_.fill_color, current_style_.stroke_color, current_style_.stroke_thickness);
+    text_primitive_ = std::make_shared<TextPrimitive>("", font, Point{bounds_.x + 5, bounds_.y + 5}, current_style_.text_color);
     
     add_child(bg_);
     add_child(text_primitive_);
@@ -49,8 +56,8 @@ bool TextBox::on_pointer_event(const Pointer& e) {
     } else if (!hit && e.state == PointerState::Pressed) {
         is_focused_ = false;
         // Default subtle outline
-        bg_->set_stroke_color(Color{200, 200, 200});
-        bg_->set_stroke_thickness(1.5f);
+        bg_->set_stroke_color(current_style_.stroke_color);
+        bg_->set_stroke_thickness(current_style_.stroke_thickness);
     }
     
     return false;
@@ -129,6 +136,22 @@ void TextBox::layout(Rect bounds) {
         int ty = bounds_.y + padding_top + (bounds_.height - 16) / 2;
         text_primitive_->set_position(Point{tx, ty});
     }
+}
+
+void TextBox::apply_style(const mvvmc::Style& style) {
+    current_style_ = style;
+    if (bg_) {
+        bg_->set_fill_color(style.fill_color);
+        if (!is_focused_) {
+            bg_->set_stroke_color(style.stroke_color);
+            bg_->set_stroke_thickness(style.stroke_thickness);
+        }
+        bg_->set_corner_radius(style.corner_radius);
+    }
+    if (text_primitive_) {
+        text_primitive_->set_color(style.text_color);
+    }
+    View::apply_style(style);
 }
 
 } // namespace gooey::controls
