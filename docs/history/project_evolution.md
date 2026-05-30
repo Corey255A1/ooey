@@ -51,7 +51,7 @@ To support advanced graphics APIs and modularize platform backends, we refactore
 ## 9. Reactive Two-Pass Layout Engine
 To move beyond hardcoded coordinates and enable responsive UI design, we implemented a reactive, constraint-based two-pass layout system (Measure & Arrange) in `gooey::View`:
 - **Base View Properties:** Added `SizePolicy`, margins, padding, and alignments to the base `View` class.
-- **Layout Containers:** Introduced `Column` (vertical stacks), `Row` (horizontal stacks), and `Grid` (tabular layouts) as first-class containers.
+- **Layout Containers:** Introduced `Column` (vertical stacks), `Row` (horizontal stacks), `Grid` (tabular layouts), and `FlowLayout` (wrapping flexbox layout) as first-class containers.
 - **Main Loop Integration:** Integrated the layout engine passes (`measure` and `layout`) directly into `Application::run_iteration()` immediately before rendering, allowing the UI layout to automatically reflow dynamically in response to window resize events.
 
 ## Summary

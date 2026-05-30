@@ -3,6 +3,7 @@
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "gooey/controls/grid.hpp"
+#include "gooey/controls/flow_layout.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 
@@ -266,4 +267,46 @@ TEST(LayoutTest, LabelLayoutDynamicAndAbsolute) {
 
     EXPECT_EQ(label2->layout_bounds.x, 50);
     EXPECT_EQ(label2->layout_bounds.y, 60);
+}
+
+TEST(LayoutTest, FlowLayoutWrapping) {
+    auto flow = std::make_shared<FlowLayout>();
+    flow->set_width(SizePolicy::WrapContent);
+    flow->set_height(SizePolicy::WrapContent);
+    flow->set_padding(10);
+
+    auto child1 = std::make_shared<View>();
+    child1->set_width(SizePolicy::Fixed, 100.0f);
+    child1->set_height(SizePolicy::Fixed, 40.0f);
+    child1->set_margin(5);
+
+    auto child2 = std::make_shared<View>();
+    child2->set_width(SizePolicy::Fixed, 80.0f);
+    child2->set_height(SizePolicy::Fixed, 30.0f);
+    child2->set_margin(5);
+
+    auto child3 = std::make_shared<View>();
+    child3->set_width(SizePolicy::Fixed, 70.0f);
+    child3->set_height(SizePolicy::Fixed, 50.0f);
+    child3->set_margin(5);
+
+    flow->add_child(child1);
+    flow->add_child(child2);
+    flow->add_child(child3);
+
+    Size measured = flow->measure(Size{220, 500});
+
+    EXPECT_EQ(measured.width, 220);
+    EXPECT_EQ(measured.height, 130);
+
+    flow->layout(Rect{0, 0, measured.width, measured.height});
+
+    EXPECT_EQ(child1->layout_bounds.x, 15);
+    EXPECT_EQ(child1->layout_bounds.y, 15);
+
+    EXPECT_EQ(child2->layout_bounds.x, 125);
+    EXPECT_EQ(child2->layout_bounds.y, 15);
+
+    EXPECT_EQ(child3->layout_bounds.x, 15);
+    EXPECT_EQ(child3->layout_bounds.y, 65);
 }

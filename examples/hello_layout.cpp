@@ -9,6 +9,7 @@
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "gooey/controls/grid.hpp"
+#include "gooey/controls/flow_layout.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/text_box.hpp"
@@ -63,8 +64,8 @@ int main() {
 
     root_column->add_child(header);
 
-    // 2. Buttons Row Section
-    auto button_row = std::make_shared<Row>();
+    // 2. Buttons Row Section (wrapping layout)
+    auto button_row = std::make_shared<FlowLayout>();
     button_row->set_width(SizePolicy::MatchParent);
     button_row->set_height(SizePolicy::WrapContent);
     button_row->set_margin(0, 0, 0, 20);
@@ -78,7 +79,7 @@ int main() {
         "Primary Action",
         Color{255, 255, 255}
     );
-    btn1->set_margin(0, 0, 10, 0);
+    btn1->set_margin(0, 5, 10, 5);
     btn1->on_click = []() {
         std::cout << "Primary Action Button Clicked!\n";
     };
@@ -93,7 +94,7 @@ int main() {
         "Secondary Action",
         Color{220, 220, 230}
     );
-    btn2->set_margin(0, 0, 10, 0);
+    btn2->set_margin(0, 5, 10, 5);
     btn2->on_click = []() {
         std::cout << "Secondary Action Button Clicked!\n";
     };
@@ -108,10 +109,47 @@ int main() {
         "Delete / Alert",
         Color{255, 255, 255}
     );
+    btn3->set_margin(0, 5, 10, 5);
     btn3->on_click = []() {
         std::cout << "Alert Action Clicked!\n";
     };
     button_row->add_child(btn3);
+
+    auto btn4 = std::make_shared<Button>(
+        Rect{0, 0, 110, 40},
+        Color{50, 50, 55},
+        Color{80, 80, 90},
+        1.5f,
+        8,
+        "Option A",
+        Color{220, 220, 230}
+    );
+    btn4->set_margin(0, 5, 10, 5);
+    button_row->add_child(btn4);
+
+    auto btn5 = std::make_shared<Button>(
+        Rect{0, 0, 110, 40},
+        Color{50, 50, 55},
+        Color{80, 80, 90},
+        1.5f,
+        8,
+        "Option B",
+        Color{220, 220, 230}
+    );
+    btn5->set_margin(0, 5, 10, 5);
+    button_row->add_child(btn5);
+
+    auto btn6 = std::make_shared<Button>(
+        Rect{0, 0, 130, 40},
+        Color{40, 160, 100},
+        Color{0, 0, 0, 0},
+        0.0f,
+        8,
+        "More Actions...",
+        Color{255, 255, 255}
+    );
+    btn6->set_margin(0, 5, 0, 5);
+    button_row->add_child(btn6);
 
     root_column->add_child(button_row);
 

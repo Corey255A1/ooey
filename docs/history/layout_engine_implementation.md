@@ -24,7 +24,7 @@ The layout system resides directly within `gooey::View` and relies on a recursiv
 ---
 
 ## 3. Layout Containers
-Three layout containers were implemented under `gooey::controls`:
+Four layout containers were implemented under `gooey::controls`:
 
 ### Column (`gooey::Column`)
 Organizes children in a vertical stack.
@@ -39,6 +39,11 @@ Organizes children in a horizontal row.
 ### Grid (`gooey::Grid`)
 Arranges children in a configured row-by-column grid layout.
 *   **Measure & Layout:** Computes cell widths and heights dynamically from the total available layout boundaries. Places children based on their grid cell indices.
+
+### FlowLayout (`gooey::FlowLayout`)
+Lays children out horizontally in a wrapping flex-row structure.
+*   **Measure:** Groups items into wrapping rows when they exceed the available constraint width; aggregates heights across wrapping rows.
+*   **Layout:** Traverses row-by-row, positioning elements. Supports vertical stretching (`Align::Stretch`) to match the dynamic height of each individual row.
 
 ---
 
