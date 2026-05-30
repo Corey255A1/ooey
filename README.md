@@ -191,41 +191,6 @@ What can you build with OOEY?
 
 ---
 
-## 🗺️ Project Roadmap
-
-```mermaid
-gantt
-    title OOEY Architectural Roadmap
-    dateFormat  YYYY-MM-DD
-    section Phase 1: Engine Optimizations
-    Batch Rendering & Quad Caching    :done,  p1, 2026-05-10, 2026-05-25
-    Dynamic Vulkan Buffer Resizing    :done,  p2, 2026-05-20, 2026-05-28
-    Hierarchical Dirty-State Caching  :active, p3, 2026-05-28, 2026-06-15
-    section Phase 2: Dynamic Font Engine
-    Modular Linux/Win32 OS Font APIs  :done,  f1, 2026-05-15, 2026-05-29
-    Subpixel MSDF Glyph Atlases       :active, f2, 2026-06-01, 2026-06-25
-    section Phase 3: Declarative Interface
-    JSON Layout View Loader           :active, l1, 2026-06-10, 2026-07-05
-    Hot-Reloading File Watcher        :        l2, 2026-07-01, 2026-07-20
-    section Phase 4: Motion & Input
-    Tweening & Easing Engine          :        m1, 2026-07-15, 2026-08-10
-    Linux libinput Hardware Driver    :        m2, 2026-08-01, 2026-08-25
-```
-
-1.  **Phase 1: Performance Foundation & Dirty-State Caching**
-    *   Implement hierarchical dirty-flag geometry updates so only elements that alter states rebuild vertex caches.
-    *   Enhance CPU software rasterizer scanline performance with SIMD-vectorized blitting.
-2.  **Phase 2: High-Performance Fonts & Direct Embedded DRM**
-    *   Transition system fonts into Multi-channel Signed Distance Fields (MSDF) textures for artifact-free scaling at 4K.
-    *   Implement direct GPU rendering backends via EGL on Linux DRM/KMS to load completely headless.
-3.  **Phase 3: Hot-Reloadable Markup (JSON) UI Engine**
-    *   Introduce a layout compiler reading declarative JSON/XML interfaces.
-    *   Implement a filesystem watcher in debug mode to swap UI structures in real-time without recompiling the application.
-4.  **Phase 4: Smooth Animation Framework**
-    *   Add a time-based interpolator directly to reactive `Property<T>` fields with easing transitions (Cubic, Bounce, Elastic).
-
----
-
 ## ⚡ Quick Start
 
 ### 📋 Prerequisites
@@ -277,16 +242,5 @@ Verify the engine by running the GoogleTest suite (39 tests checking bindings, p
 ```bash
 ./build/tests/ooey_tests
 ```
-
----
-
-## 📜 Coding Guidelines
-
-Contributions to the codebase must follow the design standards defined in the project's [GEMINI.md](file:///home/corey/code/ooey/GEMINI.md) file:
-*   **C++20 Rules:** No modules; stick to traditional header inclusions. Smart pointers over raw allocations.
-*   **Explicit Move Semantics:** When taking ownership of pointers or callbacks, parameterize using rvalue references (`&&`).
-*   **Naming Structure:** `PascalCase` for Classes/Structs; `snake_case` for methods/functions; `snake_case_` with a trailing underscore for private members.
-
----
 
 *Formulated with passion for low-overhead, hardware-agnostic C++ visual design.*
