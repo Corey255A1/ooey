@@ -17,6 +17,7 @@ public:
     // IRenderTarget implementation
     void clear(Color color) override;
     void draw_geometry(const Geometry& geometry) override;
+    void draw_image(const Image& image, const Rect& dest_rect) override;
     Size measure_text(const std::string& text, const Font& font) override;
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override;
     void present() override;

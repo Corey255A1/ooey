@@ -6,6 +6,8 @@
 
 namespace ooey::renderer {
 
+class Image;
+
 class IRenderTarget {
 public:
     virtual ~IRenderTarget() = default;
@@ -15,6 +17,9 @@ public:
 
     // Draw generic geometry
     virtual void draw_geometry(const Geometry& geometry) = 0;
+
+    // Draw an image
+    virtual void draw_image(const Image& image, const Rect& dest_rect) = 0;
 
     // Text functions
     virtual Size measure_text(const std::string& text, const Font& font) = 0;
@@ -31,4 +36,5 @@ public:
 
 namespace ooey {
 using renderer::IRenderTarget;
+using renderer::Image;
 }

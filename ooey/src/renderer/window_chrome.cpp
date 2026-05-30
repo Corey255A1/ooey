@@ -3,6 +3,7 @@
 #include "ooey/renderer/primitives/rect_primitive.hpp"
 #include "ooey/renderer/primitives/line_primitive.hpp"
 #include "ooey/renderer/primitives/text_primitive.hpp"
+#include "ooey/renderer/image.hpp"
 #include <algorithm>
 
 namespace ooey {
@@ -216,6 +217,19 @@ void ChromeRenderTarget::draw_geometry(const Geometry& geometry) {
         vertex.y += dy;
     }
     target_->draw_geometry(shifted);
+}
+
+void ChromeRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
+    if (!chrome_) {
+        target_->draw_image(image, dest_rect);
+        return;
+    }
+    int dx = chrome_->get_border_width();
+    int dy = chrome_->get_border_width() + chrome_->get_title_bar_height();
+    Rect shifted = dest_rect;
+    shifted.x += dx;
+    shifted.y += dy;
+    target_->draw_image(image, shifted);
 }
 
 Size ChromeRenderTarget::measure_text(const std::string& text, const Font& font) {

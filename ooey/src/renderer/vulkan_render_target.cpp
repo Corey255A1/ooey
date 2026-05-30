@@ -1,6 +1,7 @@
 #include "ooey/renderer/vulkan_render_target.hpp"
 #include "ooey/renderer/bitmap_font.hpp"
 #include "ooey/renderer/vulkan_shaders.hpp"
+#include "ooey/renderer/image.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
@@ -737,6 +738,42 @@ void VulkanRenderTarget::create_pipelines() {
 
     triangle_pipeline_ = create_graphics_pipeline_with_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     line_pipeline_ = create_graphics_pipeline_with_topology(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+}
+
+void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
+    // Render the image by downsampling it to max 32x32 colored quads
+    int ds_w = std::min(image.width(), 32);
+    int ds_h = std::min(image.height(), 32);
+    float qw = static_cast<float>(dest_rect.width) / ds_w;
+    float qh = static_cast<float>(dest_rect.height) / ds_h;
+    const uint8_t* pixels = image.data().data();
+    int orig_w = image.width();
+    int orig_h = image.height();
+
+    for (int y = 0; y < ds_h; ++y) {
+        int src_y = (y * orig_h) / ds_h;
+        for (int x = 0; x < ds_w; ++x) {
+            int src_x = (x * orig_w) / ds_w;
+            int src_idx = (src_y * orig_w + src_x) * 4;
+            Color color{pixels[src_idx], pixels[src_idx+1], pixels[src_idx+2], pixels[src_idx+3]};
+            
+            if (color.a == 0) continue; // skip fully transparent
+
+            float fx = static_cast<float>(dest_rect.x) + x * qw;
+            float fy = static_cast<float>(dest_rect.y) + y * qh;
+            
+            Geometry geom;
+            geom.type = PrimitiveType::Triangles;
+            geom.vertices = {
+                Vertex{fx, fy, color},
+                Vertex{fx + qw, fy, color},
+                Vertex{fx + qw, fy + qh, color},
+                Vertex{fx, fy + qh, color}
+            };
+            geom.indices = { 0, 1, 2, 2, 3, 0 };
+            draw_geometry(geom);
+        }
+    }
 }
 
 } // namespace ooey

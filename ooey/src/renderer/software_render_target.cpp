@@ -1,5 +1,6 @@
 #include "ooey/renderer/software_render_target.hpp"
 #include "ooey/renderer/bitmap_font.hpp"
+#include "ooey/renderer/image.hpp"
 #include <cmath>
 #include <algorithm>
 
@@ -231,6 +232,67 @@ void SoftwareRenderTarget::draw_triangle(const Vertex& v0, const Vertex& v1, con
         v3.color = color;
         draw_flat_bottom_triangle(sorted_v0, sorted_v1, v3, color);
         draw_flat_top_triangle(sorted_v1, v3, sorted_v2, color);
+    }
+}
+
+void SoftwareRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
+    if (!data_ || image.width() <= 0 || image.height() <= 0) {
+        return;
+    }
+
+    const uint8_t* img_pixels = image.data().data();
+    int img_w = image.width();
+    int img_h = image.height();
+
+    for (int y = 0; y < dest_rect.height; ++y) {
+        int yy = dest_rect.y + y;
+        if (yy < 0 || yy >= height_) {
+            continue;
+        }
+
+        int src_y = (y * img_h) / dest_rect.height;
+        if (src_y < 0 || src_y >= img_h) continue;
+
+        uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+
+        for (int x = 0; x < dest_rect.width; ++x) {
+            int xx = dest_rect.x + x;
+            if (xx < 0 || xx >= width_) {
+                continue;
+            }
+
+            int src_x = (x * img_w) / dest_rect.width;
+            if (src_x < 0 || src_x >= img_w) continue;
+
+            int src_idx = (src_y * img_w + src_x) * 4;
+            uint8_t src_r = img_pixels[src_idx + 0];
+            uint8_t src_g = img_pixels[src_idx + 1];
+            uint8_t src_b = img_pixels[src_idx + 2];
+            uint8_t src_a = img_pixels[src_idx + 3];
+
+            if (src_a == 255) {
+                row[xx] = (static_cast<uint32_t>(255) << 24) |
+                          (static_cast<uint32_t>(src_r) << 16) |
+                          (static_cast<uint32_t>(src_g) << 8) |
+                          (static_cast<uint32_t>(src_b));
+            } else if (src_a > 0) {
+                uint32_t dest_pixel = row[xx];
+                uint8_t dest_b = dest_pixel & 0xFF;
+                uint8_t dest_g = (dest_pixel >> 8) & 0xFF;
+                uint8_t dest_r = (dest_pixel >> 16) & 0xFF;
+                uint8_t dest_a = (dest_pixel >> 24) & 0xFF;
+
+                uint8_t r = (src_r * src_a + dest_r * (255 - src_a)) / 255;
+                uint8_t g = (src_g * src_a + dest_g * (255 - src_a)) / 255;
+                uint8_t b = (src_b * src_a + dest_b * (255 - src_a)) / 255;
+                uint8_t a = src_a + (dest_a * (255 - src_a)) / 255;
+
+                row[xx] = (static_cast<uint32_t>(a) << 24) |
+                          (static_cast<uint32_t>(r) << 16) |
+                          (static_cast<uint32_t>(g) << 8) |
+                          (static_cast<uint32_t>(b));
+            }
+        }
     }
 }
 

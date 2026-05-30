@@ -54,5 +54,19 @@ To move beyond hardcoded coordinates and enable responsive UI design, we impleme
 - **Layout Containers:** Introduced `Column` (vertical stacks), `Row` (horizontal stacks), `Grid` (tabular layouts), and `FlowLayout` (wrapping flexbox layout) as first-class containers.
 - **Main Loop Integration:** Integrated the layout engine passes (`measure` and `layout`) directly into `Application::run_iteration()` immediately before rendering, allowing the UI layout to automatically reflow dynamically in response to window resize events.
 
+## 10. Decoupled Style-Name Theme Manager
+To provide maximum flexibility and remove global state, we refactored the theme system:
+- **Singleton Removal:** Replaced the global `ThemeManager` singleton with dynamic instances owned by the application or view model.
+- **De-hardcoding:** Decoupled themes from the framework source. Users register custom themes and styles dynamically in their bootstrapper.
+- **Style Mapping:** Added `set_style_name()` and `apply_style()` to bind controls (such as `Button`, `Label`, and `TextBox`) to named style configurations that automatically apply visual updates when the active theme cycles.
+
+## 11. Modular Image Decoding & Rendering Subsystem
+To support rich media layouts, we added a modular image loading and rendering framework:
+- **Unified Raw Buffer:** Introduced `Image` holding a standard 32-bit RGBA pixel array.
+- **API Decouplers:** Added `IImageDecoder` and `ImageDecoderRegistry` to verify file format magic bytes (BMP, PNG) and decode them dynamically.
+- **Optional Dependencies:** Conditionalized the PNG decoder with CMake and `libpng` detection, keeping the core engine clean of unneeded third-party libraries.
+- **Target Drawing:** Extended `IRenderTarget` with `draw_image` and implemented it with nearest-neighbor alpha blending in CPU (Software), GL texture binding in OpenGL, geometric fallback grid rendering in Vulkan, and coordinate offsets in Chrome decorations.
+- **Layout Element:** Built the `ImageControl` view component to load, scale, and render images inside row, column, and flow layouts.
+
 ## Summary
 The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, and layering a decoupled MVVM-C reactive system on top, OOEY provides a robust, explicit, and scalable foundation for cross-platform UI development.

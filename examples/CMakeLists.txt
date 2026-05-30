@@ -32,6 +32,9 @@ if(OOEY_BUILD_CONTROLS)
     add_executable(hello_wizard hello_wizard.cpp)
     target_link_libraries(hello_wizard PRIVATE ooey ooey_controls)
 
+    add_executable(hello_image hello_image.cpp)
+    target_link_libraries(hello_image PRIVATE ooey ooey_controls)
+
     if(NOT EMSCRIPTEN)
         find_package(Boost)
         find_package(Threads REQUIRED)

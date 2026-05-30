@@ -111,6 +111,11 @@ if(OOEY_BUILD_FRAMEBUFFER)
     )
 endif()
 
+option(OOEY_WITH_LIBPNG "Build with PNG support (requires libpng)" ON)
+if(OOEY_WITH_LIBPNG)
+    find_package(PNG)
+endif()
+
 # Add source files
 set(OOEY_SRCS
     ooey/src/ooey.cpp
@@ -120,6 +125,9 @@ set(OOEY_SRCS
     ooey/src/renderer/gl_render_target.cpp
     ooey/src/renderer/vulkan_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
+    ooey/src/renderer/image.cpp
+    ooey/src/renderer/image_decoder_registry.cpp
+    ooey/src/renderer/image/bmp_decoder.cpp
     ooey/src/renderer/window_chrome.cpp
     ooey/src/renderer/primitives/circle_primitive.cpp
     ooey/src/renderer/primitives/curve_primitive.cpp
@@ -148,6 +156,10 @@ list(APPEND OOEY_SRCS
     ${OOey_FRAMEBUFFER_SRCS}
 )
 
+if(OOEY_WITH_LIBPNG AND PNG_FOUND)
+    list(APPEND OOEY_SRCS ooey/src/renderer/image/png_decoder.cpp)
+endif()
+
 target_sources(ooey PRIVATE ${OOEY_SRCS})
 
 # Setup include directories
@@ -162,6 +174,12 @@ if(OOEY_BUILD_X11)
 endif()
 if(OOEY_BUILD_WAYLAND)
     target_compile_definitions(ooey PUBLIC OOEY_BUILD_WAYLAND)
+endif()
+
+if(OOEY_WITH_LIBPNG AND PNG_FOUND)
+    target_compile_definitions(ooey PUBLIC OOEY_HAS_PNG)
+    target_include_directories(ooey PRIVATE ${PNG_INCLUDE_DIRS})
+    target_link_libraries(ooey PUBLIC ${PNG_LIBRARIES})
 endif()
 if(OOEY_BUILD_FRAMEBUFFER)
     target_compile_definitions(ooey PUBLIC OOEY_BUILD_FRAMEBUFFER)
@@ -185,6 +203,7 @@ target_sources(gooey PRIVATE
     gooey/src/controls/button.cpp
     gooey/src/controls/label.cpp
     gooey/src/controls/text_box.cpp
+    gooey/src/controls/image_control.cpp
     gooey/src/controls/list_control.cpp
     gooey/src/controls/column.cpp
     gooey/src/controls/row.cpp

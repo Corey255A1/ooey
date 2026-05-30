@@ -22,6 +22,8 @@ public:
         geometries.push_back(geometry);
     }
 
+    void draw_image(const ooey::Image& /*image*/, const ooey::Rect& /*dest_rect*/) override {}
+
     ooey::Size measure_text(const std::string& /*text*/, const ooey::Font& /*font*/) override {
         return {0, 0};
     }

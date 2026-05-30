@@ -13,6 +13,7 @@ add_executable(ooey_tests
     test_framebuffer.cpp
     test_primitives.cpp
     test_layout.cpp
+    test_image.cpp
 )
 target_link_libraries(ooey_tests PRIVATE ooey ooey_controls GTest::gtest_main)
 

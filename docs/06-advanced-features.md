@@ -5,10 +5,11 @@ Expand the engine's capabilities to include rich media, declarative UI definitio
 
 ## Action Items
 
-1. **Image Integration (Pending)**
-   - Integrate `libpng` and `libjpeg`.
-   - Implement a `Texture` or `Image` resource loader.
-   - Add image rendering capabilities to the `IRenderTarget`.
+1. **Image Integration (Completed)**
+   - Created the `IImageDecoder` API interface supporting dynamic signature-based format sniffing.
+   - Built a modular built-in `BmpDecoder` and conditional, native `PngDecoder` linking `libpng` if present.
+   - Extended `IRenderTarget` with `draw_image` implemented for CPU (Software), OpenGL, Vulkan (downsampled), and decorated Chrome rendering.
+   - Added the `ImageControl` UI layout component.
 
 2. **Audio and Video (Pending)**
    - Explore and integrate `alsa` or `pulseaudio` for audio playback.
