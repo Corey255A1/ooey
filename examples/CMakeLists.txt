@@ -26,6 +26,9 @@ if(OOEY_BUILD_CONTROLS)
     add_executable(hello_layout hello_layout.cpp)
     target_link_libraries(hello_layout PRIVATE ooey ooey_controls)
 
+    add_executable(hello_layout_mvvmc hello_layout_mvvmc.cpp)
+    target_link_libraries(hello_layout_mvvmc PRIVATE ooey ooey_controls)
+
     add_executable(hello_wizard hello_wizard.cpp)
     target_link_libraries(hello_wizard PRIVATE ooey ooey_controls)
 
