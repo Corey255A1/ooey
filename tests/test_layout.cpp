@@ -310,3 +310,86 @@ TEST(LayoutTest, FlowLayoutWrapping) {
     EXPECT_EQ(child3->layout_bounds.x, 15);
     EXPECT_EQ(child3->layout_bounds.y, 65);
 }
+
+#include "gooey/controls/text_box.hpp"
+
+TEST(LayoutTest, MVVMCLayoutDebugging) {
+    auto root = std::make_shared<Column>();
+    root->set_width(SizePolicy::MatchParent);
+    root->set_height(SizePolicy::MatchParent);
+    root->set_padding(25);
+
+    auto header = std::make_shared<Column>();
+    header->set_width(SizePolicy::MatchParent);
+    header->set_height(SizePolicy::WrapContent);
+    header->set_margin(0, 0, 0, 15);
+
+    auto title = std::make_shared<Label>("MVVMC Dashboard Demo", Font{"sans-serif", 28, FontWeight::Bold}, Point{0, 0}, Color{255, 255, 255});
+    title->set_absolute(false);
+    title->set_margin(0, 0, 0, 5);
+    header->add_child(title);
+
+    auto subtitle = std::make_shared<Label>("Resize this window...", Font{"sans-serif", 14}, Point{0, 0}, Color{150, 150, 160});
+    subtitle->set_absolute(false);
+    subtitle->set_margin(0, 0, 0, 15);
+    header->add_child(subtitle);
+    root->add_child(header);
+
+    auto button_row = std::make_shared<FlowLayout>();
+    button_row->set_width(SizePolicy::MatchParent);
+    button_row->set_height(SizePolicy::WrapContent);
+    button_row->set_margin(0, 0, 0, 20);
+
+    auto cycle_theme_btn = std::make_shared<Button>(Rect{0, 0, 160, 40}, Color{0, 120, 215}, Color{0, 0, 0, 0}, 0.0f, 8, "Cycle Theme", Color{255, 255, 255});
+    cycle_theme_btn->set_absolute(false);
+    cycle_theme_btn->set_margin(0, 5, 10, 5);
+    button_row->add_child(cycle_theme_btn);
+    root->add_child(button_row);
+
+    auto grid = std::make_shared<Grid>(2, 2);
+    grid->set_width(SizePolicy::MatchParent);
+    grid->set_height(SizePolicy::Fixed, 200.0f);
+    grid->set_margin(0, 0, 0, 20);
+    for (int i = 0; i < 4; ++i) {
+        auto card = std::make_shared<View>();
+        card->set_width(SizePolicy::MatchParent);
+        card->set_height(SizePolicy::MatchParent);
+        grid->add_child(card);
+    }
+    root->add_child(grid);
+
+    auto footer_row = std::make_shared<Row>();
+    footer_row->set_width(SizePolicy::MatchParent);
+    footer_row->set_height(SizePolicy::WrapContent);
+    footer_row->set_margin(0, 0, 0, 10);
+
+    auto name_lbl = std::make_shared<Label>("Enter Name:", Font{"sans-serif", 16}, Point{0, 0}, Color{200, 200, 200});
+    name_lbl->set_absolute(false);
+    name_lbl->set_margin(0, 5, 10, 0);
+    footer_row->add_child(name_lbl);
+
+    auto name_box = std::make_shared<TextBox>(Rect{0, 0, 250, 36}, Font{"sans-serif", 16}, Color{255, 255, 255}, Color{35, 35, 40});
+    name_box->set_absolute(false);
+    footer_row->add_child(name_box);
+    root->add_child(footer_row);
+
+    auto greeting_lbl = std::make_shared<Label>("Enter your name below to get started!", Font{"sans-serif", 16, FontWeight::Bold}, Point{0, 0}, Color{0, 200, 100});
+    greeting_lbl->set_absolute(false);
+    greeting_lbl->set_width(SizePolicy::MatchParent);
+    greeting_lbl->set_margin(0, 5, 0, 15);
+    root->add_child(greeting_lbl);
+
+    Size size{800, 600};
+    root->measure(size);
+    root->layout(Rect{0, 0, size.width, size.height});
+
+    std::cout << "[DEBUG] root layout bounds: " << root->layout_bounds.x << ", " << root->layout_bounds.y << ", " << root->layout_bounds.width << ", " << root->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] header layout bounds: " << header->layout_bounds.x << ", " << header->layout_bounds.y << ", " << header->layout_bounds.width << ", " << header->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] button_row layout bounds: " << button_row->layout_bounds.x << ", " << button_row->layout_bounds.y << ", " << button_row->layout_bounds.width << ", " << button_row->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] grid layout bounds: " << grid->layout_bounds.x << ", " << grid->layout_bounds.y << ", " << grid->layout_bounds.width << ", " << grid->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] footer_row layout bounds: " << footer_row->layout_bounds.x << ", " << footer_row->layout_bounds.y << ", " << footer_row->layout_bounds.width << ", " << footer_row->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] name_lbl layout bounds: " << name_lbl->layout_bounds.x << ", " << name_lbl->layout_bounds.y << ", " << name_lbl->layout_bounds.width << ", " << name_lbl->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] name_box layout bounds: " << name_box->layout_bounds.x << ", " << name_box->layout_bounds.y << ", " << name_box->layout_bounds.width << ", " << name_box->layout_bounds.height << "\n";
+    std::cout << "[DEBUG] greeting_lbl layout bounds: " << greeting_lbl->layout_bounds.x << ", " << greeting_lbl->layout_bounds.y << ", " << greeting_lbl->layout_bounds.width << ", " << greeting_lbl->layout_bounds.height << "\n";
+}
+

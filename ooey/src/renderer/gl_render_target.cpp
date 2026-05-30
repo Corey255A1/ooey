@@ -71,6 +71,9 @@ Size GlRenderTarget::measure_text(const std::string& text, const Font& font) {
 }
 
 void GlRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
+    if (text.empty()) {
+        return;
+    }
     glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
     
     // Performance Optimization: Hoist glBegin and glEnd outside of the glyph rasterization callback.

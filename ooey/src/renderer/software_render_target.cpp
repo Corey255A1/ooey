@@ -98,6 +98,9 @@ Size SoftwareRenderTarget::measure_text(const std::string& text, const Font& fon
 }
 
 void SoftwareRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
+    if (text.empty()) {
+        return;
+    }
     BitmapFont::draw_text(text, font.size, position, [this, color](int x, int y, int w, int h) {
         draw_filled_rect(x, y, w, h, color);
     });

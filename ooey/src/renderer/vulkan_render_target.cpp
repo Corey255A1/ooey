@@ -176,6 +176,9 @@ Size VulkanRenderTarget::measure_text(const std::string& text, const Font& font)
 }
 
 void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
+    if (text.empty()) {
+        return;
+    }
     size_t start_vertices = frame_vertices_.size();
     size_t start_indices = frame_indices_.size();
 
