@@ -56,7 +56,12 @@ public:
     void handle_xdg_surface_configure(uint32_t serial);
     void handle_xdg_toplevel_configure(int32_t width, int32_t height);
 
-private:
+protected:
+    // Virtual graphics hooks for subclasses to customize behavior
+    virtual bool init_graphics_context() { return true; }
+    virtual void cleanup_graphics_context() {}
+    virtual void recreate_render_target(int width, int height);
+
     wl_display* display_{nullptr};
     wl_registry* registry_{nullptr};
     wl_compositor* compositor_{nullptr};
@@ -76,22 +81,11 @@ private:
     size_t mapped_size_{0};
     bool released_{false};
     InputManager* input_manager_{nullptr};
-
-    void recreate_render_target(int width, int height);
-    bool init_egl();
-    void cleanup_egl();
     
     std::unique_ptr<PointerData> pointer_data_;
     std::unique_ptr<KeyboardData> keyboard_data_;
     wl_pointer* pointer_obj_{nullptr};
     wl_keyboard* keyboard_obj_{nullptr};
-
-    void* egl_display_{nullptr};
-    void* egl_context_{nullptr};
-    void* egl_surface_{nullptr};
-    void* egl_config_{nullptr};
-    wl_egl_window* egl_window_{nullptr};
-    bool use_egl_{false};
 
     int width_{};
     int height_{};
@@ -103,3 +97,4 @@ private:
 };
 
 } // namespace ooey::wayland
+

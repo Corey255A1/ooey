@@ -70,9 +70,9 @@ While the foundation is strong, the current implementation has several bottlenec
 
 ---
 
-## 3. The Technical Roadmap (How to Fix It)
+## 3. The Technical Roadmap (How to Fix It & Make It Unique)
 
-To scale OOEY into a production-grade framework, the following enhancements should be implemented sequentially:
+To scale OOEY into a production-grade framework and make it truly unique, the following enhancements should be implemented sequentially:
 
 ```mermaid
 graph TD
@@ -83,10 +83,20 @@ graph TD
     
     F[Phase 3: Layouts] --> G[Recursive Layout Engine]
     
-    B --> H[Production Ready Engine]
+    I[Phase 4: Direct Embedded GPU & Safety] --> J[DRM/KMS Backend]
+    I --> K[Zero-Allocation Arena Geometry]
+    
+    L[Phase 5: Declarative UI & Animations] --> M[Hot-Reload JSON Layouts]
+    L --> N[Reactive Tweening Engine]
+    
+    B --> H[Truly Unique UI Framework]
     C --> H
     E --> H
     G --> H
+    J --> H
+    K --> H
+    M --> H
+    N --> H
 ```
 
 ### Phase 1: Modernize the Graphics Pipeline
@@ -115,3 +125,18 @@ graph TD
    - Introduce a dedicated Layout Pass in `gooey::View` that runs before the rendering pass.
 2. **Box Model / Flexbox:**
    - Implement a lightweight layout resolver (similar to CSS Flexbox or GUI anchors) that calculates coordinates and bounds dynamically based on parent-child relationships and constraints, enabling responsive design.
+
+### Phase 5: Direct Embedded GPU & Safety (The Unique Edge Part 1)
+1. **DRM/KMS Window Backend:**
+   - Support direct hardware GPU rendering to `/dev/dri/card0` via EGL/GBM on embedded Linux without window managers, enabling 60 FPS interfaces with minimal overhead.
+   - Support input parsing via `/dev/input/event*` devices.
+2. **Zero-Allocation Cycle Mode:**
+   - Add compile-time and arena-based limits to views and geometry structures. Ensure that after initial layout assembly, the rendering and update cycles make no calls to `new` or `malloc`.
+
+### Phase 6: Declarative UI & Animations (The Unique Edge Part 2)
+1. **Hot-Reloadable JSON Layout Engine:**
+   - Support reading the view tree hierarchy from a JSON markup file.
+   - Watch the layout file during execution and dynamically rebuild the scene graph tree while rebinding properties to the persistent ViewModel.
+2. **Reactive Tweening Engine:**
+   - Integrate animation runners into `Property<T>` so updates transition smoothly using custom easing curves (Cubic, Bounce, Elastic).
+

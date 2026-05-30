@@ -86,6 +86,8 @@ if(OOEY_BUILD_WAYLAND)
     # Add the wayland source files
     list(APPEND OOey_WAYLAND_SRCS
         ooey/src/platform/wayland/window_backend.cpp
+        ooey/src/platform/wayland/egl_window_backend.cpp
+        ooey/src/platform/wayland/vulkan_window_backend.cpp
     )
     target_include_directories(ooey PUBLIC ${WAYLAND_INCLUDE_DIRS} ${XKBCOMMON_INCLUDE_DIRS} ${WAYLAND_PROTOCOLS_INCLUDE_DIRS})
     target_compile_options(ooey PUBLIC ${WAYLAND_CFLAGS_OTHER} ${XKBCOMMON_CFLAGS_OTHER} ${WAYLAND_PROTOCOLS_CFLAGS_OTHER})
@@ -116,6 +118,7 @@ set(OOEY_SRCS
     ooey/src/platform.cpp
     ooey/src/renderer/bitmap_font.cpp
     ooey/src/renderer/gl_render_target.cpp
+    ooey/src/renderer/vulkan_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
     ooey/src/renderer/window_chrome.cpp
     ooey/src/renderer/primitives/circle_primitive.cpp
@@ -168,8 +171,10 @@ if(EMSCRIPTEN)
     target_compile_options(ooey PUBLIC -sLEGACY_GL_EMULATION=1)
     target_link_options(ooey PUBLIC -sLEGACY_GL_EMULATION=1 -sALLOW_MEMORY_GROWTH=1)
 else()
+    find_package(Vulkan REQUIRED)
     target_link_libraries(ooey PUBLIC 
         OpenGL::GL
+        Vulkan::Vulkan
     )
 endif()
 

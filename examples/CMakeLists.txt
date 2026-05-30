@@ -47,6 +47,9 @@ if(OOEY_BUILD_WAYLAND)
     if(OOEY_BUILD_CONTROLS)
         add_executable(hello_ooey_text_wayland hello_ooey_text_wayland.cpp)
         target_link_libraries(hello_ooey_text_wayland PRIVATE ooey ooey_controls)
+
+        add_executable(hello_wayland_vulkan hello_wayland_vulkan.cpp)
+        target_link_libraries(hello_wayland_vulkan PRIVATE ooey ooey_controls)
     endif()
 endif()
 

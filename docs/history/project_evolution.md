@@ -42,5 +42,11 @@ In validating the MVVM-C features, we addressed critical ergonomic and memory co
 - **Ergonomics:** We improved the subscription model. Initially, users had to call a clunky `add()` method on a `SubscriptionSink`. We refined `ScopedSubscription` and `SubscriptionSink` to be more intuitive, managing lifecycle automatically.
 - **Organization:** We moved all reactive components (`property.hpp`, `scoped_subscription.hpp`, `subscription_sink.hpp`) into a dedicated `mvvmc/` directory and ensured their implementations were appropriately split between headers and source files where template mechanics allowed.
 
+## 8. Wayland Subclassing & Vulkan Pipeline Integration
+To support advanced graphics APIs and modularize platform backends, we refactored the Wayland window implementation:
+- **Subclassing:** Separated EGL/OpenGL code out of the base `WindowBackend` class. The base class now provides common Wayland input/window features, while `EglWindowBackend` and `VulkanWindowBackend` handle EGL/GL and Vulkan context setups respectively as clean subclasses.
+- **Vulkan Graphics Pipeline:** Implemented `VulkanRenderTarget` to support hardware-accelerated Vulkan rendering. It includes push constants for coordinate mapping, dedicated pipelines for Triangles and Lines, dynamic VBO/IBO buffers, and embedded SPIR-V shader bytecode for self-contained compilation.
+- **Runtime Selection:** Updated `platform.cpp` to dynamically select the Wayland subclass at runtime via the `OOEY_WAYLAND_BACKEND` environment variable.
+
 ## Summary
 The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, and layering a decoupled MVVM-C reactive system on top, OOEY provides a robust, explicit, and scalable foundation for cross-platform UI development.

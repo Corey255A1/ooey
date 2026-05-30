@@ -4,6 +4,8 @@
 
 #ifdef OOEY_BUILD_WAYLAND
 #include "ooey/platform/wayland/window_backend.hpp"
+#include "ooey/platform/wayland/egl_window_backend.hpp"
+#include "ooey/platform/wayland/vulkan_window_backend.hpp"
 #endif
 
 #ifdef OOEY_BUILD_X11
@@ -27,7 +29,16 @@ std::unique_ptr<IWindowBackend> create_default_window_backend() {
 
 #ifdef OOEY_BUILD_WAYLAND
     if (std::getenv("WAYLAND_DISPLAY") != nullptr) {
-        return std::make_unique<wayland::WindowBackend>();
+        const char* backend_env = std::getenv("OOEY_WAYLAND_BACKEND");
+        if (backend_env != nullptr) {
+            std::string type(backend_env);
+            if (type == "vulkan") {
+                return std::make_unique<wayland::VulkanWindowBackend>();
+            } else if (type == "shm" || type == "software") {
+                return std::make_unique<wayland::WindowBackend>();
+            }
+        }
+        return std::make_unique<wayland::EglWindowBackend>();
     }
 #endif
 
@@ -49,7 +60,16 @@ std::unique_ptr<IWindowBackend> create_default_window_backend() {
 #elif defined(OOEY_BUILD_X11)
     return std::make_unique<x11::WindowBackend>();
 #elif defined(OOEY_BUILD_WAYLAND)
-    return std::make_unique<wayland::WindowBackend>();
+    const char* backend_env = std::getenv("OOEY_WAYLAND_BACKEND");
+    if (backend_env != nullptr) {
+        std::string type(backend_env);
+        if (type == "vulkan") {
+            return std::make_unique<wayland::VulkanWindowBackend>();
+        } else if (type == "shm" || type == "software") {
+            return std::make_unique<wayland::WindowBackend>();
+        }
+    }
+    return std::make_unique<wayland::EglWindowBackend>();
 #else
     return nullptr;
 #endif
