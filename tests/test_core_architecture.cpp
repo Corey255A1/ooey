@@ -63,6 +63,7 @@ public:
     void start_interactive_move() override {}
     void start_interactive_resize(ooey::WindowResizeEdge /*edge*/) override {}
     void request_close() override {}
+    ooey::Size get_size() const override { return ooey::Size{800, 600}; }
 
 private:
     std::shared_ptr<ooey::WindowChrome> window_chrome_;

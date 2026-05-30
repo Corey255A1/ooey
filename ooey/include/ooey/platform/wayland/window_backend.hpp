@@ -50,7 +50,8 @@ public:
     void start_interactive_resize(WindowResizeEdge edge) override;
     void request_close() override { should_close_ = true; }
 
-    Size get_window_size() const { return Size{width_, height_}; }
+    Size get_size() const override { return Size{width_, height_}; }
+    Size get_window_size() const { return get_size(); }
 
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);

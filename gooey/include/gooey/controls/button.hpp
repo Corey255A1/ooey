@@ -33,6 +33,10 @@ public:
 
     std::function<void()> on_click;
 
+    // Layout support
+    Size measure(Size constraints) override;
+    void layout(Rect bounds) override;
+
 private:
     Rect bounds_;
     Color color_;

@@ -186,6 +186,9 @@ target_sources(gooey PRIVATE
     gooey/src/controls/label.cpp
     gooey/src/controls/text_box.cpp
     gooey/src/controls/list_control.cpp
+    gooey/src/controls/column.cpp
+    gooey/src/controls/row.cpp
+    gooey/src/controls/grid.cpp
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
     gooey/src/mvvmc/view.cpp

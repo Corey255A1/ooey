@@ -36,6 +36,9 @@ public:
     virtual void start_interactive_move() = 0;
     virtual void start_interactive_resize(WindowResizeEdge edge) = 0;
     virtual void request_close() = 0;
+
+    // Get the window size
+    virtual Size get_size() const = 0;
 };
 
 } // namespace ooey

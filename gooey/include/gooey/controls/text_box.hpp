@@ -29,6 +29,10 @@ public:
 
     std::function<void(const std::string&)> on_text_changed;
 
+    // Layout support
+    Size measure(Size constraints) override;
+    void layout(Rect bounds) override;
+
 private:
     Rect bounds_;
     std::shared_ptr<RoundedRectPrimitive> bg_;

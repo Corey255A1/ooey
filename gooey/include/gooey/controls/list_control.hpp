@@ -36,6 +36,10 @@ public:
 
     std::function<void(int)> on_selected_changed;
 
+    // Layout support
+    Size measure(Size constraints) override;
+    void layout(Rect bounds) override;
+
 private:
     void update_children();
 

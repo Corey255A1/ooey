@@ -305,6 +305,7 @@ public:
     void start_interactive_move() override { move_called = true; }
     void start_interactive_resize(ooey::WindowResizeEdge edge) override { resize_called = true; last_edge = edge; }
     void request_close() override { close_called = true; }
+    ooey::Size get_size() const override { return ooey::Size{800, 600}; }
 
     bool move_called{false};
     bool resize_called{false};

@@ -35,6 +35,7 @@ public:
     void start_interactive_move() override {}
     void start_interactive_resize(WindowResizeEdge /*edge*/) override {}
     void request_close() override { should_close_ = true; }
+    Size get_size() const override { return Size{logical_w_, logical_h_}; }
 
 private:
     int fd_{-1};

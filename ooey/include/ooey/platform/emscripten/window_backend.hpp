@@ -33,6 +33,8 @@ public:
     void start_interactive_resize(WindowResizeEdge /*edge*/) override {}
     void request_close() override { should_close_ = true; }
 
+    Size get_size() const override { return Size{width_, height_}; }
+
 private:
     std::unique_ptr<renderer::IRenderTarget> render_target_;
     InputManager* input_manager_{nullptr};

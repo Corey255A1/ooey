@@ -48,5 +48,11 @@ To support advanced graphics APIs and modularize platform backends, we refactore
 - **Vulkan Graphics Pipeline:** Implemented `VulkanRenderTarget` to support hardware-accelerated Vulkan rendering. It includes push constants for coordinate mapping, dedicated pipelines for Triangles and Lines, dynamic VBO/IBO buffers, and embedded SPIR-V shader bytecode for self-contained compilation.
 - **Runtime Selection:** Updated `platform.cpp` to dynamically select the Wayland subclass at runtime via the `OOEY_WAYLAND_BACKEND` environment variable.
 
+## 9. Reactive Two-Pass Layout Engine
+To move beyond hardcoded coordinates and enable responsive UI design, we implemented a reactive, constraint-based two-pass layout system (Measure & Arrange) in `gooey::View`:
+- **Base View Properties:** Added `SizePolicy`, margins, padding, and alignments to the base `View` class.
+- **Layout Containers:** Introduced `Column` (vertical stacks), `Row` (horizontal stacks), and `Grid` (tabular layouts) as first-class containers.
+- **Main Loop Integration:** Integrated the layout engine passes (`measure` and `layout`) directly into `Application::run_iteration()` immediately before rendering, allowing the UI layout to automatically reflow dynamically in response to window resize events.
+
 ## Summary
 The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, and layering a decoupled MVVM-C reactive system on top, OOEY provides a robust, explicit, and scalable foundation for cross-platform UI development.

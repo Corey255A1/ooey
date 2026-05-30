@@ -105,4 +105,43 @@ bool TextBox::on_text_event(const TextEvent& e) {
     return true;
 }
 
+Size TextBox::measure(Size constraints) {
+    int w = 0;
+    if (width.policy == SizePolicy::Fixed) {
+        w = static_cast<int>(width.value);
+    } else if (width.policy == SizePolicy::MatchParent) {
+        w = constraints.width;
+    } else {
+        w = bounds_.width;
+    }
+
+    int h = 0;
+    if (height.policy == SizePolicy::Fixed) {
+        h = static_cast<int>(height.value);
+    } else if (height.policy == SizePolicy::MatchParent) {
+        h = constraints.height;
+    } else {
+        h = bounds_.height;
+    }
+
+    w = std::max(0, std::min(w, constraints.width));
+    h = std::max(0, std::min(h, constraints.height));
+    return Size{w, h};
+}
+
+void TextBox::layout(Rect bounds) {
+    bounds_ = bounds;
+    View::layout(bounds);
+
+    if (bg_) {
+        bg_->set_rect(bounds_);
+    }
+
+    if (text_primitive_) {
+        int tx = bounds_.x + padding_left + 10;
+        int ty = bounds_.y + padding_top + (bounds_.height - 16) / 2;
+        text_primitive_->set_position(Point{tx, ty});
+    }
+}
+
 } // namespace gooey::controls

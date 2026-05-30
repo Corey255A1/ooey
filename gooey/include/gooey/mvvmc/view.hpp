@@ -6,6 +6,7 @@ namespace ooey {}
 #include "gooey/mvvmc/i_drawable.hpp"
 #include "gooey/mvvmc/subscription_sink.hpp"
 #include "gooey/mvvmc/property.hpp"
+#include "gooey/mvvmc/layout.hpp"
 #include <vector>
 #include <memory>
 
@@ -15,6 +16,7 @@ namespace gooey::mvvmc {
 class View : public IDrawable {
 public:
     View() = default;
+    virtual ~View() override = default;
 
     void add_child(std::shared_ptr<IDrawable>&& child);
 
@@ -28,6 +30,38 @@ public:
 
     void draw(ooey::IRenderTarget& target) const override;
     void clear_children();
+
+    // Layout configuration
+    LayoutLength width{SizePolicy::WrapContent};
+    LayoutLength height{SizePolicy::WrapContent};
+
+    int margin_left{0};
+    int margin_top{0};
+    int margin_right{0};
+    int margin_bottom{0};
+
+    int padding_left{0};
+    int padding_top{0};
+    int padding_right{0};
+    int padding_bottom{0};
+
+    Align align_self{Align::Start};
+
+    // Laido-out absolute boundaries
+    Rect layout_bounds{0, 0, 0, 0};
+
+    // Builder setters for chaining configuration
+    View& set_width(SizePolicy policy, float value = 0.0f) { width = {policy, value}; return *this; }
+    View& set_height(SizePolicy policy, float value = 0.0f) { height = {policy, value}; return *this; }
+    View& set_margin(int margin) { margin_left = margin_top = margin_right = margin_bottom = margin; return *this; }
+    View& set_margin(int left, int top, int right, int bottom) { margin_left = left; margin_top = top; margin_right = right; margin_bottom = bottom; return *this; }
+    View& set_padding(int padding) { padding_left = padding_top = padding_right = padding_bottom = padding; return *this; }
+    View& set_padding(int left, int top, int right, int bottom) { padding_left = left; padding_top = top; padding_right = right; padding_bottom = bottom; return *this; }
+    View& set_align_self(Align align) { align_self = align; return *this; }
+
+    // Two-pass reactive layout system
+    virtual Size measure(Size constraints);
+    virtual void layout(Rect bounds);
 
 private:
     std::vector<std::shared_ptr<IDrawable>> children_;

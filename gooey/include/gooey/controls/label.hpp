@@ -19,8 +19,17 @@ public:
     const std::string& get_text() const;
 
     void set_font(const Font& font);
+    const Font& get_font() const;
+
     void set_color(Color color);
+    Color get_color() const;
+
     void set_position(Point position);
+    Point get_position() const;
+
+    // Layout support
+    Size measure(Size constraints) override;
+    void layout(Rect bounds) override;
 
 private:
     std::shared_ptr<TextPrimitive> text_primitive_;

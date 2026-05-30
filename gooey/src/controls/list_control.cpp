@@ -147,4 +147,63 @@ void ListControl::update_children() {
     }
 }
 
+Size ListControl::measure(Size constraints) {
+    int w = 0;
+    if (width.policy == SizePolicy::Fixed) {
+        w = static_cast<int>(width.value);
+    } else if (width.policy == SizePolicy::MatchParent) {
+        w = constraints.width;
+    } else {
+        w = bounds_.width;
+    }
+
+    int h = 0;
+    if (height.policy == SizePolicy::Fixed) {
+        h = static_cast<int>(height.value);
+    } else if (height.policy == SizePolicy::MatchParent) {
+        h = constraints.height;
+    } else {
+        h = bounds_.height;
+    }
+
+    w = std::max(0, std::min(w, constraints.width));
+    h = std::max(0, std::min(h, constraints.height));
+    return Size{w, h};
+}
+
+void ListControl::layout(Rect bounds) {
+    bounds_ = bounds;
+    View::layout(bounds);
+
+    if (bg_) {
+        bg_->set_rect(bounds_);
+    }
+
+    visible_count_ = item_height_ > 0 ? bounds_.height / item_height_ : 1;
+    if (visible_count_ <= 0) {
+        visible_count_ = 1;
+    }
+
+    clear_children();
+    add_child(bg_);
+    item_bgs_.clear();
+    item_texts_.clear();
+
+    for (int i = 0; i < visible_count_; ++i) {
+        int item_y = bounds_.y + i * item_height_;
+        
+        Rect item_rect{bounds_.x + 2, item_y + 2, bounds_.width - 4, item_height_ - 4};
+        auto item_bg = std::make_shared<RectPrimitive>(item_rect, Color{0, 0, 0, 0});
+        item_bgs_.push_back(item_bg);
+        add_child(item_bg);
+
+        Point text_pos{bounds_.x + 10, item_y + (item_height_ - font_.size) / 2};
+        auto item_text = std::make_shared<TextPrimitive>("", font_, text_pos, text_color_);
+        item_texts_.push_back(item_text);
+        add_child(item_text);
+    }
+
+    update_children();
+}
+
 } // namespace gooey::controls

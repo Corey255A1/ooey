@@ -97,4 +97,55 @@ bool Button::on_key_event(const KeyEvent& /*e*/) {
     return false;
 }
 
+Size Button::measure(Size constraints) {
+    int w = 0;
+    if (width.policy == SizePolicy::Fixed) {
+        w = static_cast<int>(width.value);
+    } else if (width.policy == SizePolicy::MatchParent) {
+        w = constraints.width;
+    } else {
+        if (label_) {
+            Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
+            w = text_size.width + padding_left + padding_right + 30;
+        } else {
+            w = bounds_.width;
+        }
+    }
+
+    int h = 0;
+    if (height.policy == SizePolicy::Fixed) {
+        h = static_cast<int>(height.value);
+    } else if (height.policy == SizePolicy::MatchParent) {
+        h = constraints.height;
+    } else {
+        if (label_) {
+            Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
+            h = text_size.height + padding_top + padding_bottom + 20;
+        } else {
+            h = bounds_.height;
+        }
+    }
+
+    w = std::max(0, std::min(w, constraints.width));
+    h = std::max(0, std::min(h, constraints.height));
+    return Size{w, h};
+}
+
+void Button::layout(Rect bounds) {
+    bounds_ = bounds;
+    View::layout(bounds);
+    
+    if (bg_) {
+        bg_->set_rect(bounds_);
+    }
+    
+    if (label_) {
+        Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
+        int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
+        int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
+        label_->set_position(Point{lx, ly});
+        label_->layout(Rect{lx, ly, text_size.width, text_size.height});
+    }
+}
+
 } // namespace gooey::controls

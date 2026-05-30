@@ -3,6 +3,7 @@ namespace ooey {}
 #include "gooey/application.hpp"
 #include "gooey/mvvmc/controller.hpp"
 #include "ooey/logging.hpp"
+#include "ooey/renderer/window_chrome.hpp"
 
 namespace gooey {
     using namespace ooey;
@@ -107,6 +108,13 @@ void Application::run_iteration() {
                 target->clear(clear_color_);
 
                 if (root_view_) {
+                    Size size = window_backend_->get_size();
+                    if (auto chrome = window_backend_->get_window_chrome()) {
+                        size.width -= 2 * chrome->get_border_width();
+                        size.height -= (2 * chrome->get_border_width() + chrome->get_title_bar_height());
+                    }
+                    root_view_->measure(size);
+                    root_view_->layout(Rect{0, 0, size.width, size.height});
                     root_view_->draw(*target);
                 }
 
