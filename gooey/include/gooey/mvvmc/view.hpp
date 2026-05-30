@@ -68,7 +68,14 @@ public:
     virtual Size measure(Size constraints);
     virtual void layout(Rect bounds);
 
+    // Helpers to resolve width/height according to policies under parent constraints
+    int resolve_width(int constraint_w, int content_w) const;
+    int resolve_height(int constraint_h, int content_h) const;
+
 private:
+    int calculate_content_width(Size child_constraints);
+    int calculate_content_height(Size child_constraints);
+
     std::vector<std::shared_ptr<IDrawable>> children_;
     SubscriptionSink sink_;
 };

@@ -26,26 +26,8 @@ Size Column::measure(Size constraints) {
         }
     }
 
-    int final_w = 0;
-    if (width.policy == SizePolicy::Fixed) {
-        final_w = static_cast<int>(width.value);
-    } else if (width.policy == SizePolicy::MatchParent) {
-        final_w = constraints.width;
-    } else {
-        final_w = content_max_w + padding_left + padding_right;
-    }
-
-    int final_h = 0;
-    if (height.policy == SizePolicy::Fixed) {
-        final_h = static_cast<int>(height.value);
-    } else if (height.policy == SizePolicy::MatchParent) {
-        final_h = constraints.height;
-    } else {
-        final_h = total_h + padding_top + padding_bottom;
-    }
-
-    final_w = std::max(0, std::min(final_w, constraints.width));
-    final_h = std::max(0, std::min(final_h, constraints.height));
+    int final_w = resolve_width(constraints.width, content_max_w + padding_left + padding_right);
+    int final_h = resolve_height(constraints.height, total_h + padding_top + padding_bottom);
     return Size{final_w, final_h};
 }
 

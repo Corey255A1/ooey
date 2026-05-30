@@ -295,23 +295,16 @@ WindowBackend::~WindowBackend() {
     destroy();
 }
 
-bool WindowBackend::create(const Size& size, const char* title) {
-    width_ = size.width;
-    height_ = size.height;
-    title_ = title ? title : "ooey wayland";
-
+bool WindowBackend::connect_to_display() {
     display_ = wl_display_connect(nullptr);
     if (!display_) {
         std::cerr << "Failed to connect to Wayland display\n";
         return false;
     }
+    return true;
+}
 
-    if (!init_graphics_context()) {
-        std::cerr << "Failed to initialize graphics context\n";
-        return false;
-    }
-
-    WaylandState state{};
+bool WindowBackend::setup_registry(WaylandState& state) {
     registry_ = wl_display_get_registry(display_);
     wl_registry_add_listener(registry_, &g_registry_listener, &state);
     wl_display_roundtrip(display_);
@@ -327,10 +320,12 @@ bool WindowBackend::create(const Size& size, const char* title) {
     if (state.wm_base) {
         xdg_wm_base_add_listener(state.wm_base, &g_xdg_wm_base_listener, this);
     }
+    return true;
+}
 
+void WindowBackend::create_surface_and_xdg(WaylandState& state) {
     surface_ = wl_compositor_create_surface(compositor_);
 
-    // If xdg wm base is available, create an xdg surface/toplevel so the compositor maps our surface
     xdg_surface* xdg_surface_ptr = nullptr;
     xdg_toplevel* xdg_toplevel_ptr = nullptr;
     if (state.wm_base) {
@@ -343,28 +338,23 @@ bool WindowBackend::create(const Size& size, const char* title) {
                 xdg_toplevel_set_title(xdg_toplevel_ptr, title_.c_str());
             }
         }
-        // Do not attach content before acknowledging configure; wait for configure callback
         waiting_for_configure_ = true;
-        // Commit the surface (no buffer attached) to prompt the compositor to send a configure
         wl_surface_commit(surface_);
         wl_display_roundtrip(display_);
     }
 
-    // Store xdg objects in members if created
     xdg_surface_ = xdg_surface_ptr;
     xdg_toplevel_ = xdg_toplevel_ptr;
 
-    // If no xdg (older compositor?), create shm target immediately
     if (!xdg_surface_) {
         recreate_render_target(width_, height_);
     }
+}
 
-    // Setup seat for input if available
+void WindowBackend::setup_input_devices(WaylandState& state) {
     if (state.seat) {
         seat_ = state.seat;
-        // grab pointer and keyboard if present
-        wl_seat_add_listener(seat_, nullptr, nullptr); // no-op: concrete listeners created when creating pointer/keyboard
-        // Create pointer
+        wl_seat_add_listener(seat_, nullptr, nullptr);
         pointer_obj_ = wl_seat_get_pointer(seat_);
         auto pointer_data_ptr = std::make_unique<PointerData>();
         pointer_data_ptr->input_manager = input_manager_;
@@ -372,7 +362,6 @@ bool WindowBackend::create(const Size& size, const char* title) {
         pointer_data_ = std::move(pointer_data_ptr);
         wl_pointer_add_listener(pointer_obj_, &g_pointer_listener, pointer_data_.get());
 
-        // Create keyboard
         keyboard_obj_ = wl_seat_get_keyboard(seat_);
         auto keyboard_data_ptr = std::make_unique<KeyboardData>();
         keyboard_data_ptr->input_manager = input_manager_;
@@ -381,11 +370,33 @@ bool WindowBackend::create(const Size& size, const char* title) {
         keyboard_data_ptr->xkb_state_ = nullptr;
         keyboard_data_ = std::move(keyboard_data_ptr);
         wl_keyboard_add_listener(keyboard_obj_, &g_keyboard_listener, keyboard_data_.get());
-        // Process any pending enter/motion events so our listener gets initial pointer coords
         if (display_) {
             wl_display_roundtrip(display_);
         }
     }
+}
+
+bool WindowBackend::create(const Size& size, const char* title) {
+    width_ = size.width;
+    height_ = size.height;
+    title_ = title ? title : "ooey wayland";
+
+    if (!connect_to_display()) {
+        return false;
+    }
+
+    if (!init_graphics_context()) {
+        std::cerr << "Failed to initialize graphics context\n";
+        return false;
+    }
+
+    WaylandState state{};
+    if (!setup_registry(state)) {
+        return false;
+    }
+
+    create_surface_and_xdg(state);
+    setup_input_devices(state);
 
     return true;
 }

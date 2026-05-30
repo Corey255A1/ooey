@@ -108,36 +108,15 @@ bool Button::on_key_event(const KeyEvent& /*e*/) {
 }
 
 Size Button::measure(Size constraints) {
-    int w = 0;
-    if (width.policy == SizePolicy::Fixed) {
-        w = static_cast<int>(width.value);
-    } else if (width.policy == SizePolicy::MatchParent) {
-        w = constraints.width;
-    } else {
-        if (label_) {
-            Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
-            w = text_size.width + padding_left + padding_right + 30;
-        } else {
-            w = absolute_bounds.width;
-        }
+    int content_w = absolute_bounds.width;
+    int content_h = absolute_bounds.height;
+    if (label_) {
+        Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
+        content_w = text_size.width + padding_left + padding_right + 30;
+        content_h = text_size.height + padding_top + padding_bottom + 20;
     }
-
-    int h = 0;
-    if (height.policy == SizePolicy::Fixed) {
-        h = static_cast<int>(height.value);
-    } else if (height.policy == SizePolicy::MatchParent) {
-        h = constraints.height;
-    } else {
-        if (label_) {
-            Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
-            h = text_size.height + padding_top + padding_bottom + 20;
-        } else {
-            h = absolute_bounds.height;
-        }
-    }
-
-    w = std::max(0, std::min(w, constraints.width));
-    h = std::max(0, std::min(h, constraints.height));
+    int w = resolve_width(constraints.width, content_w);
+    int h = resolve_height(constraints.height, content_h);
     return Size{w, h};
 }
 

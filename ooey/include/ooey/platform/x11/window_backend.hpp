@@ -47,6 +47,11 @@ private:
     int width_{0};
     int height_{0};
     bool should_close_{false};
+
+    void handle_motion_event(const void* event_ptr);
+    void handle_button_event(const void* event_ptr, PointerState state);
+    void handle_key_press_event(const void* event_ptr);
+    void handle_key_release_event(const void* event_ptr);
 };
 
 } // namespace ooey::x11

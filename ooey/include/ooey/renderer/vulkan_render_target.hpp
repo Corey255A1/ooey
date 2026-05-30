@@ -43,6 +43,12 @@ private:
     void create_render_pass();
     void create_framebuffers();
 
+    void present_headless();
+    bool acquire_next_image(uint32_t& image_index);
+    void copy_vertex_and_index_data();
+    void record_render_commands(VkCommandBuffer cmd, uint32_t image_index);
+    void submit_and_present(VkCommandBuffer cmd, uint32_t image_index);
+
     int width_{0};
     int height_{0};
     std::function<void()> present_callback_;
@@ -102,6 +108,8 @@ private:
     std::vector<uint32_t> frame_indices_;
 
     void create_pipelines();
+    void create_pipeline_layout();
+    VkPipeline create_graphics_pipeline_with_topology(VkPrimitiveTopology topology);
     void create_vertex_buffers();
 };
 

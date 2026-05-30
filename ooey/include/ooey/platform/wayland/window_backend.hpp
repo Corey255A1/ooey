@@ -27,6 +27,7 @@ class ChromeRenderTarget;
 
 namespace ooey::wayland {
 
+class WaylandState;
 struct PointerData;
 struct KeyboardData;
 
@@ -95,6 +96,12 @@ protected:
     std::shared_ptr<ooey::WindowChrome> window_chrome_;
     std::unique_ptr<ooey::ChromeRenderTarget> decorated_render_target_;
     bool should_close_{false};
+
+private:
+    bool connect_to_display();
+    bool setup_registry(WaylandState& state);
+    void create_surface_and_xdg(WaylandState& state);
+    void setup_input_devices(WaylandState& state);
 };
 
 } // namespace ooey::wayland

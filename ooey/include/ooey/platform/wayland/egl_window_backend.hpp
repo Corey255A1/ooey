@@ -15,6 +15,10 @@ protected:
     void recreate_render_target(int width, int height) override;
 
 private:
+    bool create_egl_display();
+    bool choose_egl_config();
+    bool create_egl_context();
+
     void* egl_display_{nullptr};
     void* egl_context_{nullptr};
     void* egl_surface_{nullptr};

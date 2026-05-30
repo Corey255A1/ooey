@@ -33,26 +33,8 @@ Size FlowLayout::measure(Size constraints) {
     max_row_width = std::max(max_row_width, current_row_w);
     total_height += current_row_h;
 
-    int final_w = 0;
-    if (width.policy == SizePolicy::Fixed) {
-        final_w = static_cast<int>(width.value);
-    } else if (width.policy == SizePolicy::MatchParent) {
-        final_w = constraints.width;
-    } else {
-        final_w = max_row_width + padding_left + padding_right;
-    }
-
-    int final_h = 0;
-    if (height.policy == SizePolicy::Fixed) {
-        final_h = static_cast<int>(height.value);
-    } else if (height.policy == SizePolicy::MatchParent) {
-        final_h = constraints.height;
-    } else {
-        final_h = total_height + padding_top + padding_bottom;
-    }
-
-    final_w = std::max(0, std::min(final_w, constraints.width));
-    final_h = std::max(0, std::min(final_h, constraints.height));
+    int final_w = resolve_width(constraints.width, max_row_width + padding_left + padding_right);
+    int final_h = resolve_height(constraints.height, total_height + padding_top + padding_bottom);
     return Size{final_w, final_h};
 }
 

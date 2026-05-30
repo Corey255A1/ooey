@@ -84,6 +84,57 @@ void WindowBackend::destroy() {
     }
 }
 
+void WindowBackend::handle_motion_event(const void* event_ptr) {
+    const XEvent& event = *static_cast<const XEvent*>(event_ptr);
+    ooey::Pointer p{0, event.xmotion.x, event.xmotion.y, PointerState::Moved};
+    if (window_chrome_) {
+        if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
+            return;
+        }
+        p.x -= window_chrome_->get_border_width();
+        p.y -= (window_chrome_->get_border_width() + window_chrome_->get_title_bar_height());
+    }
+    input_manager_->push_pointer_event(p);
+}
+
+void WindowBackend::handle_button_event(const void* event_ptr, PointerState state) {
+    const XEvent& event = *static_cast<const XEvent*>(event_ptr);
+    ooey::Pointer p{0, event.xbutton.x, event.xbutton.y, state};
+    if (window_chrome_) {
+        if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
+            return;
+        }
+        p.x -= window_chrome_->get_border_width();
+        p.y -= (window_chrome_->get_border_width() + window_chrome_->get_title_bar_height());
+    }
+    input_manager_->push_pointer_event(p);
+}
+
+void WindowBackend::handle_key_press_event(const void* event_ptr) {
+    const XEvent& event = *static_cast<const XEvent*>(event_ptr);
+    char buffer[32];
+    KeySym key_symbol;
+    XKeyEvent xkey = event.xkey;
+    int length = XLookupString(&xkey, buffer, sizeof(buffer), &key_symbol, nullptr);
+    input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Pressed});
+    if (length > 0) {
+        for (int i = 0; i < length; ++i) {
+            unsigned char ch = static_cast<unsigned char>(buffer[i]);
+            if (ch >= 32 || ch == '\n' || ch == '\t') {
+                input_manager_->push_text_event({static_cast<char32_t>(ch)});
+            }
+        }
+    }
+}
+
+void WindowBackend::handle_key_release_event(const void* event_ptr) {
+    const XEvent& event = *static_cast<const XEvent*>(event_ptr);
+    KeySym key_symbol;
+    XKeyEvent xkey = event.xkey;
+    XLookupString(&xkey, nullptr, 0, &key_symbol, nullptr);
+    input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Released});
+}
+
 bool WindowBackend::poll_events() {
     if (!display_ || should_close_) {
         return false;
@@ -108,52 +159,15 @@ bool WindowBackend::poll_events() {
             }
         } else if (input_manager_) {
             if (event.type == MotionNotify) {
-                ooey::Pointer p{0, event.xmotion.x, event.xmotion.y, PointerState::Moved};
-                if (window_chrome_) {
-                    if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
-                        continue;
-                    }
-                    p.x -= window_chrome_->get_border_width();
-                    p.y -= (window_chrome_->get_border_width() + window_chrome_->get_title_bar_height());
-                }
-                input_manager_->push_pointer_event(p);
+                handle_motion_event(&event);
             } else if (event.type == ButtonPress) {
-                ooey::Pointer p{0, event.xbutton.x, event.xbutton.y, PointerState::Pressed};
-                if (window_chrome_) {
-                    if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
-                        continue;
-                    }
-                    p.x -= window_chrome_->get_border_width();
-                    p.y -= (window_chrome_->get_border_width() + window_chrome_->get_title_bar_height());
-                }
-                input_manager_->push_pointer_event(p);
+                handle_button_event(&event, PointerState::Pressed);
             } else if (event.type == ButtonRelease) {
-                ooey::Pointer p{0, event.xbutton.x, event.xbutton.y, PointerState::Released};
-                if (window_chrome_) {
-                    if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
-                        continue;
-                    }
-                    p.x -= window_chrome_->get_border_width();
-                    p.y -= (window_chrome_->get_border_width() + window_chrome_->get_title_bar_height());
-                }
-                input_manager_->push_pointer_event(p);
+                handle_button_event(&event, PointerState::Released);
             } else if (event.type == KeyPress) {
-                char buffer[32];
-                KeySym key_symbol;
-                int length = XLookupString(&event.xkey, buffer, sizeof(buffer), &key_symbol, nullptr);
-                input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Pressed});
-                if (length > 0) {
-                    for (int i = 0; i < length; ++i) {
-                        unsigned char ch = static_cast<unsigned char>(buffer[i]);
-                        if (ch >= 32 || ch == '\n' || ch == '\t') {
-                            input_manager_->push_text_event({static_cast<char32_t>(ch)});
-                        }
-                    }
-                }
+                handle_key_press_event(&event);
             } else if (event.type == KeyRelease) {
-                KeySym key_symbol;
-                XLookupString(&event.xkey, nullptr, 0, &key_symbol, nullptr);
-                input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Released});
+                handle_key_release_event(&event);
             }
         }
     }

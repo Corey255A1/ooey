@@ -15,7 +15,7 @@ EglWindowBackend::~EglWindowBackend() {
     EglWindowBackend::cleanup_graphics_context();
 }
 
-bool EglWindowBackend::init_graphics_context() {
+bool EglWindowBackend::create_egl_display() {
     egl_display_ = eglGetDisplay(reinterpret_cast<EGLNativeDisplayType>(display_));
     if (egl_display_ == EGL_NO_DISPLAY) {
         std::cerr << "Wayland EGL: eglGetDisplay failed\n";
@@ -37,7 +37,10 @@ bool EglWindowBackend::init_graphics_context() {
         egl_display_ = nullptr;
         return false;
     }
+    return true;
+}
 
+bool EglWindowBackend::choose_egl_config() {
     EGLint attribs[] = {
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
         EGL_RED_SIZE, 8,
@@ -55,7 +58,10 @@ bool EglWindowBackend::init_graphics_context() {
         egl_display_ = nullptr;
         return false;
     }
+    return true;
+}
 
+bool EglWindowBackend::create_egl_context() {
     EGLint context_attribs[] = {
         EGL_CONTEXT_MAJOR_VERSION, 3,
         EGL_CONTEXT_MINOR_VERSION, 0,
@@ -73,7 +79,19 @@ bool EglWindowBackend::init_graphics_context() {
         egl_display_ = nullptr;
         return false;
     }
+    return true;
+}
 
+bool EglWindowBackend::init_graphics_context() {
+    if (!create_egl_display()) {
+        return false;
+    }
+    if (!choose_egl_config()) {
+        return false;
+    }
+    if (!create_egl_context()) {
+        return false;
+    }
     return true;
 }
 

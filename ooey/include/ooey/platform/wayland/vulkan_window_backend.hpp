@@ -17,6 +17,11 @@ protected:
     void recreate_render_target(int width, int height) override;
 
 private:
+    bool create_instance(bool& enable_validation, const std::vector<const char*>& validation_layers);
+    bool pick_physical_device();
+    bool find_graphics_queue_family();
+    bool create_logical_device(bool enable_validation, const std::vector<const char*>& validation_layers);
+
     VkInstance instance_{VK_NULL_HANDLE};
     VkPhysicalDevice physical_device_{VK_NULL_HANDLE};
     VkDevice device_{VK_NULL_HANDLE};

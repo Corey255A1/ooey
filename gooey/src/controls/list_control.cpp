@@ -152,26 +152,8 @@ void ListControl::update_children() {
 }
 
 Size ListControl::measure(Size constraints) {
-    int w = 0;
-    if (width.policy == SizePolicy::Fixed) {
-        w = static_cast<int>(width.value);
-    } else if (width.policy == SizePolicy::MatchParent) {
-        w = constraints.width;
-    } else {
-        w = absolute_bounds.width;
-    }
-
-    int h = 0;
-    if (height.policy == SizePolicy::Fixed) {
-        h = static_cast<int>(height.value);
-    } else if (height.policy == SizePolicy::MatchParent) {
-        h = constraints.height;
-    } else {
-        h = absolute_bounds.height;
-    }
-
-    w = std::max(0, std::min(w, constraints.width));
-    h = std::max(0, std::min(h, constraints.height));
+    int w = resolve_width(constraints.width, absolute_bounds.width);
+    int h = resolve_height(constraints.height, absolute_bounds.height);
     return Size{w, h};
 }
 

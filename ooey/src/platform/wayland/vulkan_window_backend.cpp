@@ -16,7 +16,30 @@ VulkanWindowBackend::~VulkanWindowBackend() {
 #include <cstring>
 
 bool VulkanWindowBackend::init_graphics_context() {
-    // 1. Create Vulkan Instance with surface extensions
+    std::vector<const char*> validation_layers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
+    bool enable_validation = false;
+
+    if (!create_instance(enable_validation, validation_layers)) {
+        return false;
+    }
+    if (!pick_physical_device()) {
+        return false;
+    }
+    if (!find_graphics_queue_family()) {
+        return false;
+    }
+    if (!create_logical_device(enable_validation, validation_layers)) {
+        return false;
+    }
+
+    // 5. Get Graphics Queue handle
+    vkGetDeviceQueue(device_, queue_family_index_, 0, &graphics_queue_);
+    return true;
+}
+
+bool VulkanWindowBackend::create_instance(bool& enable_validation, const std::vector<const char*>& validation_layers) {
     VkApplicationInfo app_info{};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName = "ooey";
@@ -30,11 +53,7 @@ bool VulkanWindowBackend::init_graphics_context() {
         VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
     };
 
-    std::vector<const char*> validation_layers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
-    bool enable_validation = false;
+    enable_validation = false;
     const char* validation_env = std::getenv("OOEY_VULKAN_VALIDATION");
     if (validation_env != nullptr && std::string(validation_env) == "1") {
         uint32_t layer_count = 0;
@@ -70,8 +89,10 @@ bool VulkanWindowBackend::init_graphics_context() {
         std::cerr << "Vulkan Wayland: Failed to create Vulkan instance (error: " << res << "). Check if Vulkan works via vkcube or vulkaninfo.\n";
         return false;
     }
+    return true;
+}
 
-    // 2. Pick Physical Device
+bool VulkanWindowBackend::pick_physical_device() {
     uint32_t device_count = 0;
     vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
     if (device_count == 0) {
@@ -85,15 +106,16 @@ bool VulkanWindowBackend::init_graphics_context() {
     vkEnumeratePhysicalDevices(instance_, &device_count, devices.data());
     physical_device_ = devices[0];
 
-    // Log physical device properties to help the user diagnose Crostini setup
     VkPhysicalDeviceProperties device_properties;
     vkGetPhysicalDeviceProperties(physical_device_, &device_properties);
     std::cout << "Vulkan Wayland: Using Vulkan Physical Device: " << device_properties.deviceName 
               << " (Driver version: " << VK_API_VERSION_MAJOR(device_properties.driverVersion) << "."
               << VK_API_VERSION_MINOR(device_properties.driverVersion) << "."
               << VK_API_VERSION_PATCH(device_properties.driverVersion) << ")\n";
+    return true;
+}
 
-    // 3. Find Graphics Queue Family
+bool VulkanWindowBackend::find_graphics_queue_family() {
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device_, &queue_family_count, nullptr);
     std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
@@ -114,8 +136,10 @@ bool VulkanWindowBackend::init_graphics_context() {
         instance_ = VK_NULL_HANDLE;
         return false;
     }
+    return true;
+}
 
-    // 4. Create Logical Device
+bool VulkanWindowBackend::create_logical_device(bool enable_validation, const std::vector<const char*>& validation_layers) {
     float queue_priority = 1.0f;
     VkDeviceQueueCreateInfo queue_create_info{};
     queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -138,16 +162,13 @@ bool VulkanWindowBackend::init_graphics_context() {
         device_create_info.ppEnabledLayerNames = validation_layers.data();
     }
 
-    res = vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_);
+    VkResult res = vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_);
     if (res != VK_SUCCESS) {
         std::cerr << "Vulkan Wayland: Failed to create Vulkan logical device (error: " << res << ")\n";
         vkDestroyInstance(instance_, nullptr);
         instance_ = VK_NULL_HANDLE;
         return false;
     }
-
-    // 5. Get Graphics Queue handle
-    vkGetDeviceQueue(device_, queue_family_index_, 0, &graphics_queue_);
     return true;
 }
 

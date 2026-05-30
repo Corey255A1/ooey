@@ -6,22 +6,8 @@ namespace gooey::controls {
 Grid::Grid(int rows, int columns) : rows_(std::max(1, rows)), columns_(std::max(1, columns)) {}
 
 Size Grid::measure(Size constraints) {
-    int final_w = 0;
-    if (width.policy == SizePolicy::Fixed) {
-        final_w = static_cast<int>(width.value);
-    } else {
-        final_w = constraints.width;
-    }
-
-    int final_h = 0;
-    if (height.policy == SizePolicy::Fixed) {
-        final_h = static_cast<int>(height.value);
-    } else {
-        final_h = constraints.height;
-    }
-
-    final_w = std::max(0, std::min(final_w, constraints.width));
-    final_h = std::max(0, std::min(final_h, constraints.height));
+    int final_w = resolve_width(constraints.width, constraints.width);
+    int final_h = resolve_height(constraints.height, constraints.height);
     return Size{final_w, final_h};
 }
 

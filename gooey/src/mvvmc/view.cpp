@@ -24,54 +24,44 @@ void View::clear_children() {
     children_.clear();
 }
 
+int View::calculate_content_width(Size child_constraints) {
+    int max_child_w = 0;
+    for (const auto& child : children_) {
+        auto* child_view = dynamic_cast<View*>(child.get());
+        if (child_view) {
+            Size child_size = child_view->measure(child_constraints);
+            int child_w = child_view->is_absolute ? (child_view->absolute_bounds.x + child_view->absolute_bounds.width)
+                                                  : (child_size.width + child_view->margin_left + child_view->margin_right);
+            max_child_w = std::max(max_child_w, child_w);
+        }
+    }
+    return max_child_w;
+}
+
+int View::calculate_content_height(Size child_constraints) {
+    int max_child_h = 0;
+    for (const auto& child : children_) {
+        auto* child_view = dynamic_cast<View*>(child.get());
+        if (child_view) {
+            Size child_size = child_view->measure(child_constraints);
+            int child_h = child_view->is_absolute ? (child_view->absolute_bounds.y + child_view->absolute_bounds.height)
+                                                  : (child_size.height + child_view->margin_top + child_view->margin_bottom);
+            max_child_h = std::max(max_child_h, child_h);
+        }
+    }
+    return max_child_h;
+}
+
 Size View::measure(Size constraints) {
-    // 1. Calculate width
-    int w = 0;
-    if (width.policy == SizePolicy::Fixed) {
-        w = static_cast<int>(width.value);
-    } else if (width.policy == SizePolicy::MatchParent) {
-        w = constraints.width;
-    } else { // WrapContent
-        int max_child_w = 0;
-        Size child_constraints{std::max(0, constraints.width - padding_left - padding_right), 
-                               std::max(0, constraints.height - padding_top - padding_bottom)};
-        for (const auto& child : children_) {
-            auto* child_view = dynamic_cast<View*>(child.get());
-            if (child_view) {
-                Size child_size = child_view->measure(child_constraints);
-                int child_w = child_view->is_absolute ? (child_view->absolute_bounds.x + child_view->absolute_bounds.width)
-                                                      : (child_size.width + child_view->margin_left + child_view->margin_right);
-                max_child_w = std::max(max_child_w, child_w);
-            }
-        }
-        w = max_child_w + padding_left + padding_right;
-    }
+    Size child_constraints{std::max(0, constraints.width - padding_left - padding_right), 
+                           std::max(0, constraints.height - padding_top - padding_bottom)};
+    
+    int max_child_w = calculate_content_width(child_constraints);
+    int w = resolve_width(constraints.width, max_child_w + padding_left + padding_right);
 
-    // 2. Calculate height
-    int h = 0;
-    if (height.policy == SizePolicy::Fixed) {
-        h = static_cast<int>(height.value);
-    } else if (height.policy == SizePolicy::MatchParent) {
-        h = constraints.height;
-    } else { // WrapContent
-        int max_child_h = 0;
-        Size child_constraints{std::max(0, constraints.width - padding_left - padding_right), 
-                               std::max(0, constraints.height - padding_top - padding_bottom)};
-        for (const auto& child : children_) {
-            auto* child_view = dynamic_cast<View*>(child.get());
-            if (child_view) {
-                Size child_size = child_view->measure(child_constraints);
-                int child_h = child_view->is_absolute ? (child_view->absolute_bounds.y + child_view->absolute_bounds.height)
-                                                      : (child_size.height + child_view->margin_top + child_view->margin_bottom);
-                max_child_h = std::max(max_child_h, child_h);
-            }
-        }
-        h = max_child_h + padding_top + padding_bottom;
-    }
+    int max_child_h = calculate_content_height(child_constraints);
+    int h = resolve_height(constraints.height, max_child_h + padding_top + padding_bottom);
 
-    // Clamp values to parent boundaries
-    w = std::max(0, std::min(w, constraints.width));
-    h = std::max(0, std::min(h, constraints.height));
     return Size{w, h};
 }
 
@@ -108,6 +98,30 @@ void View::layout(Rect bounds) {
             child_view->layout(Rect{cx, cy, cw, ch});
         }
     }
+}
+
+int View::resolve_width(int constraint_w, int content_w) const {
+    int w = 0;
+    if (width.policy == SizePolicy::Fixed) {
+        w = static_cast<int>(width.value);
+    } else if (width.policy == SizePolicy::MatchParent) {
+        w = constraint_w;
+    } else {
+        w = content_w;
+    }
+    return std::max(0, std::min(w, constraint_w));
+}
+
+int View::resolve_height(int constraint_h, int content_h) const {
+    int h = 0;
+    if (height.policy == SizePolicy::Fixed) {
+        h = static_cast<int>(height.value);
+    } else if (height.policy == SizePolicy::MatchParent) {
+        h = constraint_h;
+    } else {
+        h = content_h;
+    }
+    return std::max(0, std::min(h, constraint_h));
 }
 
 } // namespace gooey::mvvmc

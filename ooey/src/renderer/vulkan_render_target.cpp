@@ -195,36 +195,32 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
     });
 }
 
-void VulkanRenderTarget::present() {
-    if (headless_) {
-        frame_vertices_.clear();
-        frame_indices_.clear();
-        draw_calls_.clear();
-        if (present_callback_) {
-            present_callback_();
-        }
-        return;
+void VulkanRenderTarget::present_headless() {
+    frame_vertices_.clear();
+    frame_indices_.clear();
+    draw_calls_.clear();
+    if (present_callback_) {
+        present_callback_();
     }
+}
 
-    if (swapchain_ == VK_NULL_HANDLE) {
-        return;
-    }
-
+bool VulkanRenderTarget::acquire_next_image(uint32_t& image_index) {
     vkWaitForFences(device_, 1, &in_flight_fences_[current_frame_], VK_TRUE, UINT64_MAX);
     
-    uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(device_, swapchain_, UINT64_MAX, 
                                             image_available_semaphores_[current_frame_], 
                                             VK_NULL_HANDLE, &image_index);
-                                            
+                                             
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         resize(width_, height_);
-        return;
+        return false;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Vulkan: Failed to acquire swapchain image!");
     }
+    return true;
+}
 
-    // Copy frame vertices and indices to host-visible buffers
+void VulkanRenderTarget::copy_vertex_and_index_data() {
     if (!frame_vertices_.empty()) {
         void* data;
         vkMapMemory(device_, vertex_buffer_memory_, 0, frame_vertices_.size() * sizeof(Vertex), 0, &data);
@@ -235,12 +231,9 @@ void VulkanRenderTarget::present() {
         std::memcpy(data, frame_indices_.data(), frame_indices_.size() * sizeof(uint32_t));
         vkUnmapMemory(device_, index_buffer_memory_);
     }
+}
 
-    vkResetFences(device_, 1, &in_flight_fences_[current_frame_]);
-
-    VkCommandBuffer cmd = command_buffers_[image_index];
-    vkResetCommandBuffer(cmd, 0);
-
+void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t image_index) {
     VkCommandBufferBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &begin_info);
@@ -299,7 +292,9 @@ void VulkanRenderTarget::present() {
     if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
         throw std::runtime_error("Vulkan: Failed to record command buffer!");
     }
+}
 
+void VulkanRenderTarget::submit_and_present(VkCommandBuffer cmd, uint32_t image_index) {
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -330,13 +325,40 @@ void VulkanRenderTarget::present() {
     present_info.pSwapchains = swapchains;
     present_info.pImageIndices = &image_index;
 
-    result = vkQueuePresentKHR(graphics_queue_, &present_info);
+    VkResult result = vkQueuePresentKHR(graphics_queue_, &present_info);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         resize(width_, height_);
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("Vulkan: Failed to present swapchain image!");
     }
+}
+
+void VulkanRenderTarget::present() {
+    if (headless_) {
+        present_headless();
+        return;
+    }
+
+    if (swapchain_ == VK_NULL_HANDLE) {
+        return;
+    }
+
+    uint32_t image_index = 0;
+    if (!acquire_next_image(image_index)) {
+        return;
+    }
+
+    copy_vertex_and_index_data();
+
+    vkResetFences(device_, 1, &in_flight_fences_[current_frame_]);
+
+    VkCommandBuffer cmd = command_buffers_[image_index];
+    vkResetCommandBuffer(cmd, 0);
+
+    record_render_commands(cmd, image_index);
+
+    submit_and_present(cmd, image_index);
 
     current_frame_ = (current_frame_ + 1) % 2;
 
@@ -576,14 +598,23 @@ void VulkanRenderTarget::create_vertex_buffers() {
                   index_buffer_, index_buffer_memory_);
 }
 
-void VulkanRenderTarget::create_pipelines() {
-    if (headless_) {
-        return;
+void VulkanRenderTarget::create_pipeline_layout() {
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant_range.offset = 0;
+    push_constant_range.size = sizeof(PushConstants);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info{};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+
+    if (vkCreatePipelineLayout(device_, &pipeline_layout_info, nullptr, &pipeline_layout_) != VK_SUCCESS) {
+        throw std::runtime_error("Vulkan: Failed to create pipeline layout!");
     }
+}
 
-    vert_shader_module_ = create_shader_module(device_, vulkan_vert_shader);
-    frag_shader_module_ = create_shader_module(device_, vulkan_frag_shader);
-
+VkPipeline VulkanRenderTarget::create_graphics_pipeline_with_topology(VkPrimitiveTopology topology) {
     VkPipelineShaderStageCreateInfo vert_shader_stage_info{};
     vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -598,13 +629,11 @@ void VulkanRenderTarget::create_pipelines() {
 
     VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
-    // Vertex input binding description for Struct Vertex
     VkVertexInputBindingDescription binding_description{};
     binding_description.binding = 0;
     binding_description.stride = sizeof(Vertex);
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    // Attributes: location 0 (pos = vec2), location 1 (color = vec4 mapped from RGBA8)
     VkVertexInputAttributeDescription attribute_descriptions[2]{};
     attribute_descriptions[0].binding = 0;
     attribute_descriptions[0].location = 0;
@@ -625,7 +654,7 @@ void VulkanRenderTarget::create_pipelines() {
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{};
     input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly.topology = topology;
     input_assembly.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo viewport_state{};
@@ -673,21 +702,6 @@ void VulkanRenderTarget::create_pipelines() {
     dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
     dynamic_state.pDynamicStates = dynamic_states.data();
 
-    // Push Constants range for screen resolution
-    VkPushConstantRange push_constant_range{};
-    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    push_constant_range.offset = 0;
-    push_constant_range.size = sizeof(PushConstants);
-
-    VkPipelineLayoutCreateInfo pipeline_layout_info{};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-
-    if (vkCreatePipelineLayout(device_, &pipeline_layout_info, nullptr, &pipeline_layout_) != VK_SUCCESS) {
-        throw std::runtime_error("Vulkan: Failed to create pipeline layout!");
-    }
-
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipeline_info.stageCount = 2;
@@ -704,16 +718,25 @@ void VulkanRenderTarget::create_pipelines() {
     pipeline_info.subpass = 0;
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
-    // Create Triangles pipeline
-    if (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &triangle_pipeline_) != VK_SUCCESS) {
-        throw std::runtime_error("Vulkan: Failed to create graphics pipeline for Triangles!");
+    VkPipeline pipeline;
+    if (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("Vulkan: Failed to create graphics pipeline!");
+    }
+    return pipeline;
+}
+
+void VulkanRenderTarget::create_pipelines() {
+    if (headless_) {
+        return;
     }
 
-    // Modify topology to compile Lines pipeline
-    input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-    if (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &line_pipeline_) != VK_SUCCESS) {
-        throw std::runtime_error("Vulkan: Failed to create graphics pipeline for Lines!");
-    }
+    vert_shader_module_ = create_shader_module(device_, vulkan_vert_shader);
+    frag_shader_module_ = create_shader_module(device_, vulkan_frag_shader);
+
+    create_pipeline_layout();
+
+    triangle_pipeline_ = create_graphics_pipeline_with_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    line_pipeline_ = create_graphics_pipeline_with_topology(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
 }
 
 } // namespace ooey
