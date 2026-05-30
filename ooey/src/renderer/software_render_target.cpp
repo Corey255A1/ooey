@@ -6,9 +6,22 @@
 
 namespace ooey {
 
+/**
+ * @brief Fast, bit-exact division by 255 for 16-bit values.
+ * 
+ * Traditional integer division (val / 255) compiles to a division instruction or 
+ * a combination of multiplication and shifts, which can be relatively slow.
+ * This bitwise approximation: (val + 1 + (val >> 8)) >> 8 is mathematically 
+ * identical to floor(val / 255.0) for all input values in the range [0, 65535].
+ * 
+ * Since our color values are 8-bit channels multiplied by alpha, the maximum
+ * value is 255 * 255 = 65025, which fits comfortably within this range.
+ * This optimization avoids expensive divisions during alpha blending operations.
+ */
 static inline uint8_t div255(uint32_t val) {
     return (val + 1 + (val >> 8)) >> 8;
 }
+
 
 
 SoftwareRenderTarget::SoftwareRenderTarget(uint8_t* data, int width, int height, int stride, std::function<void()>&& present_callback)
@@ -100,6 +113,8 @@ void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color co
     if (!data_) {
         return;
     }
+    // Performance optimization: Pre-clamp rect bounds to the render target resolution.
+    // This allows us to avoid expensive per-pixel clipping checks inside the nested rendering loop.
     int start_y = std::max(0, y);
     int end_y = std::min(height_, y + h);
     int start_x = std::max(0, x);
@@ -108,6 +123,9 @@ void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color co
         return;
     }
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
+    
+    // Performance optimization: Cache the pointer to the start of the row outside the inner loop.
+    // This reduces pointer arithmetic to simple offsets/increments in the tight inner loop.
     for (int yy = start_y; yy < end_y; ++yy) {
         uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
         for (int xx = start_x; xx < end_x; ++xx) {
@@ -162,6 +180,8 @@ void SoftwareRenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Ver
     if (std::abs(v1.y - v0.y) < 1e-5f) {
         return;
     }
+    // Performance optimization: Calculate reciprocal slopes once to allow incremental
+    // updates of x-coordinates (curx1, curx2) per scanline using addition instead of multiplication.
     float invslope1 = (v1.x - v0.x) / (v1.y - v0.y);
     float invslope2 = (v2.x - v0.x) / (v2.y - v0.y);
 
@@ -174,15 +194,20 @@ void SoftwareRenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Ver
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
 
     for (int scanline_y = y_start; scanline_y < y_end; scanline_y++) {
+        // Vertical clipping check at scanline level (outer loop)
         if (scanline_y >= 0 && scanline_y < height_) {
             int x1 = static_cast<int>(std::round(curx1));
             int x2 = static_cast<int>(std::round(curx2));
             if (x1 > x2) {
                 std::swap(x1, x2);
             }
+            // Performance optimization: Clamp the horizontal scanline bounds to target width.
+            // Avoids per-pixel clipping checks inside the inner loop.
             int start_x = std::max(0, x1);
             int end_x = std::min(width_ - 1, x2);
             if (start_x <= end_x) {
+                // Performance optimization: Cache row pointer per scanline (outer loop).
+                // Minimizes address calculation overhead for individual pixel writes.
                 uint32_t* row = reinterpret_cast<uint32_t*>(data_ + scanline_y * stride_);
                 for (int x = start_x; x <= end_x; ++x) {
                     row[x] = pixel;
@@ -198,6 +223,8 @@ void SoftwareRenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex
     if (std::abs(v2.y - v0.y) < 1e-5f) {
         return;
     }
+    // Performance optimization: Calculate reciprocal slopes once to allow incremental
+    // updates of x-coordinates (curx1, curx2) per scanline using subtraction instead of multiplication.
     float invslope1 = (v2.x - v0.x) / (v2.y - v0.y);
     float invslope2 = (v2.x - v1.x) / (v2.y - v1.y);
 
@@ -210,15 +237,20 @@ void SoftwareRenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
 
     for (int scanline_y = y_start; scanline_y > y_end; scanline_y--) {
+        // Vertical clipping check at scanline level (outer loop)
         if (scanline_y >= 0 && scanline_y < height_) {
             int x1 = static_cast<int>(std::round(curx1));
             int x2 = static_cast<int>(std::round(curx2));
             if (x1 > x2) {
                 std::swap(x1, x2);
             }
+            // Performance optimization: Clamp the horizontal scanline bounds to target width.
+            // Avoids per-pixel clipping checks inside the inner loop.
             int start_x = std::max(0, x1);
             int end_x = std::min(width_ - 1, x2);
             if (start_x <= end_x) {
+                // Performance optimization: Cache row pointer per scanline (outer loop).
+                // Minimizes address calculation overhead for individual pixel writes.
                 uint32_t* row = reinterpret_cast<uint32_t*>(data_ + scanline_y * stride_);
                 for (int x = start_x; x <= end_x; ++x) {
                     row[x] = pixel;

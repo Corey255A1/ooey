@@ -11,22 +11,32 @@ This document outlines the evolutionary improvements made to the OOEY GUI Engine
 - `Property<T>` utilizes a `std::shared_ptr<bool> alive_flag_`. If the `ViewModel` (and thus the `Property`) is destroyed *before* the `View`, the `ScopedSubscription` will gracefully ignore the unsubscribe attempt.
 - Disabled copy and move constructors on `Property<T>` to guarantee memory address stability for its internal listeners.
 
+## 2. Rendering & Rasterization Performance Optimizations
+To support complex user interfaces without bottlenecks, several performance optimizations were implemented across the Software, OpenGL, and Vulkan backends. Detailed performance metrics and baseline comparisons can be found in the [Performance Optimization Report](file:///home/corey/.gemini/antigravity-cli/brain/93ad6b3b-7320-42d0-a95b-da82a0679bf0/performance_optimization_report.md).
+
+Key optimizations:
+- **Vulkan Image Caching & Batching:** Caches unit-space downsampled quads in an `image_geometry_cache_` to avoid dynamic quad generation and dynamic heap allocations. Batches quads for each image into a single draw call, reducing draw calls from 102,400 to just 100 per frame in benchmarks (yielding a **70% (3.3x) speedup**).
+- **Vulkan & OpenGL Text Batching:** Hoists command boundaries (like OpenGL `glBegin` / `glEnd`) outside character loops and aggregates glyph vertices into single buffers in Vulkan, reducing GPU draw-call overhead and state changes.
+- **Dynamic Vulkan Buffer Resizing:** Safely destroys and rescales Vulkan geometry/index buffers at runtime to prevent overflows and crashes during complex vertex rendering tests.
+- **Software Rasterizer Improvements:** Implements outer-loop clamping, scanline clipping, row-pointer caching, and a bitwise-exact integer division algorithm `(val + 1 + (val >> 8)) >> 8` for division by 255 during alpha blending. This achieves a **14% to 45%** performance uplift.
+
 ## Future Refinements Needed
 
-### 2. Layout and Sizing Engine (Critical)
+### 3. Layout and Sizing Engine (Critical)
 Currently, every primitive requires hardcoded absolute coordinates.
 **Improvement:** Implement a layout system (Flexbox, Grid). Views should specify a `Size` (e.g., "Wrap Content", fixed pixels) and layout containers (`VBox`, `HBox`) should calculate absolute coordinates during a dedicated "Layout Pass".
 
-### 3. Dirty Geometry & Optimization
+### 4. Dirty Geometry & Optimization
 Currently, `Application::run()` rebuilds the entire scene graph geometry *every single frame*.
 **Improvement:** Implement a hierarchical "Dirty Flag" system. If a button changes color, only its geometry should be regenerated and patched into the cached buffer, rather than rebuilding the entire screen.
 
-### 4. Local Coordinate Systems
+### 5. Local Coordinate Systems
 Hit-testing currently occurs in absolute screen-space coordinates.
 **Improvement:** Implement transform matrices on `View` nodes. Pointer coordinates must be converted from screen-space to local-space as they traverse down the tree, so child elements exist at `(0,0)` relative to their parents.
 
-### 5. CMake Options and Libraries
-Current the CMake file structure is very basic and when we get to compiling on another platform it isn't going to work. Additionally I want to structure the project such that you can include only the libraries that you need.
+### 6. CMake Options and Libraries
+Currently the CMake file structure is very basic and when we get to compiling on another platform it isn't going to work. Additionally I want to structure the project such that you can include only the libraries that you need.
+
 
 ## Copilot Wayland Plan
 Plan: Implement Native Wayland Platform

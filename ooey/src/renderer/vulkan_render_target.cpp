@@ -179,6 +179,9 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
     size_t start_vertices = frame_vertices_.size();
     size_t start_indices = frame_indices_.size();
 
+    // Performance Optimization: Allocate a single Vulkan DrawCall record for the entire string.
+    // We batch all individual character glyph quads directly into the frame vertex/index arrays,
+    // which results in executing exactly one Vulkan draw command for the whole string.
     DrawCall call;
     call.first_index = static_cast<uint32_t>(start_indices);
     call.vertex_offset = static_cast<int32_t>(start_vertices);
@@ -241,6 +244,9 @@ bool VulkanRenderTarget::acquire_next_image(uint32_t& image_index) {
 }
 
 void VulkanRenderTarget::copy_vertex_and_index_data() {
+    // Performance & Stability Optimization: Dynamically resize vertex and index buffers.
+    // If the current frame requires more vertex/index capacity than allocated, we free the old
+    // buffers and allocate larger ones, rounding up to MB boundaries to avoid recurring reallocation thrashing.
     if (!frame_vertices_.empty()) {
         VkDeviceSize needed_vertex_size = frame_vertices_.size() * sizeof(Vertex);
         if (needed_vertex_size > vertex_buffer_size_) {
@@ -791,6 +797,10 @@ void VulkanRenderTarget::create_pipelines() {
 }
 
 void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
+    // Performance Optimization: Cache unit-sized geometry of downsampled image pixels.
+    // Rather than rebuilding the image quads and allocating dynamic structures every frame,
+    // we query our cache. If the image is not cached yet, we generate its unit-sized vertices
+    // and indices once.
     auto it = image_geometry_cache_.find(&image);
     if (it == image_geometry_cache_.end()) {
         CachedImageGeometry cached;
@@ -812,7 +822,7 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
                 int src_x = (x * orig_w) / ds_w;
                 int src_idx = (src_y * orig_w + src_x) * 4;
                 Color color{pixels[src_idx], pixels[src_idx+1], pixels[src_idx+2], pixels[src_idx+3]};
-                
+
                 if (color.a == 0) continue; // skip fully transparent
 
                 float fx = x * qw;
@@ -846,6 +856,8 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
     size_t start_vertices = frame_vertices_.size();
     size_t start_indices = frame_indices_.size();
 
+    // Performance Optimization: Batch all quads representing the image pixels into a single draw call.
+    // This reduces Vulkan drawing commands from thousands per image to exactly one draw command.
     DrawCall call;
     call.first_index = static_cast<uint32_t>(start_indices);
     call.vertex_offset = static_cast<int32_t>(start_vertices);
@@ -855,7 +867,7 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
     // Copy indices direct with offset adjustments
     frame_indices_.insert(frame_indices_.end(), cached.indices.begin(), cached.indices.end());
 
-    // Scale and shift vertices to dest_rect
+    // Scale and shift vertices to dest_rect (extremely fast linear projection, zero heap allocations)
     float rx = static_cast<float>(dest_rect.x);
     float ry = static_cast<float>(dest_rect.y);
     float rw = static_cast<float>(dest_rect.width);

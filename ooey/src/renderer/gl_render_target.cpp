@@ -72,6 +72,10 @@ Size GlRenderTarget::measure_text(const std::string& text, const Font& font) {
 
 void GlRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
     glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+    
+    // Performance Optimization: Hoist glBegin and glEnd outside of the glyph rasterization callback.
+    // This batches the vertex submission of all text glyph character blocks into a single OpenGL draw operation,
+    // avoiding redundant CPU-GPU roundtrips and state changes.
     glBegin(GL_QUADS);
     BitmapFont::draw_text(text, font.size, position, [](int x, int y, int w, int h) {
         glVertex2f(static_cast<float>(x), static_cast<float>(y));
