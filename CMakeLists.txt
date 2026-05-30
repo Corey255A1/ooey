@@ -122,6 +122,9 @@ set(OOEY_SRCS
     ooey/src/input.cpp
     ooey/src/platform.cpp
     ooey/src/renderer/bitmap_font.cpp
+    ooey/src/renderer/font_engine.cpp
+    ooey/src/renderer/linux_font_backend.cpp
+    ooey/src/renderer/win32_font_backend.cpp
     ooey/src/renderer/gl_render_target.cpp
     ooey/src/renderer/vulkan_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
@@ -193,6 +196,7 @@ else()
     target_link_libraries(ooey PUBLIC 
         OpenGL::GL
         Vulkan::Vulkan
+        ${CMAKE_DL_LIBS}
     )
 endif()
 

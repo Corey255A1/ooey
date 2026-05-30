@@ -15,8 +15,8 @@ To support both system fonts and minimal dependencies, text rendering is integra
 - Drawing text (`draw_text`).
 
 ### Unified Rendering Fallback
-- **System Fonts:** Supported platforms attempt to load native system fonts (e.g. X11 server bitmap fonts) for high-performance rendering.
-- **Embedded Fallback:** If system fonts are missing or fail to load, the engine falls back to `ooey::BitmapFont`, an embedded ASCII character set. The rendering logic maps characters to glyph pixel coordinates, yielding consistent, cross-platform layouts.
+- **System Fonts:** Supported platforms use OS-specific font matching and rendering APIs (FreeType/Fontconfig on Linux, DirectWrite on Windows) to dynamically load and rasterize system TrueType/OpenType (.ttf/.otf) fonts.
+- **Embedded Fallback:** If system fonts are missing, fail to load, or the OS APIs are unavailable, the engine falls back to `ooey::BitmapFont`, an embedded ASCII character set. The rendering logic maps characters to glyph pixel coordinates, yielding consistent, cross-platform layouts.
 
 ## 2. Displaying Text
 

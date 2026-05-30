@@ -14,6 +14,7 @@ add_executable(ooey_tests
     test_primitives.cpp
     test_layout.cpp
     test_image.cpp
+    test_font.cpp
 )
 target_link_libraries(ooey_tests PRIVATE ooey ooey_controls GTest::gtest_main)
 

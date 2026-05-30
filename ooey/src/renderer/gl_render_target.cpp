@@ -1,5 +1,5 @@
 #include "ooey/renderer/gl_render_target.hpp"
-#include "ooey/renderer/bitmap_font.hpp"
+#include "ooey/renderer/font_engine.hpp"
 #include "ooey/renderer/image.hpp"
 #include <GL/gl.h>
 
@@ -67,7 +67,7 @@ void GlRenderTarget::draw_geometry(const Geometry& geometry) {
 }
 
 Size GlRenderTarget::measure_text(const std::string& text, const Font& font) {
-    return BitmapFont::measure_text(text, font.size);
+    return FontEngine::measure_text(text, font);
 }
 
 void GlRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
@@ -80,7 +80,9 @@ void GlRenderTarget::draw_text(const std::string& text, const Font& font, const 
     // This batches the vertex submission of all text glyph character blocks into a single OpenGL draw operation,
     // avoiding redundant CPU-GPU roundtrips and state changes.
     glBegin(GL_QUADS);
-    BitmapFont::draw_text(text, font.size, position, [](int x, int y, int w, int h) {
+    FontEngine::draw_text(text, font, position, [color](int x, int y, int w, int h, uint8_t alpha) {
+        float a = color.a * (alpha / 255.0f);
+        glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, a / 255.0f);
         glVertex2f(static_cast<float>(x), static_cast<float>(y));
         glVertex2f(static_cast<float>(x + w), static_cast<float>(y));
         glVertex2f(static_cast<float>(x + w), static_cast<float>(y + h));

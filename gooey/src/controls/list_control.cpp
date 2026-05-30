@@ -1,10 +1,19 @@
 namespace ooey {}
 
 #include "gooey/controls/list_control.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include <algorithm>
+#include <unordered_set>
 
 namespace gooey::controls {
     using namespace ooey;
+
+namespace {
+    const char* keep_alive_family(const std::string& family) {
+        static std::unordered_set<std::string> families;
+        return families.insert(family).first->c_str();
+    }
+}
 
 ListControl::ListControl(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color)
     : bounds_(bounds), item_height_(item_height), font_(font), text_color_(text_color), bg_color_(bg_color),
@@ -137,6 +146,11 @@ void ListControl::update_children() {
         int item_idx = scroll_offset_ + i;
         if (item_idx < static_cast<int>(items_.size())) {
             item_texts_[i]->set_text(items_[item_idx]);
+            if (stylize_items_) {
+                item_texts_[i]->set_font(Font{keep_alive_family(items_[item_idx]), font_.size, font_.weight, font_.style});
+            } else {
+                item_texts_[i]->set_font(font_);
+            }
             if (item_idx == selected_index_) {
                 item_bgs_[i]->set_fill_color(highlight_bg_color_);
                 item_texts_[i]->set_color(highlight_text_color_);
@@ -190,6 +204,33 @@ void ListControl::layout(Rect bounds) {
     }
 
     update_children();
+}
+
+void ListControl::set_stylize_items(bool stylize) {
+    if (stylize_items_ != stylize) {
+        stylize_items_ = stylize;
+        update_children();
+    }
+}
+
+bool ListControl::get_stylize_items() const {
+    return stylize_items_;
+}
+
+void ListControl::apply_style(const mvvmc::Style& style) {
+    bg_color_ = style.fill_color;
+    text_color_ = style.text_color;
+    if (bg_) {
+        bg_->set_fill_color(style.fill_color);
+        bg_->set_stroke_color(style.stroke_color);
+        bg_->set_stroke_thickness(style.stroke_thickness);
+        bg_->set_corner_radius(style.corner_radius);
+    }
+    highlight_bg_color_ = style.stroke_color;
+    highlight_text_color_ = style.fill_color;
+    
+    update_children();
+    View::apply_style(style);
 }
 
 } // namespace gooey::controls

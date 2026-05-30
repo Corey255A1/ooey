@@ -1,5 +1,5 @@
 #include "ooey/renderer/software_render_target.hpp"
-#include "ooey/renderer/bitmap_font.hpp"
+#include "ooey/renderer/font_engine.hpp"
 #include "ooey/renderer/image.hpp"
 #include <cmath>
 #include <algorithm>
@@ -94,15 +94,17 @@ void SoftwareRenderTarget::draw_geometry(const Geometry& geometry) {
 }
 
 Size SoftwareRenderTarget::measure_text(const std::string& text, const Font& font) {
-    return BitmapFont::measure_text(text, font.size);
+    return FontEngine::measure_text(text, font);
 }
 
 void SoftwareRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
     if (text.empty()) {
         return;
     }
-    BitmapFont::draw_text(text, font.size, position, [this, color](int x, int y, int w, int h) {
-        draw_filled_rect(x, y, w, h, color);
+    FontEngine::draw_text(text, font, position, [this, color](int x, int y, int w, int h, uint8_t alpha) {
+        Color blended_color = color;
+        blended_color.a = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha) / 255);
+        draw_filled_rect_blended(x, y, w, h, blended_color);
     });
 }
 
@@ -133,6 +135,52 @@ void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color co
         uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
         for (int xx = start_x; xx < end_x; ++xx) {
             row[xx] = pixel;
+        }
+    }
+}
+
+void SoftwareRenderTarget::draw_filled_rect_blended(int x, int y, int w, int h, Color color) {
+    if (!data_ || color.a == 0) {
+        return;
+    }
+    int start_y = std::max(0, y);
+    int end_y = std::min(height_, y + h);
+    int start_x = std::max(0, x);
+    int end_x = std::min(width_, x + w);
+    if (start_x >= end_x || start_y >= end_y) {
+        return;
+    }
+
+    if (color.a == 255) {
+        uint32_t pixel = (static_cast<uint32_t>(255) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
+        for (int yy = start_y; yy < end_y; ++yy) {
+            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+            for (int xx = start_x; xx < end_x; ++xx) {
+                row[xx] = pixel;
+            }
+        }
+    } else {
+        uint32_t src_a = color.a;
+        uint32_t inv_a = 255 - src_a;
+        for (int yy = start_y; yy < end_y; ++yy) {
+            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+            for (int xx = start_x; xx < end_x; ++xx) {
+                uint32_t dest_pixel = row[xx];
+                uint8_t dest_b = dest_pixel & 0xFF;
+                uint8_t dest_g = (dest_pixel >> 8) & 0xFF;
+                uint8_t dest_r = (dest_pixel >> 16) & 0xFF;
+                uint8_t dest_a = (dest_pixel >> 24) & 0xFF;
+
+                uint8_t r = div255(color.r * src_a + dest_r * inv_a);
+                uint8_t g = div255(color.g * src_a + dest_g * inv_a);
+                uint8_t b = div255(color.b * src_a + dest_b * inv_a);
+                uint8_t a = div255(src_a * 255 + dest_a * inv_a);
+
+                row[xx] = (static_cast<uint32_t>(a) << 24) |
+                          (static_cast<uint32_t>(r) << 16) |
+                          (static_cast<uint32_t>(g) << 8) |
+                          (static_cast<uint32_t>(b));
+            }
         }
     }
 }

@@ -31,6 +31,9 @@ public:
     void select_next();
     void select_previous();
 
+    void set_stylize_items(bool stylize);
+    bool get_stylize_items() const;
+
     bool on_pointer_event(const Pointer& e) override;
     bool on_key_event(const KeyEvent& e) override;
 
@@ -39,6 +42,7 @@ public:
     // Layout support
     Size measure(Size constraints) override;
     void layout(Rect bounds) override;
+    void apply_style(const mvvmc::Style& style) override;
 
 private:
     void update_children();
@@ -55,6 +59,7 @@ private:
     std::vector<std::string> items_;
     int selected_index_{0};
     int scroll_offset_{0};
+    bool stylize_items_{false};
 
     std::shared_ptr<RoundedRectPrimitive> bg_;
     std::vector<std::shared_ptr<RectPrimitive>> item_bgs_;

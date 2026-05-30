@@ -2,7 +2,7 @@ namespace ooey {}
 
 #include "gooey/controls/button.hpp"
 #include "gooey/mvvmc/theme.hpp"
-#include "ooey/renderer/bitmap_font.hpp"
+#include "ooey/renderer/font_engine.hpp"
 
 namespace gooey::controls {
     using namespace ooey;
@@ -30,7 +30,7 @@ Button::Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_t
 
     if (!label_text.empty()) {
         Font font{"sans-serif", 14};
-        Size text_size = BitmapFont::measure_text(label_text, font.size);
+        Size text_size = FontEngine::measure_text(label_text, font);
         int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
         int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
         label_ = std::make_shared<Label>(label_text, font, Point{lx, ly}, label_color);
@@ -77,13 +77,13 @@ void Button::set_corner_radius(int radius) {
 void Button::set_label_text(const std::string& text) {
     if (label_) {
         label_->set_text(text);
-        Size text_size = BitmapFont::measure_text(text, 14);
+        Size text_size = FontEngine::measure_text(text, label_->get_font());
         int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
         int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
         label_->set_position(Point{lx, ly});
     } else {
         Font font{"sans-serif", 14};
-        Size text_size = BitmapFont::measure_text(text, font.size);
+        Size text_size = FontEngine::measure_text(text, font);
         int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
         int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
         label_ = std::make_shared<Label>(text, font, Point{lx, ly}, Color{255, 255, 255});
@@ -112,7 +112,7 @@ Size Button::measure(Size constraints) {
     int content_w = absolute_bounds.width;
     int content_h = absolute_bounds.height;
     if (label_) {
-        Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
+        Size text_size = FontEngine::measure_text(label_->get_text(), label_->get_font());
         content_w = text_size.width + padding_left + padding_right + 30;
         content_h = text_size.height + padding_top + padding_bottom + 20;
     }
@@ -130,7 +130,7 @@ void Button::layout(Rect bounds) {
     }
     
     if (label_) {
-        Size text_size = BitmapFont::measure_text(label_->get_text(), label_->get_font().size);
+        Size text_size = FontEngine::measure_text(label_->get_text(), label_->get_font());
         int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
         int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
         label_->set_position(Point{lx, ly});

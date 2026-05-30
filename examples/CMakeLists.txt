@@ -38,6 +38,12 @@ if(OOEY_BUILD_CONTROLS)
     add_executable(performance_benchmark performance_benchmark.cpp)
     target_link_libraries(performance_benchmark PRIVATE ooey ooey_controls)
 
+    add_executable(hello_fonts hello_fonts.cpp)
+    target_link_libraries(hello_fonts PRIVATE ooey ooey_controls)
+
+    add_executable(hello_sysinfo hello_sysinfo.cpp)
+    target_link_libraries(hello_sysinfo PRIVATE ooey ooey_controls)
+
 
     if(NOT EMSCRIPTEN)
         find_package(Boost)

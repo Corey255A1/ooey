@@ -24,6 +24,9 @@ public:
     void set_text(const std::string& text);
     const std::string& get_text() const;
 
+    void set_font(const Font& font);
+    const Font& get_font() const;
+
     bool on_pointer_event(const Pointer& e) override;
     bool on_key_event(const KeyEvent& e) override;
     bool on_text_event(const TextEvent& e) override;

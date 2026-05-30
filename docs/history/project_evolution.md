@@ -74,5 +74,20 @@ To support complex UI layouts without bottlenecks, we undertook a rendering perf
 - **Dynamic Memory Safety:** Implemented dynamic Vulkan vertex and index buffer resizing to prevent crashes and memory overflows under high geometry loads.
 - **Empty-Primitive Flicker Fix:** Diagnosed and fixed a driver-specific (especially LLVMpipe software rasterizer) rendering bug where empty `glBegin`/`glEnd` blocks (triggered by drawing empty string text in `TextBox`) caused subsequent rendering commands (like the greeting label) to flicker. Prevented this by adding early returns for empty text in all backends (`draw_text`).
 
+## 13. Dynamic Cross-Platform Font Rendering
+To support high-fidelity text rendering with native system fonts, we implemented a modular, cross-platform font loading and rasterization subsystem:
+- **Modular Backend:** Defined the `IFontBackend` interface to isolate platform-specific font loading and drawing.
+- **Dynamic Loading:** Implemented `LinuxFontBackend`, which uses `dlopen`/`dlsym` at runtime to resolve symbols from standard system libraries (`libfontconfig.so.1` and `libfreetype.so.6`) without compile-time link dependencies. It matches requested font weights and styles to actual TTF/OTF files on the filesystem.
+- **Cross-Platform Extensibility:** Stubbed out `Win32FontBackend` to define the architecture for a Windows DirectWrite implementation.
+- **Unified Fallback:** Integrated an automatic fallback to the static `BitmapFont` implementation if dynamic loading of system APIs or matching fonts fails.
+- **Control Integration:** Updated standard UI components (`Label`, `TextBox`, `Button`, `ListControl`) and rendering targets to support dynamic font measuring, layout alignment, vertical centering, and custom family/style/weight settings.
+
+## 14. Real-time Cross-Platform System Monitor Dashboard
+We developed a highly responsive, styled system metrics visualizer showing hardware health in real-time:
+- **Unified OS Metrics API**: Built system data collectors querying `/proc/stat` and `/proc/meminfo` on Linux, coupled with native Win32 `GetSystemTimes` and `GlobalMemoryStatusEx` on Windows, and utilizing C++17 `<filesystem>` for cross-platform disk capacity statistics.
+- **Process List Harvesting**: Implemented process parsing extracting running PIDs, process names (from `comm`), states, and resident set sizes (RSS bytes), sorting them by RAM consumption.
+- **Dynamic Component Styling**: Overrode `apply_style` in `ListControl` to dynamically map foreground, background, border, selection highlight, and text colors inside the theme manager.
+- **Interactive Multi-Theme Support**: Configured four visually distinct styles (Dark, Light, Hacker green, Lofi warm pastel) that map active vs. inactive button highlights and layouts declaratively purely through style names, requiring zero procedural switch logic.
+
 ## Summary
 The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, and layering a decoupled MVVM-C reactive system on top, OOEY provides a robust, explicit, and scalable foundation for cross-platform UI development.

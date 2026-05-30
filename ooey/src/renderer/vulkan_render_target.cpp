@@ -1,5 +1,5 @@
 #include "ooey/renderer/vulkan_render_target.hpp"
-#include "ooey/renderer/bitmap_font.hpp"
+#include "ooey/renderer/font_engine.hpp"
 #include "ooey/renderer/vulkan_shaders.hpp"
 #include "ooey/renderer/image.hpp"
 #include <iostream>
@@ -172,7 +172,7 @@ void VulkanRenderTarget::draw_geometry(const Geometry& geometry) {
 }
 
 Size VulkanRenderTarget::measure_text(const std::string& text, const Font& font) {
-    return BitmapFont::measure_text(text, font.size);
+    return FontEngine::measure_text(text, font);
 }
 
 void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
@@ -192,17 +192,20 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
 
     uint32_t quad_count = 0;
 
-    BitmapFont::draw_text(text, font.size, position, [&](int x, int y, int w, int h) {
+    FontEngine::draw_text(text, font, position, [&](int x, int y, int w, int h, uint8_t alpha) {
         float fx = static_cast<float>(x);
         float fy = static_cast<float>(y);
         float fw = static_cast<float>(w);
         float fh = static_cast<float>(h);
 
         uint32_t base = quad_count * 4;
-        frame_vertices_.push_back(Vertex{fx, fy, color});
-        frame_vertices_.push_back(Vertex{fx + fw, fy, color});
-        frame_vertices_.push_back(Vertex{fx + fw, fy + fh, color});
-        frame_vertices_.push_back(Vertex{fx, fy + fh, color});
+        Color blended_color = color;
+        blended_color.a = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha) / 255);
+
+        frame_vertices_.push_back(Vertex{fx, fy, blended_color});
+        frame_vertices_.push_back(Vertex{fx + fw, fy, blended_color});
+        frame_vertices_.push_back(Vertex{fx + fw, fy + fh, blended_color});
+        frame_vertices_.push_back(Vertex{fx, fy + fh, blended_color});
 
         frame_indices_.push_back(base + 0);
         frame_indices_.push_back(base + 1);

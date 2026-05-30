@@ -2,6 +2,7 @@ namespace ooey {}
 
 #include "gooey/controls/text_box.hpp"
 #include "gooey/mvvmc/theme.hpp"
+#include "ooey/renderer/font_engine.hpp"
 #include <iostream>
 
 namespace gooey::controls {
@@ -132,8 +133,9 @@ void TextBox::layout(Rect bounds) {
     }
 
     if (text_primitive_) {
+        Size font_size = FontEngine::measure_text("A", text_primitive_->get_font());
         int tx = bounds_.x + padding_left + 10;
-        int ty = bounds_.y + padding_top + (bounds_.height - 16) / 2;
+        int ty = bounds_.y + padding_top + (bounds_.height - font_size.height) / 2;
         text_primitive_->set_position(Point{tx, ty});
     }
 }
@@ -152,6 +154,17 @@ void TextBox::apply_style(const mvvmc::Style& style) {
         text_primitive_->set_color(style.text_color);
     }
     View::apply_style(style);
+}
+
+void TextBox::set_font(const Font& font) {
+    if (text_primitive_) {
+        text_primitive_->set_font(font);
+        layout(bounds_);
+    }
+}
+
+const Font& TextBox::get_font() const {
+    return text_primitive_->get_font();
 }
 
 } // namespace gooey::controls

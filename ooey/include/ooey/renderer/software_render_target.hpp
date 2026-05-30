@@ -32,6 +32,7 @@ protected:
     void draw_pixel(int x, int y, Color color);
     void draw_line(int start_x, int start_y, int end_x, int end_y, Color color);
     void draw_filled_rect(int x, int y, int w, int h, Color color);
+    void draw_filled_rect_blended(int x, int y, int w, int h, Color color);
     void draw_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color);
     void draw_flat_bottom_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color);
     void draw_flat_top_triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Color color);
