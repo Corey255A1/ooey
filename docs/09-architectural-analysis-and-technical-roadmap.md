@@ -124,8 +124,8 @@ gantt
     Virtualized ScrollBar & DataGrid   :done, p3, 2026-05-30, 2026-05-31
     section Phase 3: Modern Font System
     OS System Font Matching            :done, f1, 2026-05-15, 2026-05-29
-    Glyph Texture Atlases              :active, f2, 2026-06-01, 2026-06-20
-    SDF/MSDF Vector Text Scaling       :f3, 2026-06-18, 2026-07-10
+    Glyph Texture Atlases              :done, f2, 2026-05-30, 2026-05-31
+    SDF/MSDF Vector Text Scaling       :done, f3, 2026-05-30, 2026-05-31
     section Phase 4: Embedded Direct GPU
     DRM/KMS Linux Console Backend      :e1, 2026-07-05, 2026-07-25
     Direct Hardware libinput Drivers   :e2, 2026-07-20, 2026-08-10
@@ -149,10 +149,10 @@ gantt
 - Add `dirty` states to scene graph nodes, skipping VBO data updates for clean elements. (Done)
 - Implement virtual scrolling in `DataGrid` and custom `ScrollBar` to recycle visual slots, bypassing layout/drawing for non-visible rows. (Done)
 
-#### Phase 3: Modern Font System (Short-term)
-- Implement a static glyph texture atlas populated at startup or lazily during char matches.
-- Replace pixel drawing callbacks with quad vertex/index buffer arrays mapped to texture UV coordinates.
-- Incorporate MSDF generation pipelines for crisp text rendering.
+#### Phase 3: Modern Font System (Completed)
+- Implement a static glyph texture atlas populated at startup or lazily during char matches. (Done)
+- Replace pixel drawing callbacks with quad vertex/index buffer arrays mapped to texture UV coordinates. (Done)
+- Incorporate MSDF/SDF generation pipelines for crisp text rendering. (Done)
 
 #### Phase 4: Bare-Metal Console Deployment (Medium-term)
 - Develop Linux DRM/KMS backend utilizing GBM (Generic Buffer Manager) and EGL contexts.

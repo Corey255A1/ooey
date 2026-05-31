@@ -1,5 +1,6 @@
 #include "ooey/renderer/vulkan_render_target.hpp"
 #include "ooey/renderer/font_engine.hpp"
+#include "ooey/renderer/glyph_atlas.hpp"
 #include "ooey/renderer/vulkan_shaders.hpp"
 #include "ooey/renderer/image.hpp"
 #include <iostream>
@@ -286,12 +287,14 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
     if (text.empty()) {
         return;
     }
+    auto atlas = FontEngine::get_glyph_atlas(font);
+    if (!atlas || !atlas->get_image()) {
+        return;
+    }
+
     size_t start_vertices = frame_vertices_.size();
     size_t start_indices = frame_indices_.size();
 
-    // Performance Optimization: Allocate a single Vulkan DrawCall record for the entire string.
-    // We batch all individual character glyph quads directly into the frame vertex/index arrays,
-    // which results in executing exactly one Vulkan draw command for the whole string.
     DrawCall call;
     call.first_index = static_cast<uint32_t>(start_indices);
     call.vertex_offset = static_cast<int32_t>(start_vertices);
@@ -299,30 +302,58 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
 
     uint32_t quad_count = 0;
 
-    FontEngine::draw_text(text, font, position, [&](int x, int y, int w, int h, uint8_t alpha) {
-        float fx = static_cast<float>(x);
-        float fy = static_cast<float>(y);
-        float fw = static_cast<float>(w);
-        float fh = static_cast<float>(h);
+    int pen_x = position.x;
+    int pen_y = position.y;
 
-        uint32_t base = quad_count * 4;
-        Color blended_color = color;
-        blended_color.a = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha) / 255);
+    const Image& image = *atlas->get_image();
+    const uint8_t* pixels = image.data().data();
+    int atlas_w = image.width();
 
-        frame_vertices_.push_back(Vertex{fx, fy, blended_color});
-        frame_vertices_.push_back(Vertex{fx + fw, fy, blended_color});
-        frame_vertices_.push_back(Vertex{fx + fw, fy + fh, blended_color});
-        frame_vertices_.push_back(Vertex{fx, fy + fh, blended_color});
+    for (char c : text) {
+        GlyphMetrics metrics;
+        if (atlas->get_glyph_metrics(c, metrics)) {
+            if (metrics.width > 0 && metrics.height > 0) {
+                int x0 = pen_x + metrics.offset_x;
+                int y0 = pen_y + metrics.offset_y;
 
-        frame_indices_.push_back(base + 0);
-        frame_indices_.push_back(base + 1);
-        frame_indices_.push_back(base + 2);
-        frame_indices_.push_back(base + 2);
-        frame_indices_.push_back(base + 3);
-        frame_indices_.push_back(base + 0);
+                for (int r = 0; r < metrics.height; ++r) {
+                    int atlas_y = metrics.y + r;
+                    for (int col = 0; col < metrics.width; ++col) {
+                        int atlas_x = metrics.x + col;
+                        int src_idx = (atlas_y * atlas_w + atlas_x) * 4;
+                        uint8_t alpha_coverage = pixels[src_idx + 3];
+                        uint8_t alpha = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha_coverage) / 255);
 
-        quad_count++;
-    });
+                        if (alpha > 0) {
+                            float fx = static_cast<float>(x0 + col);
+                            float fy = static_cast<float>(y0 + r);
+                            float fw = 1.0f;
+                            float fh = 1.0f;
+
+                            uint32_t base = quad_count * 4;
+                            Color blended_color = color;
+                            blended_color.a = alpha;
+
+                            frame_vertices_.push_back(Vertex{fx, fy, blended_color});
+                            frame_vertices_.push_back(Vertex{fx + fw, fy, blended_color});
+                            frame_vertices_.push_back(Vertex{fx + fw, fy + fh, blended_color});
+                            frame_vertices_.push_back(Vertex{fx, fy + fh, blended_color});
+
+                            frame_indices_.push_back(base + 0);
+                            frame_indices_.push_back(base + 1);
+                            frame_indices_.push_back(base + 2);
+                            frame_indices_.push_back(base + 2);
+                            frame_indices_.push_back(base + 3);
+                            frame_indices_.push_back(base + 0);
+
+                            quad_count++;
+                        }
+                    }
+                }
+            }
+            pen_x += metrics.advance;
+        }
+    }
 
     if (quad_count > 0) {
         call.index_count = quad_count * 6;

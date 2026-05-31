@@ -1,5 +1,6 @@
 #include "ooey/renderer/software_render_target.hpp"
 #include "ooey/renderer/font_engine.hpp"
+#include "ooey/renderer/glyph_atlas.hpp"
 #include "ooey/renderer/image.hpp"
 #include <cmath>
 #include <algorithm>
@@ -102,14 +103,76 @@ Size SoftwareRenderTarget::measure_text(const std::string& text, const Font& fon
 }
 
 void SoftwareRenderTarget::draw_text(const std::string& text, const Font& font, const Point& position, Color color) {
-    if (text.empty()) {
+    if (text.empty() || !data_) {
         return;
     }
-    FontEngine::draw_text(text, font, position, [this, color](int x, int y, int w, int h, uint8_t alpha) {
-        Color blended_color = color;
-        blended_color.a = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha) / 255);
-        draw_filled_rect_blended(x, y, w, h, blended_color);
-    });
+    auto atlas = FontEngine::get_glyph_atlas(font);
+    if (!atlas || !atlas->get_image()) {
+        return;
+    }
+    const Image& image = *atlas->get_image();
+    const uint8_t* pixels = image.data().data();
+    int atlas_w = image.width();
+
+    int pen_x = position.x;
+    int pen_y = position.y;
+
+    for (char c : text) {
+        GlyphMetrics metrics;
+        if (atlas->get_glyph_metrics(c, metrics)) {
+            if (metrics.width > 0 && metrics.height > 0) {
+                int x0 = pen_x + metrics.offset_x;
+                int y0 = pen_y + metrics.offset_y;
+
+                int start_y = std::max(0, y0);
+                int end_y = std::min(height_, y0 + metrics.height);
+                int start_x = std::max(0, x0);
+                int end_x = std::min(width_, x0 + metrics.width);
+
+                for (int yy = start_y; yy < end_y; ++yy) {
+                    uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+                    int atlas_y = metrics.y + (yy - y0);
+
+                    for (int xx = start_x; xx < end_x; ++xx) {
+                        int atlas_x = metrics.x + (xx - x0);
+                        int src_idx = (atlas_y * atlas_w + atlas_x) * 4;
+                        uint8_t alpha_coverage = pixels[src_idx + 3];
+                        uint8_t alpha = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha_coverage) / 255);
+
+                        if (alpha > 0) {
+                            if (alpha == 255) {
+                                uint32_t src_pixel = (static_cast<uint32_t>(255) << 24) |
+                                                     (static_cast<uint32_t>(color.r) << 16) |
+                                                     (static_cast<uint32_t>(color.g) << 8) |
+                                                     (static_cast<uint32_t>(color.b));
+                                row[xx] = src_pixel;
+                            } else {
+                                uint32_t dest_pixel = row[xx];
+                                uint8_t dest_b = dest_pixel & 0xFF;
+                                uint8_t dest_g = (dest_pixel >> 8) & 0xFF;
+                                uint8_t dest_r = (dest_pixel >> 16) & 0xFF;
+                                uint8_t dest_a = (dest_pixel >> 24) & 0xFF;
+
+                                uint32_t src_a = alpha;
+                                uint32_t inv_a = 255 - src_a;
+
+                                uint8_t r = div255(color.r * src_a + dest_r * inv_a);
+                                uint8_t g = div255(color.g * src_a + dest_g * inv_a);
+                                uint8_t b = div255(color.b * src_a + dest_b * inv_a);
+                                uint8_t a = div255(src_a * 255 + dest_a * inv_a);
+
+                                row[xx] = (static_cast<uint32_t>(a) << 24) |
+                                          (static_cast<uint32_t>(r) << 16) |
+                                          (static_cast<uint32_t>(g) << 8) |
+                                          (static_cast<uint32_t>(b));
+                            }
+                        }
+                    }
+                }
+            }
+            pen_x += metrics.advance;
+        }
+    }
 }
 
 void SoftwareRenderTarget::present() {

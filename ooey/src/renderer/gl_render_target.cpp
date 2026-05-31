@@ -1,5 +1,6 @@
 #include "ooey/renderer/gl_render_target.hpp"
 #include "ooey/renderer/font_engine.hpp"
+#include "ooey/renderer/glyph_atlas.hpp"
 #include "ooey/renderer/image.hpp"
 #include <GL/gl.h>
 
@@ -78,21 +79,64 @@ void GlRenderTarget::draw_text(const std::string& text, const Font& font, const 
     if (text.empty()) {
         return;
     }
+    auto atlas = FontEngine::get_glyph_atlas(font);
+    if (!atlas || !atlas->get_image()) {
+        return;
+    }
+    const Image& image = *atlas->get_image();
+    unsigned int tex_id = 0;
+    auto it = texture_cache_.find(&image);
+    if (it != texture_cache_.end()) {
+        tex_id = it->second;
+    } else {
+        glGenTextures(1, &tex_id);
+        glBindTexture(GL_TEXTURE_2D, tex_id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F /* GL_CLAMP_TO_EDGE */);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F /* GL_CLAMP_TO_EDGE */);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, image.width(), image.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data().data());
+        texture_cache_[&image] = tex_id;
+    }
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
-    
-    // Performance Optimization: Hoist glBegin and glEnd outside of the glyph rasterization callback.
-    // This batches the vertex submission of all text glyph character blocks into a single OpenGL draw operation,
-    // avoiding redundant CPU-GPU roundtrips and state changes.
+
+    float inv_w = 1.0f / image.width();
+    float inv_h = 1.0f / image.height();
+
+    int pen_x = position.x;
+    int pen_y = position.y;
+
     glBegin(GL_QUADS);
-    FontEngine::draw_text(text, font, position, [color](int x, int y, int w, int h, uint8_t alpha) {
-        float a = color.a * (alpha / 255.0f);
-        glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, a / 255.0f);
-        glVertex2f(static_cast<float>(x), static_cast<float>(y));
-        glVertex2f(static_cast<float>(x + w), static_cast<float>(y));
-        glVertex2f(static_cast<float>(x + w), static_cast<float>(y + h));
-        glVertex2f(static_cast<float>(x), static_cast<float>(y + h));
-    });
+    for (char c : text) {
+        GlyphMetrics metrics;
+        if (atlas->get_glyph_metrics(c, metrics)) {
+            if (metrics.width > 0 && metrics.height > 0) {
+                float x0 = static_cast<float>(pen_x + metrics.offset_x);
+                float y0 = static_cast<float>(pen_y + metrics.offset_y);
+                float x1 = x0 + metrics.width;
+                float y1 = y0 + metrics.height;
+
+                float u0 = metrics.x * inv_w;
+                float v0 = metrics.y * inv_h;
+                float u1 = (metrics.x + metrics.width) * inv_w;
+                float v1 = (metrics.y + metrics.height) * inv_h;
+
+                glTexCoord2f(u0, v0); glVertex2f(x0, y0);
+                glTexCoord2f(u1, v0); glVertex2f(x1, y0);
+                glTexCoord2f(u1, v1); glVertex2f(x1, y1);
+                glTexCoord2f(u0, v1); glVertex2f(x0, y1);
+            }
+            pen_x += metrics.advance;
+        }
+    }
     glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 

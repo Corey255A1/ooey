@@ -1,4 +1,5 @@
 #include "ooey/renderer/font_engine.hpp"
+#include "ooey/renderer/glyph_atlas.hpp"
 
 #ifdef _WIN32
 #include "win32_font_backend.hpp"
@@ -48,6 +49,10 @@ std::vector<std::string> FontEngine::get_available_fonts() {
         return backend->get_available_fonts();
     }
     return {"sans-serif", "serif", "monospace"};
+}
+
+std::shared_ptr<GlyphAtlas> FontEngine::get_glyph_atlas(const Font& font) {
+    return GlyphAtlasManager::get_atlas(font, get_backend());
 }
 
 } // namespace ooey

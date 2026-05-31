@@ -123,6 +123,7 @@ set(OOEY_SRCS
     ooey/src/platform.cpp
     ooey/src/renderer/bitmap_font.cpp
     ooey/src/renderer/font_engine.cpp
+    ooey/src/renderer/glyph_atlas.cpp
     ooey/src/renderer/linux_font_backend.cpp
     ooey/src/renderer/win32_font_backend.cpp
     ooey/src/renderer/gl_render_target.cpp

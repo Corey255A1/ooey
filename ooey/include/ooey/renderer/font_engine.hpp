@@ -10,10 +10,15 @@
 
 namespace ooey {
 
+class GlyphAtlas;
+
 class FontEngine {
 public:
     // Explicitly sets the platform-specific font backend.
     static void set_backend(std::unique_ptr<IFontBackend>&& backend);
+
+    // Returns the cached glyph atlas for the specified font.
+    static std::shared_ptr<GlyphAtlas> get_glyph_atlas(const Font& font);
 
     // Measures the text dimensions using the active backend or falls back to BitmapFont.
     static Size measure_text(const std::string& text, const Font& font);
