@@ -482,5 +482,32 @@ TEST(LayoutTest, DataGridVirtualizationAndSetup) {
     EXPECT_EQ(measured.height, 300);
 
     grid.layout(Rect{0, 0, 400, 300});
+
+    // Verify separation line properties and setters/getters
+    grid.set_show_column_lines(false);
+    EXPECT_FALSE(grid.get_show_column_lines());
+
+    grid.set_show_row_lines(false);
+    EXPECT_FALSE(grid.get_show_row_lines());
+
+    grid.set_column_line_thickness(2.5f);
+    EXPECT_FLOAT_EQ(grid.get_column_line_thickness(), 2.5f);
+
+    grid.set_row_line_thickness(3.0f);
+    EXPECT_FLOAT_EQ(grid.get_row_line_thickness(), 3.0f);
+
+    Color col_color{255, 0, 0, 255};
+    grid.set_column_line_color(col_color);
+    EXPECT_EQ(grid.get_column_line_color(), col_color);
+
+    Color row_color{0, 255, 0, 255};
+    grid.set_row_line_color(row_color);
+    EXPECT_EQ(grid.get_row_line_color(), row_color);
+
+    grid.set_column_line_style(LineStyle::Dashed);
+    EXPECT_EQ(grid.get_column_line_style(), LineStyle::Dashed);
+
+    grid.set_row_line_style(LineStyle::Dotted);
+    EXPECT_EQ(grid.get_row_line_style(), LineStyle::Dotted);
 }
 

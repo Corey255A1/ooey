@@ -8,7 +8,7 @@ namespace ooey {
 
 class LinePrimitive : public IDrawable {
 public:
-    LinePrimitive(Point start, Point end, Color color, float thickness = 1.0f);
+    LinePrimitive(Point start, Point end, Color color, float thickness = 1.0f, LineStyle style = LineStyle::Solid);
 
     void set_start(Point start);
     Point get_start() const;
@@ -22,6 +22,9 @@ public:
     void set_thickness(float thickness);
     float get_thickness() const;
 
+    void set_style(LineStyle style);
+    LineStyle get_style() const;
+
     void draw(IRenderTarget& target) const override;
 
     bool is_dirty() const;
@@ -33,6 +36,7 @@ private:
     Point end_;
     Color color_;
     float thickness_{1.0f};
+    LineStyle style_{LineStyle::Solid};
 
     mutable Geometry cached_geometry_;
     mutable bool is_dirty_{true};

@@ -123,6 +123,23 @@ $$\text{Cull}_{\text{col}} = \left(X_{\text{screen}} + W_{\text{col}} < X_{\text
 
 If $\text{Cull}_{\text{col}}$ is true, the grid skips allocating or positioning cell backgrounds and texts for that column.
 
+### Grid Divider Styling & Drawing Order (Z-Order Layout)
+
+To avoid layout clipping and visual overlapping:
+1. **Z-Order Drawing Hierarchy:** DataGrid child elements are cleared and added to the scene graph in a strict layering sequence:
+   * **Level 1 (Lowest):** Main grid background (`bg_`) and header background (`header_bg_`).
+   * **Level 2:** Cell backgrounds (`cell_bgs_`).
+   * **Level 3:** Grid column and row separator lines (`column_dividers_` and `row_dividers_`). Drawing these on top of cell backgrounds prevents cell fills from overlapping and hiding the lines.
+   * **Level 4:** Header separator and vertical dividers (`header_dividers_`).
+   * **Level 5:** Text labels (`header_texts_` and `cell_texts_`), ensuring text is never obscured.
+   * **Level 6 (Highest):** Scrollbars (`v_scroll_` and `h_scroll_`).
+2. **Procedural Line Styles:** Separation lines support customizable style parameters (`LineStyle::Solid`, `LineStyle::Dashed`, and `LineStyle::Dotted`). If dashed or dotted styles are selected, `LinePrimitive` builds segmented vertex arrays in its geometry cache. This supports custom dashed/dotted patterns natively across all render backends (Software, OpenGL, and Vulkan) with a single draw call.
+3. **Styling Parameters:** The following properties are exposed on the `DataGrid` and integrated with the MVVM-C theme style system:
+   * `show_column_lines` / `show_row_lines` (Visibility toggles)
+   * `column_line_thickness` / `row_line_thickness` (Widths in pixels)
+   * `column_line_color` / `row_line_color` (Custom stroke colors)
+   * `column_line_style` / `row_line_style` (Solid, Dashed, or Dotted enum settings)
+
 ---
 
 ## 4. MVVM-C Theming Integration

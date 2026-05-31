@@ -57,6 +57,26 @@ TEST(PrimitivesTest, LinePrimitiveThickness) {
     EXPECT_EQ(target.geometries[0].indices.size(), 6);
 }
 
+TEST(PrimitivesTest, LinePrimitiveStyles) {
+    MockRenderTarget target;
+
+    // Dashed line (thin)
+    ooey::LinePrimitive dashed_thin({0, 0}, {100, 0}, {255, 0, 0}, 1.0f, ooey::LineStyle::Dashed);
+    dashed_thin.draw(target);
+    ASSERT_EQ(target.geometries.size(), 1);
+    EXPECT_EQ(target.geometries[0].type, ooey::PrimitiveType::Lines);
+    EXPECT_GT(target.geometries[0].vertices.size(), 2); // should generate multiple dash segments
+
+    target.geometries.clear();
+
+    // Dotted line (thick)
+    ooey::LinePrimitive dotted_thick({0, 0}, {100, 0}, {255, 0, 0}, 3.0f, ooey::LineStyle::Dotted);
+    dotted_thick.draw(target);
+    ASSERT_EQ(target.geometries.size(), 1);
+    EXPECT_EQ(target.geometries[0].type, ooey::PrimitiveType::Triangles);
+    EXPECT_GT(target.geometries[0].vertices.size(), 4); // should generate multiple dots as rectangles
+}
+
 TEST(PrimitivesTest, RectPrimitiveFillAndStroke) {
     MockRenderTarget target;
 

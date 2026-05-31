@@ -32,6 +32,31 @@ public:
     void set_rows(const std::vector<std::vector<std::string>>& rows);
     const std::vector<std::vector<std::string>>& get_rows() const { return rows_; }
 
+    // separation lines styling
+    void set_show_column_lines(bool show) { show_column_lines_ = show; invalidate_layout(); }
+    bool get_show_column_lines() const { return show_column_lines_; }
+
+    void set_show_row_lines(bool show) { show_row_lines_ = show; invalidate_layout(); }
+    bool get_show_row_lines() const { return show_row_lines_; }
+
+    void set_column_line_thickness(float thickness) { column_line_thickness_ = thickness; invalidate_layout(); }
+    float get_column_line_thickness() const { return column_line_thickness_; }
+
+    void set_row_line_thickness(float thickness) { row_line_thickness_ = thickness; invalidate_layout(); }
+    float get_row_line_thickness() const { return row_line_thickness_; }
+
+    void set_column_line_color(Color color) { column_line_color_ = color; invalidate_layout(); }
+    Color get_column_line_color() const { return column_line_color_; }
+
+    void set_row_line_color(Color color) { row_line_color_ = color; invalidate_layout(); }
+    Color get_row_line_color() const { return row_line_color_; }
+
+    void set_column_line_style(LineStyle style) { column_line_style_ = style; invalidate_layout(); }
+    LineStyle get_column_line_style() const { return column_line_style_; }
+
+    void set_row_line_style(LineStyle style) { row_line_style_ = style; invalidate_layout(); }
+    LineStyle get_row_line_style() const { return row_line_style_; }
+
     bool on_pointer_event(const Pointer& e) override;
     bool on_key_event(const KeyEvent& e) override;
 
@@ -64,10 +89,22 @@ private:
     Color header_text_color_{255, 255, 255};
     Color alt_row_bg_color_{35, 35, 40};
 
+    bool show_column_lines_{true};
+    bool show_row_lines_{true};
+    float column_line_thickness_{1.0f};
+    float row_line_thickness_{1.0f};
+    Color column_line_color_{80, 80, 90};
+    Color row_line_color_{80, 80, 90};
+    LineStyle column_line_style_{LineStyle::Solid};
+    LineStyle row_line_style_{LineStyle::Solid};
+
     std::shared_ptr<RoundedRectPrimitive> bg_;
     std::shared_ptr<RectPrimitive> header_bg_;
     std::vector<std::shared_ptr<TextPrimitive>> header_texts_;
     std::vector<std::shared_ptr<LinePrimitive>> header_dividers_;
+
+    std::vector<std::shared_ptr<LinePrimitive>> row_dividers_;
+    std::vector<std::shared_ptr<LinePrimitive>> column_dividers_;
 
     std::vector<std::vector<std::shared_ptr<RectPrimitive>>> cell_bgs_;
     std::vector<std::vector<std::shared_ptr<TextPrimitive>>> cell_texts_;

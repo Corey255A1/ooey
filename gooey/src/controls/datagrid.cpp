@@ -119,6 +119,12 @@ void DataGrid::apply_style(const mvvmc::Style& style) {
     header_text_color_ = style.text_color;
     if (style.stroke_color.a > 0) {
         border_color_ = style.stroke_color;
+        column_line_color_ = style.stroke_color;
+        row_line_color_ = style.stroke_color;
+    }
+    if (style.stroke_thickness > 0) {
+        column_line_thickness_ = style.stroke_thickness;
+        row_line_thickness_ = style.stroke_thickness;
     }
 
     header_bg_color_ = Color{
@@ -148,13 +154,10 @@ void DataGrid::apply_style(const mvvmc::Style& style) {
 void DataGrid::update_layout_elements() {
     clear_children();
 
-    add_child(bg_);
-    add_child(header_bg_);
-    add_child(v_scroll_);
-    add_child(h_scroll_);
-
     header_texts_.clear();
     header_dividers_.clear();
+    column_dividers_.clear();
+    row_dividers_.clear();
     cell_bgs_.clear();
     cell_texts_.clear();
 
@@ -196,6 +199,16 @@ void DataGrid::update_layout_elements() {
     h_scroll_->layout(h_scroll_bounds);
 
     int col_x_offset = bounds_.x - scroll_offset_x_;
+
+    // Horizontal divider under header
+    auto header_sep = std::make_shared<LinePrimitive>(
+        Point{bounds_.x, bounds_.y + header_height},
+        Point{bounds_.x + viewport_w, bounds_.y + header_height},
+        border_color_,
+        1.5f
+    );
+    header_dividers_.push_back(header_sep);
+
     for (size_t col_idx = 0; col_idx < columns_.size(); ++col_idx) {
         const auto& col = columns_[col_idx];
 
@@ -216,15 +229,24 @@ void DataGrid::update_layout_elements() {
         if (text_pos.x >= bounds_.x && text_pos.x + 10 < bounds_.x + viewport_w) {
             auto txt = std::make_shared<TextPrimitive>(col.header, font_, text_pos, header_text_color_);
             header_texts_.push_back(txt);
-            add_child(txt);
         }
 
         if (col_idx < columns_.size() - 1) {
             int div_x = col_x_offset + col.width;
             if (div_x >= bounds_.x && div_x <= bounds_.x + viewport_w) {
-                auto divider = std::make_shared<LinePrimitive>(Point{div_x, bounds_.y}, Point{div_x, bounds_.y + bounds_.height}, border_color_, 1.0f);
-                header_dividers_.push_back(divider);
-                add_child(divider);
+                // Header vertical divider
+                auto h_div = std::make_shared<LinePrimitive>(Point{div_x, bounds_.y}, Point{div_x, bounds_.y + header_height}, border_color_, 1.0f);
+                header_dividers_.push_back(h_div);
+
+                // Data vertical divider
+                auto col_div = std::make_shared<LinePrimitive>(
+                    Point{div_x, bounds_.y + header_height},
+                    Point{div_x, bounds_.y + bounds_.height - (need_h ? 12 : 0)},
+                    column_line_color_,
+                    column_line_thickness_,
+                    column_line_style_
+                );
+                column_dividers_.push_back(col_div);
             }
         }
 
@@ -235,6 +257,9 @@ void DataGrid::update_layout_elements() {
     cell_texts_.resize(visible_rows_count_);
 
     for (int r = 0; r < visible_rows_count_; ++r) {
+        cell_bgs_[r].clear();
+        cell_texts_[r].clear();
+
         int row_y = bounds_.y + header_height + r * row_height_;
         if (row_y + row_height_ > bounds_.y + bounds_.height - (need_h ? 12 : 0)) {
             break;
@@ -261,18 +286,72 @@ void DataGrid::update_layout_elements() {
             Rect cell_rect{cell_x, row_y + 1, cell_w, row_height_ - 2};
             auto cell_bg = std::make_shared<RectPrimitive>(cell_rect, bg_col);
             cell_bgs_[r].push_back(cell_bg);
-            add_child(cell_bg);
 
             Point text_pos{col_x_offset + 5, row_y + (row_height_ - font_.size) / 2};
             if (text_pos.x >= bounds_.x && text_pos.x + 10 < bounds_.x + viewport_w) {
                 auto cell_text = std::make_shared<TextPrimitive>("", font_, text_pos, text_color_);
                 cell_texts_[r].push_back(cell_text);
-                add_child(cell_text);
             }
 
             col_x_offset += col.width;
         }
+
+        // Horizontal divider under this row
+        int div_y = row_y + row_height_;
+        if (div_y >= bounds_.y + header_height && div_y <= bounds_.y + bounds_.height - (need_h ? 12 : 0)) {
+            auto row_div = std::make_shared<LinePrimitive>(
+                Point{bounds_.x, div_y},
+                Point{bounds_.x + viewport_w, div_y},
+                row_line_color_,
+                row_line_thickness_,
+                row_line_style_
+            );
+            row_dividers_.push_back(row_div);
+        }
     }
+
+    // Add children in strict z-order
+    // 1. General backgrounds
+    add_child(bg_);
+    add_child(header_bg_);
+
+    // 2. Cell backgrounds
+    for (const auto& row_bgs : cell_bgs_) {
+        for (const auto& cell_bg : row_bgs) {
+            add_child(cell_bg);
+        }
+    }
+
+    // 3. Grid separation lines (on top of cell bgs)
+    if (show_column_lines_) {
+        for (const auto& divider : column_dividers_) {
+            add_child(divider);
+        }
+    }
+    if (show_row_lines_) {
+        for (const auto& divider : row_dividers_) {
+            add_child(divider);
+        }
+    }
+
+    // 4. Header separators/dividers
+    for (const auto& divider : header_dividers_) {
+        add_child(divider);
+    }
+
+    // 5. Text labels (always on top of cell backgrounds and grid lines)
+    for (const auto& txt : header_texts_) {
+        add_child(txt);
+    }
+    for (const auto& row_texts : cell_texts_) {
+        for (const auto& cell_text : row_texts) {
+            add_child(cell_text);
+        }
+    }
+
+    // 6. Interactive scrollbars (on very top)
+    add_child(v_scroll_);
+    add_child(h_scroll_);
 
     update_cell_values();
 }

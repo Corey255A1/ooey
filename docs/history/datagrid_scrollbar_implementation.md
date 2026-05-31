@@ -83,3 +83,20 @@ The `hello_sysinfo` dashboard has been refactored to show the power of these com
   - Windows: Resolves ticks using `GetProcessTimes` API, dividing the delta by $dt$ to yield accurate per-process CPU usage.
 - **Dynamic Key Garbage Collection**: Evicts terminated process IDs from the tick delta cache automatically.
 - **Efficiency Gains**: Reduced process list crawling latency by switching from multi-file `/proc/[pid]/status` parses to a single fast parse of the space-separated fields of `/proc/[pid]/stat`.
+
+---
+
+## 5. Grid Divider Styling & Drawing Order Corrections
+
+### The Overlap Issue
+In the virtualized `DataGrid`, cell background boxes were previously added to the view hierarchy after the vertical column divider lines. Because children are drawn in insertion order, the cell backgrounds drew over and completely obscured the column lines.
+
+### The Resolution
+1. **Z-Order Reconstruction:** Refactored the insertion order in `DataGrid::update_layout_elements()`. The container backgrounds are added first, then the cell backgrounds, followed by the grid divider lines (placed on top of the cell backgrounds), and finally text labels and scrollbars. This guarantees that divider lines remain visible and are never overlapped by cell information or row backgrounds.
+2. **Separation Line Styling:** Added direct styling parameters to `DataGrid` to control the visual properties of separation lines:
+   * **Toggles:** `show_column_lines` and `show_row_lines` allow turning dividers on/off.
+   * **Thickness & Color:** Thickness and color of column and row lines are fully customizable.
+   * **Styles (Stippling):** Added support for different line patterns (`LineStyle::Solid`, `LineStyle::Dashed`, and `LineStyle::Dotted`).
+3. **Procedural Geometry Generation:** Extended the `LinePrimitive` geometry generation pass (`rebuild_geometry`) to support the new line styles. If dashed or dotted styles are set, the primitive segments the path procedurally into alternating dashes/gaps (using individual line segments for thin lines or individual rectangle quads for thick lines). This enables clean stippled lines across legacy OpenGL, software, and Vulkan backends under a single draw command.
+4. **Theme Binding:** Integrated separation line styling with the style system inside `DataGrid::apply_style()`, defaulting divider colors and thicknesses to the stylesheet's `stroke_color` and `stroke_thickness` when defined.
+

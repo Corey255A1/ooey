@@ -51,6 +51,12 @@ struct Rect {
     bool operator==(const Rect&) const = default;
 };
 
+enum class LineStyle {
+    Solid,
+    Dashed,
+    Dotted
+};
+
 enum class FontWeight {
     Normal,
     Bold
