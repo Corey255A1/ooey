@@ -84,3 +84,28 @@ WebAssembly applications cannot be loaded directly from the local file system (`
 python3 -m http.server -d build-wasm/examples 8080
 ```
 Open your browser and navigate to `http://localhost:8080/hello_emscripten.html` to run the GUI demo.
+
+## 5. WebAssembly Compatibility Refinements (2026-05-31)
+
+To ensure the Emscripten/WASM compilation succeeds cleanly without environment mismatches or header dependency leaks, several architectural refinements were made:
+
+### Vulkan Backend Guarding & Platform Isolation
+- **Headers & Source Guarding:** Added `#ifndef __EMSCRIPTEN__` preprocessor guards around [vulkan_render_target.hpp](file:///home/corey/code/ooey/ooey/include/ooey/renderer/vulkan_render_target.hpp) and [vulkan_render_target.cpp](file:///home/corey/code/ooey/ooey/src/renderer/vulkan_render_target.cpp) to prevent any inclusion of `<vulkan/vulkan.h>` under the WASM target (where Vulkan is unsupported).
+- **CMake Refinement:** Modified the main [CMakeLists.txt](file:///home/corey/code/ooey/CMakeLists.txt) to conditionally exclude `vulkan_render_target.cpp` from `OOEY_SRCS` when compiling under Emscripten.
+
+### Image Class Namespace Ambiguity Resolution
+- **Conflicting Declarations:** In [image_control.hpp](file:///home/corey/code/ooey/gooey/include/gooey/controls/image_control.hpp), the forward declaration of `class Image` was defined directly in `namespace ooey`. This clashed with the `using renderer::Image;` alias imported from rendering targets, causing compilation failures due to ambiguous symbol resolution.
+- **Corrected Aliasing:** Forward-declared `Image` inside `namespace ooey::renderer` and declared `using renderer::Image;` in `namespace ooey` to match the core framework structure.
+
+### Example & Test Target Isolation
+- **X11 Exclusions:** Wrapped the compilation of the direct X11 example `hello_ooey_text_x11` inside [examples/CMakeLists.txt](file:///home/corey/code/ooey/examples/CMakeLists.txt) with `if(OOEY_BUILD_X11)` to prevent build failures when target platforms do not support X11 (such as Emscripten).
+- **Framebuffer Test Exclusions:** Conditionalized `test_framebuffer.cpp` in [tests/CMakeLists.txt](file:///home/corey/code/ooey/tests/CMakeLists.txt) on `if(OOEY_BUILD_FRAMEBUFFER)` to avoid missing `<linux/fb.h>` errors on WASM and non-Linux systems.
+
+### SinusoidPrimitive Constructor Correction
+- Fixed an invalid instantiation of `SinusoidPrimitive` inside [hello_emscripten.cpp](file:///home/corey/code/ooey/examples/hello_emscripten.cpp) that attempted to pass a `Rect` instead of the signature-conforming `Point start, Point end` coordinate layout, bringing the WebAssembly demo in line with standard API guidelines.
+
+### WebGL Legacy GL Emulation Runtime Fix
+- **Context Initialization Bypasses:** Raw C-level context creation via `emscripten_webgl_create_context` bypassed the JS-level `Browser.createContext()` call, preventing `Browser.useWebGL` from being set to `true` and skipping the invocation of `GLImmediate.init()` callbacks. This caused `glEnable` (and other legacy GL emulation wrappers) to fail with a `TypeError: Cannot read properties of null (reading '0')` when querying texture units.
+- **Forced Emulation Bootstrapping:** In [window_backend.cpp](file:///home/corey/code/ooey/ooey/src/platform/emscripten/window_backend.cpp), injected an `EM_ASM` block immediately following `emscripten_webgl_make_context_current` to explicitly set `Browser.useWebGL = true` and call `GLImmediate.init()`, enabling runtime execution of all WASM example pages.
+- **WebGL Texture Format Compatibility:** Resolved a WebGL error (`INVALID_VALUE: texImage2D: invalid internalformat`) by conditionalizing `glTexImage2D` calls in [gl_render_target.cpp](file:///home/corey/code/ooey/ooey/src/renderer/gl_render_target.cpp). WebGL 1.0 requires unsized internal formats like `GL_RGBA` instead of the sized `GL_RGBA8` format used on desktop.
+- **Canvas Scaling & Stretching Resolution:** Fixed a blurry, zoomed-in rendering issue on WASM examples by updating the `EM_ASM` block in [window_backend.cpp](file:///home/corey/code/ooey/ooey/src/platform/emscripten/window_backend.cpp) to explicitly resize the HTML5 canvas element’s internal resolution (`canvas.width` and `canvas.height`) to match the requested logical size of the window (e.g., 800x600), overriding the browser's default canvas size (300x150).

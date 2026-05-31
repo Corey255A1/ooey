@@ -7,15 +7,20 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(ooey_tests 
+set(OOEY_TEST_SRCS
     test_ooey.cpp
     test_core_architecture.cpp
-    test_framebuffer.cpp
     test_primitives.cpp
     test_layout.cpp
     test_image.cpp
     test_font.cpp
 )
+
+if(OOEY_BUILD_FRAMEBUFFER)
+    list(APPEND OOEY_TEST_SRCS test_framebuffer.cpp)
+endif()
+
+add_executable(ooey_tests ${OOEY_TEST_SRCS})
 target_link_libraries(ooey_tests PRIVATE ooey ooey_controls GTest::gtest_main)
 
 include(GoogleTest)

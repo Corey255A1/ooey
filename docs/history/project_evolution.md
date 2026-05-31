@@ -89,5 +89,15 @@ We developed a highly responsive, styled system metrics visualizer showing hardw
 - **Dynamic Component Styling**: Overrode `apply_style` in `ListControl` to dynamically map foreground, background, border, selection highlight, and text colors inside the theme manager.
 - **Interactive Multi-Theme Support**: Configured four visually distinct styles (Dark, Light, Hacker green, Lofi warm pastel) that map active vs. inactive button highlights and layouts declaratively purely through style names, requiring zero procedural switch logic.
 
+## 15. WebAssembly/Emscripten Compatibility & Refinements
+To support seamless cross-compilation of the entire framework to WebAssembly/HTML5 via Emscripten, we resolved several system-level configuration issues:
+- **Vulkan Driver Guarding:** Isolated the Vulkan rendering engine (`VulkanRenderTarget`) inside CMake and added preprocessor guards to prevent compiling with native Vulkan headers on the WASM target.
+- **Ambiguity and Header Clashes:** Resolved conflicting forward declarations of the `Image` class inside the `gooey` controls namespace.
+- **Backend & Target Isolation:** Excluded framebuffer testing targets (which depend on `<linux/fb.h>`) and platform-specific X11 sample targets from building when compiling for WebAssembly.
+- **Demanded API Compliance:** Updated invalid calls to primitive drawing shapes (such as `SinusoidPrimitive`) in Emscripten examples to match standard layout signatures.
+- **Emulation Runtime Fix:** Fixed a WebAssembly runtime crash in legacy GL emulation context setup by explicitly forcing initialization of the `GLImmediate` state via `EM_ASM` inside the Emscripten window backend.
+- **WebGL Texture Format Compatibility:** Resolved WebGL invalid internalformat errors (`GL_RGBA8` vs `GL_RGBA`) on Emscripten targets by conditionalizing `glTexImage2D` calls in `gl_render_target.cpp` to use the unsized `GL_RGBA` format.
+- **Canvas Scaling Correction:** Set the internal resolution of the HTML5 canvas element (`canvas.width` and `canvas.height`) in `window_backend.cpp` using the requested window dimensions to prevent the browser from blurry-stretching a default-sized canvas.
+
 ## Summary
 The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, and layering a decoupled MVVM-C reactive system on top, OOEY provides a robust, explicit, and scalable foundation for cross-platform UI development.

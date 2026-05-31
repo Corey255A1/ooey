@@ -4,8 +4,12 @@
 #include <memory>
 #include <string>
 
-namespace ooey {
+namespace ooey::renderer {
 class Image;
+}
+
+namespace ooey {
+using renderer::Image;
 }
 
 namespace gooey::controls {

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef __EMSCRIPTEN__
+
 #include "ooey/renderer/i_render_target.hpp"
 #include <vulkan/vulkan.h>
 #include <functional>
@@ -144,3 +146,5 @@ private:
 };
 
 } // namespace ooey
+
+#endif // __EMSCRIPTEN__

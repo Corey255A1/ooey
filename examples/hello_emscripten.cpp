@@ -140,9 +140,11 @@ int main() {
 
     // 8. Sinusoid Wave animation
     auto sinusoid = std::make_shared<ooey::SinusoidPrimitive>(
-        ooey::Rect{400, 420, 300, 80},
-        4.0f, // frequency
+        ooey::Point{400, 460},
+        ooey::Point{700, 460},
         20.0f, // amplitude
+        4.0f, // frequency
+        0.0f, // phase
         ooey::Color{0, 200, 100, 180},
         2.0f // thickness
     );

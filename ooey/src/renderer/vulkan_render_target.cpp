@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "ooey/renderer/vulkan_render_target.hpp"
 #include "ooey/renderer/font_engine.hpp"
 #include "ooey/renderer/glyph_atlas.hpp"
@@ -1062,3 +1063,5 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
 
 
 } // namespace ooey
+
+#endif // __EMSCRIPTEN__

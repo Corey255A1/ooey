@@ -93,6 +93,49 @@
             color: #475569;
             line-height: 1.5;
         }
+
+        .example-selector-container {
+            margin-top: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(30, 30, 35, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .example-selector-container label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        #example-select {
+            font-family: 'Outfit', sans-serif;
+            background: rgba(15, 15, 18, 0.9);
+            color: #f0f0f5;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #example-select:hover, #example-select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+        }
+
+        #example-select option {
+            background: #0f0f11;
+            color: #f0f0f5;
+        }
     </style>
 </head>
 <body>
@@ -100,6 +143,25 @@
     <header>
         <h1>OOEY WebAssembly App</h1>
         <p>Retained-mode modern C++ GUI in WebGL</p>
+        <div class="example-selector-container">
+            <label for="example-select">Switch Example:</label>
+            <select id="example-select" onchange="window.location.href = this.value;">
+                <option value="hello_emscripten.html">Unified WebAssembly Demo</option>
+                <option value="hello_ooey.html">Basic Retained Shape Rendering</option>
+                <option value="hello_ooey_mvvmc.html">Simple MVVM-C Binding</option>
+                <option value="hello_ooey_text.html">Text Rendering System</option>
+                <option value="hello_ooey_modern.html">Styled Layouts & Buttons</option>
+                <option value="hello_clock_sinusoid.html">Real-time Clock & Waveform</option>
+                <option value="hello_list.html">Scrollable Custom List Views</option>
+                <option value="hello_layout.html">Nested Container Layouts</option>
+                <option value="hello_layout_mvvmc.html">MVVM-C Driven Dynamic Grid</option>
+                <option value="hello_wizard.html">Interactive Multi-step Wizard</option>
+                <option value="hello_image.html">BMP & PNG Image Rendering</option>
+                <option value="hello_fonts.html">Dynamic Font Atlas Grid</option>
+                <option value="hello_sysinfo.html">System Performance Monitor Dashboard</option>
+                <option value="performance_benchmark.html">High-load Graphics Benchmark</option>
+            </select>
+        </div>
     </header>
 
     <div class="canvas-container">
@@ -117,6 +179,24 @@
     </div>
 
     <script type='text/javascript'>
+        // Set active option in dropdown based on current URL path
+        (function() {
+            var currentPath = window.location.pathname;
+            var currentFilename = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+            if (!currentFilename || currentFilename === 'index.html') {
+                currentFilename = 'hello_emscripten.html';
+            }
+            var selectEl = document.getElementById('example-select');
+            if (selectEl) {
+                for (var i = 0; i < selectEl.options.length; i++) {
+                    if (selectEl.options[i].value === currentFilename) {
+                        selectEl.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        })();
+
         var statusIndicator = document.getElementById('status-indicator');
         var statusText = document.getElementById('status-text');
 

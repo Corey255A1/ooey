@@ -30,6 +30,11 @@ function(add_ooey_executable name)
     else()
         add_executable(${name} ${ARGN})
     endif()
+
+    if(EMSCRIPTEN)
+        set_target_properties(${name} PROPERTIES SUFFIX ".html")
+        target_link_options(${name} PRIVATE --shell-file ${CMAKE_SOURCE_DIR}/examples/shell.html)
+    endif()
 endfunction()
 
 # Define the ooey library target
@@ -136,7 +141,6 @@ set(OOEY_SRCS
     ooey/src/renderer/linux_font_backend.cpp
     ooey/src/renderer/win32_font_backend.cpp
     ooey/src/renderer/gl_render_target.cpp
-    ooey/src/renderer/vulkan_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
     ooey/src/renderer/image.cpp
     ooey/src/renderer/image_decoder_registry.cpp
@@ -151,6 +155,12 @@ set(OOEY_SRCS
     ooey/src/renderer/primitives/sinusoid_primitive.cpp
     ooey/src/renderer/primitives/text_primitive.cpp
 )
+
+if(NOT EMSCRIPTEN)
+    list(APPEND OOEY_SRCS
+        ooey/src/renderer/vulkan_render_target.cpp
+    )
+endif()
 
 if(OOEY_BUILD_X11)
     list(APPEND OOEY_SRCS

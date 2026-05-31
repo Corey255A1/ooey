@@ -2,6 +2,7 @@
 #include "ooey/renderer/gl_render_target.hpp"
 #include "ooey/renderer/window_chrome.hpp"
 #include <emscripten/html5.h>
+#include <emscripten.h>
 #include <iostream>
 #include <cstring>
 
@@ -90,6 +91,19 @@ bool WindowBackend::create(const Size& size, const char* /*title*/) {
     }
     
     emscripten_webgl_make_context_current(ctx);
+
+    // Force legacy GL emulation state initialization and set correct canvas element resolution
+    EM_ASM({
+        var canvas = document.getElementById('canvas');
+        if (canvas) {
+            canvas.width = $0;
+            canvas.height = $1;
+        }
+        if (typeof GLImmediate !== 'undefined' && !GLImmediate.initted) {
+            Browser.useWebGL = true;
+            GLImmediate.init();
+        }
+    }, size.width, size.height);
 
     // Register mouse callbacks on canvas (passing this)
     emscripten_set_mousedown_callback("#canvas", this, EM_FALSE, [](int type, const EmscriptenMouseEvent* ev, void* data) {
