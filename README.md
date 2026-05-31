@@ -127,6 +127,14 @@ private:
     std::shared_ptr<CounterViewModel> vm_;
     SubscriptionSink subscriptions_;
 
+    void bind_view_state() {
+        subscriptions_ += vm_->display_text.subscribe([this](const std::string& text) {
+            if (label_) label_->set_text(text);
+        });
+    }
+
+    std::shared_ptr<Label> label_;
+
 public:
     explicit CounterView(std::shared_ptr<CounterViewModel> vm) : vm_(vm) {
         set_width(SizePolicy::MatchParent);
@@ -134,14 +142,12 @@ public:
         set_padding(20);
 
         // Bindable dynamic label
-        auto label = std::make_shared<Label>("Clicks: 0", Font{"sans-serif", 18});
-        label->set_margin(0, 0, 0, 15);
-        add_child(label);
+        label_ = std::make_shared<Label>("Clicks: 0", Font{"sans-serif", 18});
+        label_->set_margin(0, 0, 0, 15);
+        add_child(label_);
 
-        // Reactively synchronize the label when VM changes
-        subscriptions_ += vm_->display_text.subscribe([label](const std::string& text) {
-            label->set_text(text);
-        });
+        // Register bindings
+        bind_view_state();
 
         // Trigger VM command on button click
         auto button = std::make_shared<Button>(
@@ -188,6 +194,79 @@ What can you build with OOEY?
 *   🚗 **Automotive Head Units & Medical Dashboards:** Build rock-solid safety UI panels that adhere to strict zero-heap dynamic memory restrictions using OOEY's pre-allocated geometry cache buffers.
 *   🎮 **Custom Portable Gaming Dashboards:** Create hardware-accelerated diagnostic HUDs and overlays using Vulkan render passes overlaying game outputs.
 *   🌐 **Cross-Platform Single-Executable Utilities:** Standardize corporate tooling panels across Linux, Windows, and Web browsers, compiling a single lightweight native binary.
+
+---
+
+## ⚖️ Performance & Memory Strategy
+
+To keep OOEY lightweight and performant under load, we actively address design limitations. Below is our profiling report for memory and CPU execution:
+
+### 🔍 Memory Diagnosis: The ~100MB RSS Footprint of `hello_sysinfo`
+Profiling the system monitor dashboard revealed that it consumes approximately 100MB of Resident Set Size (RSS) memory. We identified the root causes:
+1.  **Mesa / LLVMpipe Software Graphics Fallback:** When running hardware targets without discrete GPUs, Mesa dynamically loads heavy CPU compilation contexts and shader buffer blocks, consuming 60MB - 90MB of RAM instantly on startup.
+2.  **Inefficient `/proc` Directory Scanning:** The dashboard crawls the entire `/proc` folder once per second to pull names and RSS bytes for hundreds of system processes. Iterating directories and creating temporary file streams/strings allocates heavy amounts of heap memory, triggering fragmentation.
+3.  **Pixel-by-Pixel Font Glyphs Rasterization:** Character drawing works by querying pixel alphas in a nested loop. In large scroll lists, this pushes hundreds of thousands of coordinate structures onto rendering vectors every frame.
+4.  **Continuous Layout Re-evaluation:** The engine measures and layouts the entire visual widget tree *every frame*, causing the `ListControl` component to destroy and recreate all slot widget primitives (generating heap allocation churn at 60 FPS).
+
+### 🚀 Optimization Remediation
+We are actively implementing the following mitigations to optimize OOEY's runtime performance:
+*   **Layout Results Caching:** Store measured widget bounds and avoid traversing the layout hierarchy when constraints and state remain static.
+*   **Virtualized Lists:** Modify `ListControl` to recycle slot backgrounds and labels, rendering only the elements visible in the viewport instead of instantiating components for thousands of rows.
+*   **Idle Throttling:** Detect frame inactivity. If pointer events are absent and ViewModel states are quiet, drop the loop refresh rate to 1 FPS or pause presentation entirely.
+*   **Glyph Texture Atlases:** Upload rasterized font characters to a single GPU atlas once on load, switching text rendering to textured quads mapping UV coordinates to avoid pixel callback iterations.
+
+---
+
+## 🗺️ Project Roadmap
+
+```mermaid
+gantt
+    title OOEY Long-Term Roadmap & Progress Log
+    dateFormat  YYYY-MM-DD
+    section Phase 1: Graphics & Layouts
+    Modern Render Targets (Vulkan/GL)  :done, g1, 2026-05-10, 2026-05-20
+    Flexbox Layout Containers          :done, g2, 2026-05-18, 2026-05-25
+    Image Geometry Caching             :done, g3, 2026-05-22, 2026-05-28
+    section Phase 2: Performance
+    Layout & Measure Caching           :active, p1, 2026-05-28, 2026-06-12
+    Dirty-Flag Geometry Caching        :p2, 2026-06-10, 2026-06-25
+    Virtualized ListControls           :p3, 2026-06-20, 2026-07-05
+    section Phase 3: Modern Font System
+    OS System Font Matching            :done, f1, 2026-05-15, 2026-05-29
+    Glyph Texture Atlases              :active, f2, 2026-06-01, 2026-06-20
+    SDF/MSDF Vector Text Scaling       :f3, 2026-06-18, 2026-07-10
+    section Phase 4: Embedded Direct GPU
+    DRM/KMS Linux Console Backend      :e1, 2026-07-05, 2026-07-25
+    Direct Hardware libinput Drivers   :e2, 2026-07-20, 2026-08-10
+    section Phase 5: Declarative UI
+    JSON/XML Layout Parser             :l1, 2026-08-01, 2026-08-25
+    Hot-Reloading File Watcher         :l2, 2026-08-20, 2026-09-10
+    section Phase 6: Safety & Motion
+    Zero-Allocation Execution Mode     :s1, 2026-09-01, 2026-09-25
+    Easing & Tween Animation Engine    :s2, 2026-09-15, 2026-10-10
+```
+
+1.  **Phase 1: Modern Graphics & Core Layouts (Completed)**
+    *   Dynamic resizable Vulkan & OpenGL ES target buffers mapping.
+    *   Flexbox-style `Column`, `Row`, `Grid`, and `FlowLayout` container classes.
+    *   Modular OS system font matching via dynamic runtime library wrappers.
+2.  **Phase 2: Performance Foundation & Caching (Active)**
+    *   Add Measure/Layout result caching to visual trees.
+    *   Implement dirty-flag scene graphs to bypass compiling geometry for clean nodes.
+    *   Virtualized scroll rows in `ListControl` to recycle slot widget allocations.
+3.  **Phase 3: Glyph Texture Atlases & SDF Text (Active)**
+    *   Cache text glyphs in high-density GPU texture atlases.
+    *   Draw strings as batched quad vectors to bypass pixel callback iterations.
+    *   Integrate Signed Distance Field (SDF) shaders for sharp text scaling.
+4.  **Phase 4: Embedded Direct GPU & Drivers (Planned)**
+    *   Direct framebuffer EGL contexts via GBM on Linux DRM/KMS.
+    *   Low-level input processing via libinput (`/dev/input/event*`) drivers.
+5.  **Phase 5: Declarative Loader & Hot-Reloading (Planned)**
+    *   Dynamic parsing of UI definitions from JSON layout files.
+    *   Filesystem watcher to reload views in-flight without losing state.
+6.  **Phase 6: Safety & Animations (Planned)**
+    *   Static pre-allocated buffer pools for zero-heap UI loops.
+    *   Tweening properties engine supporting easing transitions.
 
 ---
 
@@ -242,5 +321,16 @@ Verify the engine by running the GoogleTest suite (39 tests checking bindings, p
 ```bash
 ./build/tests/ooey_tests
 ```
+
+---
+
+## 📜 Coding Guidelines
+
+Contributions to the codebase must follow the design standards defined in the project's [GEMINI.md](file:///home/corey/code/ooey/GEMINI.md) file:
+*   **C++20 Rules:** No modules; stick to traditional header inclusions. Smart pointers over raw allocations.
+*   **Explicit Move Semantics:** When taking ownership of pointers or callbacks, parameterize using rvalue references (`&&`).
+*   **Naming Structure:** `PascalCase` for Classes/Structs; `snake_case` for methods/functions; `snake_case_` with a trailing underscore for private members.
+
+---
 
 *Formulated with passion for low-overhead, hardware-agnostic C++ visual design.*
