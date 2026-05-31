@@ -103,4 +103,72 @@ std::shared_ptr<Image> BmpDecoder::decode(const std::string& path) {
     return std::make_shared<Image>(width, height, std::move(pixels));
 }
 
+std::shared_ptr<Image> BmpDecoder::decode_from_memory(const std::vector<uint8_t>& data) {
+    if (data.size() < sizeof(BMPFileHeader) + sizeof(BMPInfoHeader)) return nullptr;
+
+    const BMPFileHeader* file_header = reinterpret_cast<const BMPFileHeader*>(data.data());
+    if (file_header->file_type != 0x4D42) return nullptr;
+
+    const BMPInfoHeader* info_header = reinterpret_cast<const BMPInfoHeader*>(data.data() + sizeof(BMPFileHeader));
+
+    // Support only uncompressed or bitfields 24-bit/32-bit BMP
+    if (info_header->compression != 0 && info_header->compression != 3) {
+        return nullptr;
+    }
+
+    if (info_header->bit_count != 24 && info_header->bit_count != 32) {
+        return nullptr;
+    }
+
+    int width = info_header->width;
+    int height = info_header->height;
+    bool flip = true;
+    if (height < 0) {
+        flip = false;
+        height = -height;
+    }
+
+    if (file_header->offset_data >= data.size()) return nullptr;
+    const uint8_t* pixels_start = data.data() + file_header->offset_data;
+    size_t pixels_size = data.size() - file_header->offset_data;
+
+    std::vector<uint8_t> pixels(width * height * 4, 0);
+
+    if (info_header->bit_count == 24) {
+        int row_stride = (width * 3 + 3) & ~3; // aligned to 4 bytes
+        if (static_cast<size_t>(row_stride * height) > pixels_size) return nullptr;
+
+        for (int y = 0; y < height; ++y) {
+            const uint8_t* row_src = pixels_start + y * row_stride;
+            int target_y = flip ? (height - 1 - y) : y;
+            uint8_t* dest_row = pixels.data() + target_y * width * 4;
+
+            for (int x = 0; x < width; ++x) {
+                dest_row[x * 4 + 0] = row_src[x * 3 + 2]; // R
+                dest_row[x * 4 + 1] = row_src[x * 3 + 1]; // G
+                dest_row[x * 4 + 2] = row_src[x * 3 + 0]; // B
+                dest_row[x * 4 + 3] = 255;                // A
+            }
+        }
+    } else if (info_header->bit_count == 32) {
+        int row_stride = width * 4;
+        if (static_cast<size_t>(row_stride * height) > pixels_size) return nullptr;
+
+        for (int y = 0; y < height; ++y) {
+            const uint8_t* row_src = pixels_start + y * row_stride;
+            int target_y = flip ? (height - 1 - y) : y;
+            uint8_t* dest_row = pixels.data() + target_y * width * 4;
+
+            for (int x = 0; x < width; ++x) {
+                dest_row[x * 4 + 0] = row_src[x * 4 + 2]; // R
+                dest_row[x * 4 + 1] = row_src[x * 4 + 1]; // G
+                dest_row[x * 4 + 2] = row_src[x * 4 + 0]; // B
+                dest_row[x * 4 + 3] = row_src[x * 4 + 3]; // A
+            }
+        }
+    }
+
+    return std::make_shared<Image>(width, height, std::move(pixels));
+}
+
 } // namespace ooey::renderer

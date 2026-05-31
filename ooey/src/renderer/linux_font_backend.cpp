@@ -171,28 +171,38 @@ struct LinuxFontBackend::Impl {
         if (!fontconfig_lib) {
             fontconfig_lib = dlopen("libfontconfig.so", RTLD_LAZY);
         }
-        if (!fontconfig_lib) return false;
 
         freetype_lib = dlopen("libfreetype.so.6", RTLD_LAZY);
         if (!freetype_lib) {
             freetype_lib = dlopen("libfreetype.so", RTLD_LAZY);
         }
         if (!freetype_lib) {
-            dlclose(fontconfig_lib);
-            fontconfig_lib = nullptr;
+            if (fontconfig_lib) {
+                dlclose(fontconfig_lib);
+                fontconfig_lib = nullptr;
+            }
             return false;
         }
 
-        // Fontconfig Resolve
-        *(void**)(&FcInitLoadConfigAndFonts) = dlsym(fontconfig_lib, "FcInitLoadConfigAndFonts");
-        *(void**)(&FcPatternCreate) = dlsym(fontconfig_lib, "FcPatternCreate");
-        *(void**)(&FcPatternAddString) = dlsym(fontconfig_lib, "FcPatternAddString");
-        *(void**)(&FcPatternAddInteger) = dlsym(fontconfig_lib, "FcPatternAddInteger");
-        *(void**)(&FcConfigSubstitute) = dlsym(fontconfig_lib, "FcConfigSubstitute");
-        *(void**)(&FcDefaultSubstitute) = dlsym(fontconfig_lib, "FcDefaultSubstitute");
-        *(void**)(&FcFontMatch) = dlsym(fontconfig_lib, "FcFontMatch");
-        *(void**)(&FcPatternGetString) = dlsym(fontconfig_lib, "FcPatternGetString");
-        *(void**)(&FcPatternDestroy) = dlsym(fontconfig_lib, "FcPatternDestroy");
+        // Fontconfig Resolve (optional)
+        if (fontconfig_lib) {
+            *(void**)(&FcInitLoadConfigAndFonts) = dlsym(fontconfig_lib, "FcInitLoadConfigAndFonts");
+            *(void**)(&FcPatternCreate) = dlsym(fontconfig_lib, "FcPatternCreate");
+            *(void**)(&FcPatternAddString) = dlsym(fontconfig_lib, "FcPatternAddString");
+            *(void**)(&FcPatternAddInteger) = dlsym(fontconfig_lib, "FcPatternAddInteger");
+            *(void**)(&FcConfigSubstitute) = dlsym(fontconfig_lib, "FcConfigSubstitute");
+            *(void**)(&FcDefaultSubstitute) = dlsym(fontconfig_lib, "FcDefaultSubstitute");
+            *(void**)(&FcFontMatch) = dlsym(fontconfig_lib, "FcFontMatch");
+            *(void**)(&FcPatternGetString) = dlsym(fontconfig_lib, "FcPatternGetString");
+            *(void**)(&FcPatternDestroy) = dlsym(fontconfig_lib, "FcPatternDestroy");
+
+            if (!FcInitLoadConfigAndFonts || !FcPatternCreate || !FcPatternAddString || 
+                !FcPatternAddInteger || !FcConfigSubstitute || !FcDefaultSubstitute || 
+                !FcFontMatch || !FcPatternGetString || !FcPatternDestroy) {
+                dlclose(fontconfig_lib);
+                fontconfig_lib = nullptr;
+            }
+        }
 
         // FreeType Resolve
         *(void**)(&FT_Init_FreeType) = dlsym(freetype_lib, "FT_Init_FreeType");
@@ -202,10 +212,7 @@ struct LinuxFontBackend::Impl {
         *(void**)(&FT_Done_Face) = dlsym(freetype_lib, "FT_Done_Face");
         *(void**)(&FT_Done_FreeType) = dlsym(freetype_lib, "FT_Done_FreeType");
 
-        if (!FcInitLoadConfigAndFonts || !FcPatternCreate || !FcPatternAddString || 
-            !FcPatternAddInteger || !FcConfigSubstitute || !FcDefaultSubstitute || 
-            !FcFontMatch || !FcPatternGetString || !FcPatternDestroy ||
-            !FT_Init_FreeType || !FT_New_Face || !FT_Set_Pixel_Sizes || 
+        if (!FT_Init_FreeType || !FT_New_Face || !FT_Set_Pixel_Sizes || 
             !FT_Load_Char || !FT_Done_Face || !FT_Done_FreeType) {
             cleanup();
             return false;
@@ -222,6 +229,21 @@ struct LinuxFontBackend::Impl {
 
     std::string match_font(const std::string& family, FontWeight weight, FontStyle style) {
         if (!loaded) return "";
+
+        if (!fontconfig_lib) {
+            // Android system fonts path fallback mapping
+            bool is_bold = (weight == FontWeight::Bold);
+            bool is_italic = (style == FontStyle::Italic);
+            if (is_bold && is_italic) {
+                return "/system/fonts/Roboto-BoldItalic.ttf";
+            } else if (is_bold) {
+                return "/system/fonts/Roboto-Bold.ttf";
+            } else if (is_italic) {
+                return "/system/fonts/Roboto-Italic.ttf";
+            } else {
+                return "/system/fonts/Roboto-Regular.ttf";
+            }
+        }
 
         FcConfig* config = FcInitLoadConfigAndFonts();
         FcPattern* pat = FcPatternCreate();

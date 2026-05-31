@@ -23,6 +23,15 @@ endif()
 # Export compile commands for tooling (clangd, etc)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Helper function to define an executable or an Android shared library
+function(add_ooey_executable name)
+    if(ANDROID)
+        add_library(${name} SHARED ${ARGN})
+    else()
+        add_executable(${name} ${ARGN})
+    endif()
+endfunction()
+
 # Define the ooey library target
 add_library(ooey)
 
@@ -155,6 +164,19 @@ if(EMSCRIPTEN)
     )
 endif()
 
+if(ANDROID)
+    # Find NDK native_app_glue
+    include_directories(${ANDROID_NDK_HOME}/sources/android/native_app_glue)
+    add_library(native_app_glue STATIC
+        ${ANDROID_NDK_HOME}/sources/android/native_app_glue/android_native_app_glue.c
+    )
+    
+    list(APPEND OOEY_SRCS
+        ooey/src/platform/android/window_backend.cpp
+        ooey/src/platform/android/android_main.cpp
+    )
+endif()
+
 list(APPEND OOEY_SRCS
     ${OOey_WAYLAND_SRCS}
     ${OOey_FRAMEBUFFER_SRCS}
@@ -192,6 +214,16 @@ endif()
 if(EMSCRIPTEN)
     target_compile_options(ooey PUBLIC -sLEGACY_GL_EMULATION=1)
     target_link_options(ooey PUBLIC -sLEGACY_GL_EMULATION=1 -sALLOW_MEMORY_GROWTH=1)
+elseif(ANDROID)
+    target_compile_definitions(ooey PUBLIC OOEY_BUILD_ANDROID)
+    target_link_libraries(ooey PUBLIC 
+        android
+        log
+        native_app_glue
+        EGL
+        GLESv2
+        vulkan
+    )
 else()
     find_package(Vulkan REQUIRED)
     target_link_libraries(ooey PUBLIC 

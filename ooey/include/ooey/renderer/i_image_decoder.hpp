@@ -18,6 +18,9 @@ public:
 
     // Decodes the image file to a standard RGBA8888 Image object
     virtual std::shared_ptr<Image> decode(const std::string& path) = 0;
+
+    // Decodes the image from a memory buffer
+    virtual std::shared_ptr<Image> decode_from_memory(const std::vector<uint8_t>& /*data*/) { return nullptr; }
 };
 
 } // namespace ooey::renderer

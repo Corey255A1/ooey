@@ -11,6 +11,7 @@ public:
 
     bool can_decode(const std::string& path, const std::vector<uint8_t>& header) override;
     std::shared_ptr<Image> decode(const std::string& path) override;
+    std::shared_ptr<Image> decode_from_memory(const std::vector<uint8_t>& data) override;
 };
 
 } // namespace ooey::renderer
