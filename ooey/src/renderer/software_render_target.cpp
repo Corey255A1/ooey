@@ -93,6 +93,10 @@ void SoftwareRenderTarget::draw_geometry(const Geometry& geometry) {
     }
 }
 
+void SoftwareRenderTarget::draw_geometry(const Geometry& geometry, const void* /*cache_key*/, bool /*is_dirty*/) {
+    draw_geometry(geometry);
+}
+
 Size SoftwareRenderTarget::measure_text(const std::string& text, const Font& font) {
     return FontEngine::measure_text(text, font);
 }

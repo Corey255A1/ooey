@@ -5,13 +5,13 @@ namespace gooey::controls {
 
 Grid::Grid(int rows, int columns) : rows_(std::max(1, rows)), columns_(std::max(1, columns)) {}
 
-Size Grid::measure(Size constraints) {
+Size Grid::do_measure(Size constraints) {
     int final_w = resolve_width(constraints.width, constraints.width);
     int final_h = resolve_height(constraints.height, constraints.height);
     return Size{final_w, final_h};
 }
 
-void Grid::layout(Rect bounds) {
+void Grid::do_layout(Rect bounds) {
     layout_bounds = bounds;
 
     int content_w = std::max(0, bounds.width - padding_left - padding_right);

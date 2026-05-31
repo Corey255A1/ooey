@@ -88,12 +88,13 @@ void LinePrimitive::rebuild_geometry() const {
 }
 
 void LinePrimitive::draw(IRenderTarget& target) const {
+    bool dirty = is_dirty_;
     if (is_dirty_) {
         rebuild_geometry();
         is_dirty_ = false;
     }
     if (!cached_geometry_.vertices.empty()) {
-        target.draw_geometry(cached_geometry_);
+        target.draw_geometry(cached_geometry_, this, dirty);
     }
 }
 

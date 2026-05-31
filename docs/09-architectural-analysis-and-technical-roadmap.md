@@ -49,19 +49,21 @@ Since the initial architectural layout, several high-impact rendering, layout, a
 *   **Image Caching:** Cached downsampled image coordinate mappings, reducing dynamic heap allocations and batching image draw calls (a 3.3x speedup on Vulkan).
 *   **Text Quad Batching:** Batched multiple glyph rendering arrays into a single GPU draw call per text string instead of spawning separate draw operations per character.
 
+### E. Two-Pass Layout Caching & Invalidation
+*   **Centralized View Wrappers:** Introduced non-virtual public `measure()` and `layout()` wrappers in `gooey::mvvmc::View` that check constraints and boundary dimensions against cached measurements before delegating to layout computations.
+*   **Invalidation Bubble:** Added parent pointer tracking to dynamically bubble layout invalidation up the view hierarchy when children or text content is modified.
+*   **Widget Migrations:** Ported all standard widgets (`Button`, `Label`, `TextBox`, `ListControl`, `Column`, `Row`, `Grid`, `FlowLayout`, and `ImageControl`) to override the layout/measure do-hooks and utilize the invalidation system.
+
+### F. Hierarchical Dirty-Flag Geometry Caching
+*   **Visual Primitive Caching:** Scene graph primitives cache compiled geometry vectors on the CPU, only rebuilding them when styling or layout properties change.
+*   **Vulkan Persistent Cache Buffers:** Implemented persistent allocations of GPU vertex/index buffers keyed on shape addresses (`cache_key`), bypassing dynamic PCIe bus transfers. Included collision bypass detection for stack-reused addresses (temporary primitives) to ensure correct rendering.
+*   **Epoch-Based Garbage Collection:** Unused cached GPU geometry buffers are automatically reaped after 300 unused frames.
+
 ---
 
 ## 3. What is Still Missing (Framework Gaps)
 
 To evolve OOEY into a highly competitive, production-ready framework, the following missing features need to be designed and implemented:
-
-### A. Visual Tree Layout & Measure Caching
-*   **The Issue:** Currently, `measure()` and `layout()` are executed recursively for the entire scene graph *on every frame* in the main application loop.
-*   **The Solution:** Implement a layout caching system. Widgets should cache their measured dimensions. Layout recalculation should only occur when window dimensions change, items are added/removed, or a widget's text content is altered.
-
-### B. Hierarchical Dirty-Flag Geometry Caching
-*   **The Issue:** Scene graph primitives regenerate their geometry arrays and upload them to renderers every frame.
-*   **The Solution:** Implement a hierarchical `dirty` flag system. Nodes only rebuild their geometry when visual properties (colors, positions, layout constraints) change. The renderer caches existing vertex/index handles and reuses them directly, saving PCIe bus bandwidth.
 
 ### C. True Glyph Texture Atlasing & SDF/MSDF Rendering
 *   **The Issue:** Though fonts are matched dynamically, drawing text still uses a pixel-by-pixel draw callback loop for every character, translating into thousands of CPU iterations and coordinate push-backs per frame.
@@ -113,9 +115,9 @@ gantt
     Flexbox Layout Containers          :done, g2, 2026-05-18, 2026-05-25
     Image Geometry Caching             :done, g3, 2026-05-22, 2026-05-28
     section Phase 2: Performance
-    Layout & Measure Caching           :active, p1, 2026-05-28, 2026-06-12
-    Dirty-Flag Geometry Caching        :p2, 2026-06-10, 2026-06-25
-    Virtualized ListControls           :p3, 2026-06-20, 2026-07-05
+    Layout & Measure Caching           :done, p1, 2026-05-28, 2026-06-12
+    Dirty-Flag Geometry Caching        :done, p2, 2026-06-10, 2026-06-25
+    Virtualized ListControls           :active, p3, 2026-06-20, 2026-07-05
     section Phase 3: Modern Font System
     OS System Font Matching            :done, f1, 2026-05-15, 2026-05-29
     Glyph Texture Atlases              :active, f2, 2026-06-01, 2026-06-20
@@ -138,10 +140,10 @@ gantt
 - Create `Measure` and `Arrange` passes with `Column`, `Row`, `Grid`, and `FlowLayout` controls.
 - Integrate dynamic Linux/Win32 OS font matchers.
 
-#### Phase 2: Rendering Performance & Layout Caching (Short-term)
-- Write layout result caching in `gooey::View` to bypass layout trees on static frames.
-- Add `dirty` states to scene graph nodes, skipping VBO data updates for clean elements.
-- Implement virtual scrolling in `ListControl` to recycle visual slots, bypassing layout/drawing for non-visible rows.
+#### Phase 2: Rendering Performance & Layout Caching (Completed)
+- Write layout result caching in `gooey::View` to bypass layout trees on static frames. (Done)
+- Add `dirty` states to scene graph nodes, skipping VBO data updates for clean elements. (Done)
+- Implement virtual scrolling in `ListControl` to recycle visual slots, bypassing layout/drawing for non-visible rows. (Pending)
 
 #### Phase 3: Modern Font System (Short-term)
 - Implement a static glyph texture atlas populated at startup or lazily during char matches.

@@ -33,9 +33,10 @@ public:
 
     std::function<void(const std::string&)> on_text_changed;
 
+protected:
     // Layout support
-    Size measure(Size constraints) override;
-    void layout(Rect bounds) override;
+    Size do_measure(Size constraints) override;
+    void do_layout(Rect bounds) override;
     void apply_style(const mvvmc::Style& style) override;
 
 private:

@@ -13,8 +13,10 @@ void View::add_child(std::shared_ptr<IDrawable>&& child) {
     auto* child_view = dynamic_cast<View*>(child.get());
     if (child_view) {
         child_view->set_theme_manager(get_theme_manager());
+        child_view->parent_ = this;
     }
     children_.push_back(std::move(child));
+    invalidate_layout();
 }
 
 const std::vector<std::shared_ptr<IDrawable>>& View::get_children() const {
@@ -28,7 +30,14 @@ void View::draw(ooey::IRenderTarget& target) const {
 }
 
 void View::clear_children() {
+    for (const auto& child : children_) {
+        auto* child_view = dynamic_cast<View*>(child.get());
+        if (child_view) {
+            child_view->parent_ = nullptr;
+        }
+    }
     children_.clear();
+    invalidate_layout();
 }
 
 int View::calculate_content_width(Size child_constraints) {
@@ -59,7 +68,27 @@ int View::calculate_content_height(Size child_constraints) {
     return max_child_h;
 }
 
+void View::invalidate_layout() {
+    is_measure_clean_ = false;
+    is_layout_clean_ = false;
+    if (parent_) {
+        parent_->invalidate_layout();
+    }
+}
+
 Size View::measure(Size constraints) {
+    if (is_measure_clean_ && 
+        constraints.width == last_measure_constraints_.width && 
+        constraints.height == last_measure_constraints_.height) {
+        return measured_size_;
+    }
+    measured_size_ = do_measure(constraints);
+    last_measure_constraints_ = constraints;
+    is_measure_clean_ = true;
+    return measured_size_;
+}
+
+Size View::do_measure(Size constraints) {
     Size child_constraints{std::max(0, constraints.width - padding_left - padding_right), 
                            std::max(0, constraints.height - padding_top - padding_bottom)};
     
@@ -73,8 +102,19 @@ Size View::measure(Size constraints) {
 }
 
 void View::layout(Rect bounds) {
+    if (is_layout_clean_ && 
+        bounds.x == layout_bounds.x && 
+        bounds.y == layout_bounds.y && 
+        bounds.width == layout_bounds.width && 
+        bounds.height == layout_bounds.height) {
+        return;
+    }
+    do_layout(bounds);
     layout_bounds = bounds;
-    
+    is_layout_clean_ = true;
+}
+
+void View::do_layout(Rect bounds) {
     int content_w = std::max(0, bounds.width - padding_left - padding_right);
     int content_h = std::max(0, bounds.height - padding_top - padding_bottom);
     Size child_constraints{content_w, content_h};

@@ -69,9 +69,16 @@ public:
     View& set_absolute_bounds(Rect bounds) { absolute_bounds = bounds; return *this; }
 
     // Two-pass reactive layout system
-    virtual Size measure(Size constraints);
-    virtual void layout(Rect bounds);
+    Size measure(Size constraints);
+    void layout(Rect bounds);
 
+    void invalidate_layout();
+
+protected:
+    virtual Size do_measure(Size constraints);
+    virtual void do_layout(Rect bounds);
+
+public:
     // Helpers to resolve width/height according to policies under parent constraints
     int resolve_width(int constraint_w, int content_w) const;
     int resolve_height(int constraint_h, int content_h) const;
@@ -94,6 +101,12 @@ private:
     ScopedSubscription theme_subscription_;
     std::vector<std::shared_ptr<IDrawable>> children_;
     SubscriptionSink sink_;
+
+    View* parent_{nullptr};
+    bool is_measure_clean_{false};
+    bool is_layout_clean_{false};
+    Size measured_size_{0, 0};
+    Size last_measure_constraints_{0, 0};
 };
 
 } // namespace gooey::mvvmc

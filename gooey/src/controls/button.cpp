@@ -89,6 +89,7 @@ void Button::set_label_text(const std::string& text) {
         label_ = std::make_shared<Label>(text, font, Point{lx, ly}, Color{255, 255, 255});
         add_child(label_);
     }
+    invalidate_layout();
 }
 
 bool Button::on_pointer_event(const Pointer& e) {
@@ -108,7 +109,7 @@ bool Button::on_key_event(const KeyEvent& /*e*/) {
     return false;
 }
 
-Size Button::measure(Size constraints) {
+Size Button::do_measure(Size constraints) {
     int content_w = absolute_bounds.width;
     int content_h = absolute_bounds.height;
     if (label_) {
@@ -121,9 +122,9 @@ Size Button::measure(Size constraints) {
     return Size{w, h};
 }
 
-void Button::layout(Rect bounds) {
+void Button::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::layout(bounds);
+    View::do_layout(bounds);
     
     if (bg_) {
         bg_->set_rect(bounds_);

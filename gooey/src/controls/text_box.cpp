@@ -37,6 +37,7 @@ void TextBox::set_text(const std::string& text) {
     if (text_ != text) {
         text_ = text;
         text_primitive_->set_text(text_);
+        invalidate_layout();
     }
 }
 
@@ -74,6 +75,7 @@ bool TextBox::on_key_event(const KeyEvent& e) {
             if (!text_.empty()) {
                 text_.pop_back();
                 text_primitive_->set_text(text_);
+                invalidate_layout();
                 if (on_text_changed) {
                     on_text_changed(text_);
                 }
@@ -112,21 +114,22 @@ bool TextBox::on_text_event(const TextEvent& e) {
     }
 
     text_primitive_->set_text(text_);
+    invalidate_layout();
     if (on_text_changed) {
         on_text_changed(text_);
     }
     return true;
 }
 
-Size TextBox::measure(Size constraints) {
+Size TextBox::do_measure(Size constraints) {
     int w = resolve_width(constraints.width, absolute_bounds.width);
     int h = resolve_height(constraints.height, absolute_bounds.height);
     return Size{w, h};
 }
 
-void TextBox::layout(Rect bounds) {
+void TextBox::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::layout(bounds);
+    View::do_layout(bounds);
 
     if (bg_) {
         bg_->set_rect(bounds_);
@@ -159,7 +162,7 @@ void TextBox::apply_style(const mvvmc::Style& style) {
 void TextBox::set_font(const Font& font) {
     if (text_primitive_) {
         text_primitive_->set_font(font);
-        layout(bounds_);
+        invalidate_layout();
     }
 }
 

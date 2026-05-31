@@ -17,6 +17,9 @@ public:
 
     // Draw generic geometry
     virtual void draw_geometry(const Geometry& geometry) = 0;
+    virtual void draw_geometry(const Geometry& geometry, const void* cache_key, bool is_dirty) {
+        draw_geometry(geometry);
+    }
 
     // Draw an image
     virtual void draw_image(const Image& image, const Rect& dest_rect) = 0;

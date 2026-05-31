@@ -8,8 +8,9 @@ class Column : public View {
 public:
     Column() = default;
 
-    Size measure(Size constraints) override;
-    void layout(Rect bounds) override;
+protected:
+    Size do_measure(Size constraints) override;
+    void do_layout(Rect bounds) override;
 };
 
 } // namespace gooey::controls

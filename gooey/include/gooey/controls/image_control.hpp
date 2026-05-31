@@ -23,9 +23,10 @@ public:
     void set_image(std::shared_ptr<Image> image);
     std::shared_ptr<Image> get_image() const { return image_; }
 
-    // Layout support
-    Size measure(Size constraints) override;
-    void layout(Rect bounds) override;
+protected:
+    Size do_measure(Size constraints) override;
+    void do_layout(Rect bounds) override;
+public:
     void draw(IRenderTarget& target) const override;
 
 private:

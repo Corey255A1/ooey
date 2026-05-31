@@ -55,3 +55,32 @@ void GlRenderTarget::draw_text(const std::string& text, const Font& font, const 
 }
 ```
 This is also applied to `VulkanRenderTarget` and `SoftwareRenderTarget` to avoid redundant memory setup and ensure clean rendering behavior across all backends.
+
+---
+
+## 3. Visual Tree Layout & Measure Caching
+
+### The Issue
+Previously, the `measure()` and `layout()` steps walked the entire visual tree recursively on every single frame, resulting in high CPU overhead in the main application loop, especially for large visual trees with static content.
+
+### The Solution
+We implemented a two-pass layout caching system:
+1. **Centralized Layout Caching in `View`:** Introduced non-virtual public `measure()` and `layout()` wrappers in `gooey::mvvmc::View` that check constraints and boundary dimensions against cached measurements before delegating to the protected virtual methods `do_measure()` and `do_layout()`.
+2. **Parent Pointer Linkage & Invalidation Bubble:** Added parent pointer tracking (`parent_`) during `add_child()` and `clear_children()`. A recursive `invalidate_layout()` call bubbles up the dirty layout status to all parent elements whenever layout properties or children structural bounds change.
+3. **Migration of Standard Controls:** Ported all standard widgets (`Button`, `Label`, `TextBox`, `ListControl`, `Column`, `Row`, `Grid`, `FlowLayout`, and `ImageControl`) to override the `do_measure` and `do_layout` template methods and correctly trigger layout invalidations when properties or items are modified.
+
+---
+
+## 4. Hierarchical Dirty-Flag Geometry Caching & Stack Address Collision Fix
+
+### The Issue
+The baseline scene graph primitives regenerated their geometry vertices/indices arrays on the CPU and re-uploaded them to target renderers on every frame, generating significant PCIe bus bandwidth overhead and CPU processing load.
+
+### The Solution
+1. **Hierarchical Dirty Flag:** Added an `is_dirty_` flag to visual primitives (`CirclePrimitive`, `LinePrimitive`, `CurvePrimitive`, etc.), only rebuilding their CPU geometry arrays when styling or positioning properties change.
+2. **Persistent GPU Cache Buffers in Vulkan:** Implemented persistent allocations of vertex and index buffers keyed on the geometry object's pointer address (`cache_key`). The Vulkan renderer maps and copies new vertices/indices only when `is_dirty` is true, reusing the bound buffer direct state across frames otherwise.
+3. **Epoch-Based Garbage Collector:** Introduced a cache epoch tracking system that garbage-collects cached GPU buffers that have not been drawn for over 300 frames.
+
+### Bug Diagnosis & Resolution (Temporary Stack Object Key Collisions)
+*   **The Bug:** In the geometry performance benchmark (`performance_benchmark.cpp` with `--scenario geometry`), shapes are created dynamically on the stack inside a loop. The compiler reuses the exact same stack memory addresses for different shapes across loop iterations. Since `cache_key` was defined as the shape address (`this`), Vulkan's persistent cache lookup mapped all 2000 draw calls in the frame to a single GPU buffer slot, overwriting it continuously. This resulted in the renderer drawing only the last shape (a squiggle/curve) 2000 times on top of itself.
+*   **The Fix:** Added a frame key tracking set, `current_frame_keys_`, inside `VulkanRenderTarget`. At the start of `draw_geometry`, if the `cache_key` has already been drawn in the current frame, it indicates a stack address reuse collision. The renderer sets `cache_key = nullptr` for this draw call, causing it to bypass caching and fall back to the transient, frame-aggregated vertex/index buffer path. This ensures all transient/stack-allocated primitives render correctly while maintaining caching for persistent controls.

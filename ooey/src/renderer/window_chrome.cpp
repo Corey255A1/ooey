@@ -219,6 +219,21 @@ void ChromeRenderTarget::draw_geometry(const Geometry& geometry) {
     target_->draw_geometry(shifted);
 }
 
+void ChromeRenderTarget::draw_geometry(const Geometry& geometry, const void* cache_key, bool is_dirty) {
+    if (!chrome_) {
+        target_->draw_geometry(geometry, cache_key, is_dirty);
+        return;
+    }
+    int dx = chrome_->get_border_width();
+    int dy = chrome_->get_border_width() + chrome_->get_title_bar_height();
+    Geometry shifted = geometry;
+    for (auto& vertex : shifted.vertices) {
+        vertex.x += dx;
+        vertex.y += dy;
+    }
+    target_->draw_geometry(shifted, cache_key, is_dirty);
+}
+
 void ChromeRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
     if (!chrome_) {
         target_->draw_image(image, dest_rect);

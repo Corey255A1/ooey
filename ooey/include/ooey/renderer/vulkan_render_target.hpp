@@ -5,6 +5,7 @@
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 
 namespace ooey {
@@ -28,6 +29,7 @@ public:
     // IRenderTarget implementation
     void clear(Color color) override;
     void draw_geometry(const Geometry& geometry) override;
+    void draw_geometry(const Geometry& geometry, const void* cache_key, bool is_dirty) override;
     void draw_image(const Image& image, const Rect& dest_rect) override;
     Size measure_text(const std::string& text, const Font& font) override;
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override;
@@ -110,13 +112,26 @@ private:
     };
     std::unordered_map<const Image*, CachedImageGeometry> image_geometry_cache_;
 
-
+    struct VulkanGeometryCacheEntry {
+        VkBuffer vertex_buffer{VK_NULL_HANDLE};
+        VkDeviceMemory vertex_memory{VK_NULL_HANDLE};
+        VkBuffer index_buffer{VK_NULL_HANDLE};
+        VkDeviceMemory index_memory{VK_NULL_HANDLE};
+        uint32_t vertex_count{0};
+        uint32_t index_count{0};
+        uint32_t epoch{0};
+    };
+    std::unordered_map<const void*, VulkanGeometryCacheEntry> geometry_cache_;
+    uint32_t current_epoch_{0};
+    std::unordered_set<const void*> current_frame_keys_;
 
     struct DrawCall {
         uint32_t first_index;
         uint32_t index_count;
         int32_t vertex_offset;
         PrimitiveType type;
+        VkBuffer vertex_buffer{VK_NULL_HANDLE};
+        VkBuffer index_buffer{VK_NULL_HANDLE};
     };
     std::vector<DrawCall> draw_calls_;
     std::vector<Vertex> frame_vertices_;

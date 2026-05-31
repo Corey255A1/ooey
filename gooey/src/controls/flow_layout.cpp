@@ -4,7 +4,7 @@
 
 namespace gooey::controls {
 
-Size FlowLayout::measure(Size constraints) {
+Size FlowLayout::do_measure(Size constraints) {
     int current_row_w = 0;
     int current_row_h = 0;
     int max_row_width = 0;
@@ -38,8 +38,7 @@ Size FlowLayout::measure(Size constraints) {
     return Size{final_w, final_h};
 }
 
-void FlowLayout::layout(Rect bounds) {
-    layout_bounds = bounds;
+void FlowLayout::do_layout(Rect bounds) {
 
     int avail_w = std::max(0, bounds.width - padding_left - padding_right);
     int avail_h = std::max(0, bounds.height - padding_top - padding_bottom);

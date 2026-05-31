@@ -3,7 +3,7 @@
 
 namespace gooey::controls {
 
-Size Column::measure(Size constraints) {
+Size Column::do_measure(Size constraints) {
     int content_max_w = 0;
     int total_h = 0;
 
@@ -31,7 +31,7 @@ Size Column::measure(Size constraints) {
     return Size{final_w, final_h};
 }
 
-void Column::layout(Rect bounds) {
+void Column::do_layout(Rect bounds) {
     layout_bounds = bounds;
 
     int content_w = std::max(0, bounds.width - padding_left - padding_right);

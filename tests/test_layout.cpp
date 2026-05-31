@@ -393,3 +393,47 @@ TEST(LayoutTest, MVVMCLayoutDebugging) {
     std::cout << "[DEBUG] greeting_lbl layout bounds: " << greeting_lbl->layout_bounds.x << ", " << greeting_lbl->layout_bounds.y << ", " << greeting_lbl->layout_bounds.width << ", " << greeting_lbl->layout_bounds.height << "\n";
 }
 
+class CountingView : public View {
+public:
+    int measure_count{0};
+    int layout_count{0};
+
+protected:
+    Size do_measure(Size constraints) override {
+        measure_count++;
+        return View::do_measure(constraints);
+    }
+    void do_layout(Rect bounds) override {
+        layout_count++;
+        View::do_layout(bounds);
+    }
+};
+
+TEST(LayoutTest, MeasureAndLayoutCaching) {
+    auto view = std::make_shared<CountingView>();
+    view->set_width(SizePolicy::Fixed, 100.0f);
+    view->set_height(SizePolicy::Fixed, 50.0f);
+
+    Size constraints{200, 200};
+    Rect bounds{0, 0, 100, 50};
+
+    // First pass - should measure and layout
+    view->measure(constraints);
+    view->layout(bounds);
+    EXPECT_EQ(view->measure_count, 1);
+    EXPECT_EQ(view->layout_count, 1);
+
+    // Second pass with same inputs - should use cache
+    view->measure(constraints);
+    view->layout(bounds);
+    EXPECT_EQ(view->measure_count, 1);
+    EXPECT_EQ(view->layout_count, 1);
+
+    // Invalidation - should reset cache
+    view->invalidate_layout();
+    view->measure(constraints);
+    view->layout(bounds);
+    EXPECT_EQ(view->measure_count, 2);
+    EXPECT_EQ(view->layout_count, 2);
+}
+

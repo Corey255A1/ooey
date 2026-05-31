@@ -67,6 +67,7 @@ void ListControl::set_items(const std::vector<std::string>& items) {
     }
 
     update_children();
+    invalidate_layout();
 }
 
 const std::vector<std::string>& ListControl::get_items() const {
@@ -87,6 +88,7 @@ void ListControl::set_selected_index(int index) {
     }
 
     update_children();
+    invalidate_layout();
 
     if (on_selected_changed) {
         on_selected_changed(selected_index_);
@@ -165,15 +167,15 @@ void ListControl::update_children() {
     }
 }
 
-Size ListControl::measure(Size constraints) {
+Size ListControl::do_measure(Size constraints) {
     int w = resolve_width(constraints.width, absolute_bounds.width);
     int h = resolve_height(constraints.height, absolute_bounds.height);
     return Size{w, h};
 }
 
-void ListControl::layout(Rect bounds) {
+void ListControl::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::layout(bounds);
+    View::do_layout(bounds);
 
     if (bg_) {
         bg_->set_rect(bounds_);

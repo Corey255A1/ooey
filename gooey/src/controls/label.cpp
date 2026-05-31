@@ -25,6 +25,7 @@ void Label::set_text(const std::string& text) {
         absolute_bounds.width = text_size.width;
         absolute_bounds.height = text_size.height;
     }
+    invalidate_layout();
 }
 
 
@@ -39,6 +40,7 @@ void Label::set_font(const Font& font) {
         absolute_bounds.width = text_size.width;
         absolute_bounds.height = text_size.height;
     }
+    invalidate_layout();
 }
 
 const Font& Label::get_font() const {
@@ -59,13 +61,14 @@ void Label::set_position(Point position) {
         absolute_bounds.x = position.x;
         absolute_bounds.y = position.y;
     }
+    invalidate_layout();
 }
 
 Point Label::get_position() const {
     return text_primitive_->get_position();
 }
 
-Size Label::measure(Size constraints) {
+Size Label::do_measure(Size constraints) {
     if (text_primitive_) {
         // Resolve fixed/match parent constraints if set, but default to text size
         Size text_size = FontEngine::measure_text(text_primitive_->get_text(), text_primitive_->get_font());
@@ -76,8 +79,8 @@ Size Label::measure(Size constraints) {
     return Size{0, 0};
 }
 
-void Label::layout(Rect bounds) {
-    View::layout(bounds);
+void Label::do_layout(Rect bounds) {
+    View::do_layout(bounds);
     if (text_primitive_) {
         text_primitive_->set_position(Point{bounds.x + padding_left, bounds.y + padding_top});
     }

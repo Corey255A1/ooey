@@ -114,6 +114,14 @@ VulkanRenderTarget::~VulkanRenderTarget() {
         if (index_buffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, index_buffer_, nullptr);
         if (index_buffer_memory_ != VK_NULL_HANDLE) vkFreeMemory(device_, index_buffer_memory_, nullptr);
         
+        for (auto& pair : geometry_cache_) {
+            if (pair.second.vertex_buffer != VK_NULL_HANDLE) vkDestroyBuffer(device_, pair.second.vertex_buffer, nullptr);
+            if (pair.second.vertex_memory != VK_NULL_HANDLE) vkFreeMemory(device_, pair.second.vertex_memory, nullptr);
+            if (pair.second.index_buffer != VK_NULL_HANDLE) vkDestroyBuffer(device_, pair.second.index_buffer, nullptr);
+            if (pair.second.index_memory != VK_NULL_HANDLE) vkFreeMemory(device_, pair.second.index_memory, nullptr);
+        }
+        geometry_cache_.clear();
+
         if (render_pass_ != VK_NULL_HANDLE) {
             vkDestroyRenderPass(device_, render_pass_, nullptr);
         }
@@ -155,8 +163,105 @@ void VulkanRenderTarget::clear(Color color) {
 }
 
 void VulkanRenderTarget::draw_geometry(const Geometry& geometry) {
+    draw_geometry(geometry, nullptr, true);
+}
+
+void VulkanRenderTarget::draw_geometry(const Geometry& geometry, const void* cache_key, bool is_dirty) {
     if (geometry.vertices.empty()) {
         return;
+    }
+
+    if (cache_key != nullptr) {
+        if (current_frame_keys_.count(cache_key) > 0) {
+            // Collision detected! This is a stack-reused address (a temporary object).
+            // Bypass the cache and use the transient (per-frame) buffer.
+            cache_key = nullptr;
+        } else {
+            current_frame_keys_.insert(cache_key);
+        }
+    }
+
+    if (cache_key != nullptr) {
+        auto it = geometry_cache_.find(cache_key);
+        if (it != geometry_cache_.end()) {
+            it->second.epoch = current_epoch_;
+            if (is_dirty) {
+                if (it->second.vertex_count < geometry.vertices.size() || it->second.index_count < geometry.indices.size()) {
+                    if (it->second.vertex_buffer != VK_NULL_HANDLE) vkDestroyBuffer(device_, it->second.vertex_buffer, nullptr);
+                    if (it->second.vertex_memory != VK_NULL_HANDLE) vkFreeMemory(device_, it->second.vertex_memory, nullptr);
+                    if (it->second.index_buffer != VK_NULL_HANDLE) vkDestroyBuffer(device_, it->second.index_buffer, nullptr);
+                    if (it->second.index_memory != VK_NULL_HANDLE) vkFreeMemory(device_, it->second.index_memory, nullptr);
+
+                    VkDeviceSize needed_vertex_size = geometry.vertices.size() * sizeof(Vertex);
+                    VkDeviceSize needed_index_size = geometry.indices.size() * sizeof(uint32_t);
+
+                    create_buffer(device_, physical_device_, needed_vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                  it->second.vertex_buffer, it->second.vertex_memory);
+                    create_buffer(device_, physical_device_, needed_index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                  it->second.index_buffer, it->second.index_memory);
+                }
+
+                it->second.vertex_count = static_cast<uint32_t>(geometry.vertices.size());
+                it->second.index_count = static_cast<uint32_t>(geometry.indices.size());
+
+                void* data;
+                vkMapMemory(device_, it->second.vertex_memory, 0, it->second.vertex_count * sizeof(Vertex), 0, &data);
+                std::memcpy(data, geometry.vertices.data(), it->second.vertex_count * sizeof(Vertex));
+                vkUnmapMemory(device_, it->second.vertex_memory);
+
+                vkMapMemory(device_, it->second.index_memory, 0, it->second.index_count * sizeof(uint32_t), 0, &data);
+                std::memcpy(data, geometry.indices.data(), it->second.index_count * sizeof(uint32_t));
+                vkUnmapMemory(device_, it->second.index_memory);
+            }
+
+            DrawCall call;
+            call.first_index = 0;
+            call.index_count = it->second.index_count;
+            call.vertex_offset = 0;
+            call.type = geometry.type;
+            call.vertex_buffer = it->second.vertex_buffer;
+            call.index_buffer = it->second.index_buffer;
+            draw_calls_.push_back(call);
+            return;
+        } else {
+            VulkanGeometryCacheEntry entry;
+            entry.epoch = current_epoch_;
+            entry.vertex_count = static_cast<uint32_t>(geometry.vertices.size());
+            entry.index_count = static_cast<uint32_t>(geometry.indices.size());
+
+            VkDeviceSize needed_vertex_size = entry.vertex_count * sizeof(Vertex);
+            VkDeviceSize needed_index_size = entry.index_count * sizeof(uint32_t);
+
+            create_buffer(device_, physical_device_, needed_vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                          entry.vertex_buffer, entry.vertex_memory);
+            create_buffer(device_, physical_device_, needed_index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                          entry.index_buffer, entry.index_memory);
+
+            void* data;
+            vkMapMemory(device_, entry.vertex_memory, 0, needed_vertex_size, 0, &data);
+            std::memcpy(data, geometry.vertices.data(), needed_vertex_size);
+            vkUnmapMemory(device_, entry.vertex_memory);
+
+            vkMapMemory(device_, entry.index_memory, 0, needed_index_size, 0, &data);
+            std::memcpy(data, geometry.indices.data(), needed_index_size);
+            vkUnmapMemory(device_, entry.index_memory);
+
+            geometry_cache_[cache_key] = entry;
+
+            DrawCall call;
+            call.first_index = 0;
+            call.index_count = entry.index_count;
+            call.vertex_offset = 0;
+            call.type = geometry.type;
+            call.vertex_buffer = entry.vertex_buffer;
+            call.index_buffer = entry.index_buffer;
+            draw_calls_.push_back(call);
+            return;
+        }
     }
 
     DrawCall call;
@@ -164,6 +269,8 @@ void VulkanRenderTarget::draw_geometry(const Geometry& geometry) {
     call.index_count = static_cast<uint32_t>(geometry.indices.size());
     call.vertex_offset = static_cast<int32_t>(frame_vertices_.size());
     call.type = geometry.type;
+    call.vertex_buffer = VK_NULL_HANDLE;
+    call.index_buffer = VK_NULL_HANDLE;
 
     frame_vertices_.insert(frame_vertices_.end(), geometry.vertices.begin(), geometry.vertices.end());
     frame_indices_.insert(frame_indices_.end(), geometry.indices.begin(), geometry.indices.end());
@@ -228,6 +335,7 @@ void VulkanRenderTarget::present_headless() {
     frame_vertices_.clear();
     frame_indices_.clear();
     draw_calls_.clear();
+    current_frame_keys_.clear();
     if (present_callback_) {
         present_callback_();
     }
@@ -330,15 +438,13 @@ void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t im
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
     // If we have geometry to draw, record pipeline bindings and draws
-    if (!frame_vertices_.empty() && !draw_calls_.empty()) {
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(cmd, 0, 1, &vertex_buffer_, offsets);
-        vkCmdBindIndexBuffer(cmd, index_buffer_, 0, VK_INDEX_TYPE_UINT32);
-
+    if (!draw_calls_.empty()) {
         PushConstants push_constants{ static_cast<float>(width_), static_cast<float>(height_) };
         vkCmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
 
         VkPipeline last_pipeline = VK_NULL_HANDLE;
+        VkBuffer last_vertex_buffer = VK_NULL_HANDLE;
+        VkBuffer last_index_buffer = VK_NULL_HANDLE;
 
         for (const auto& call : draw_calls_) {
             VkPipeline active_pipeline = (call.type == PrimitiveType::Triangles) ? triangle_pipeline_ : line_pipeline_;
@@ -346,6 +452,20 @@ void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t im
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, active_pipeline);
                 last_pipeline = active_pipeline;
             }
+
+            VkBuffer active_vertex = (call.vertex_buffer != VK_NULL_HANDLE) ? call.vertex_buffer : vertex_buffer_;
+            VkBuffer active_index = (call.index_buffer != VK_NULL_HANDLE) ? call.index_buffer : index_buffer_;
+
+            if (active_vertex != last_vertex_buffer && active_vertex != VK_NULL_HANDLE) {
+                VkDeviceSize offsets[] = {0};
+                vkCmdBindVertexBuffers(cmd, 0, 1, &active_vertex, offsets);
+                last_vertex_buffer = active_vertex;
+            }
+            if (active_index != last_index_buffer && active_index != VK_NULL_HANDLE) {
+                vkCmdBindIndexBuffer(cmd, active_index, 0, VK_INDEX_TYPE_UINT32);
+                last_index_buffer = active_index;
+            }
+
             vkCmdDrawIndexed(cmd, call.index_count, 1, call.first_index, call.vertex_offset, 0);
         }
     }
@@ -425,9 +545,27 @@ void VulkanRenderTarget::present() {
 
     current_frame_ = (current_frame_ + 1) % 2;
 
+    // Garbage collect unused cached geometry buffers (epoch-based)
+    current_epoch_++;
+    std::vector<const void*> keys_to_remove;
+    for (const auto& pair : geometry_cache_) {
+        if (current_epoch_ - pair.second.epoch > 300) {
+            keys_to_remove.push_back(pair.first);
+        }
+    }
+    for (const void* key : keys_to_remove) {
+        auto& entry = geometry_cache_[key];
+        if (entry.vertex_buffer != VK_NULL_HANDLE) vkDestroyBuffer(device_, entry.vertex_buffer, nullptr);
+        if (entry.vertex_memory != VK_NULL_HANDLE) vkFreeMemory(device_, entry.vertex_memory, nullptr);
+        if (entry.index_buffer != VK_NULL_HANDLE) vkDestroyBuffer(device_, entry.index_buffer, nullptr);
+        if (entry.index_memory != VK_NULL_HANDLE) vkFreeMemory(device_, entry.index_memory, nullptr);
+        geometry_cache_.erase(key);
+    }
+
     frame_vertices_.clear();
     frame_indices_.clear();
     draw_calls_.clear();
+    current_frame_keys_.clear();
 
     if (present_callback_) {
         present_callback_();

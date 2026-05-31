@@ -28,17 +28,18 @@ Rect ImageControl::bounds() const {
 
 void ImageControl::set_image(std::shared_ptr<Image> image) {
     image_ = std::move(image);
+    invalidate_layout();
 }
 
-Size ImageControl::measure(Size constraints) {
+Size ImageControl::do_measure(Size constraints) {
     int w = resolve_width(constraints.width, absolute_bounds.width);
     int h = resolve_height(constraints.height, absolute_bounds.height);
     return Size{w, h};
 }
 
-void ImageControl::layout(Rect bounds) {
+void ImageControl::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::layout(bounds);
+    View::do_layout(bounds);
 }
 
 void ImageControl::draw(IRenderTarget& target) const {
