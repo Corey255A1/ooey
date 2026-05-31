@@ -213,6 +213,8 @@ target_sources(gooey PRIVATE
     gooey/src/controls/row.cpp
     gooey/src/controls/grid.cpp
     gooey/src/controls/flow_layout.cpp
+    gooey/src/controls/scrollbar.cpp
+    gooey/src/controls/datagrid.cpp
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
     gooey/src/mvvmc/view.cpp

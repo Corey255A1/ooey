@@ -8,6 +8,9 @@
 #include <fstream>
 #include <algorithm>
 #include <filesystem>
+#include <unordered_map>
+#include <unordered_set>
+#include <thread>
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
@@ -15,17 +18,18 @@
 #include "gooey/mvvmc/theme.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
-#include "gooey/controls/list_control.hpp"
+#include "gooey/controls/datagrid.hpp"
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "ooey/renderer/primitives/rect_primitive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 
-// Windows imports
 #ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
 #include <tlhelp32.h>
+#else
+#include <unistd.h>
 #endif
 
 using namespace ooey;
@@ -93,7 +97,7 @@ void read_ram_usage(size_t& total, size_t& free) {
     }
 }
 
-std::vector<ProcessInfo> read_process_list() {
+std::vector<ProcessInfo> read_process_list(double dt, std::unordered_map<int, unsigned long long>& ticks_cache) {
     std::vector<ProcessInfo> list;
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot != INVALID_HANDLE_VALUE) {
@@ -102,19 +106,55 @@ std::vector<ProcessInfo> read_process_list() {
         if (Process32First(snapshot, &pe)) {
             do {
                 size_t mem_bytes = 0;
+                float cpu_percent = 0.0f;
                 HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pe.th32ProcessID);
                 if (proc) {
                     PROCESS_MEMORY_COUNTERS pmc;
                     if (GetProcessMemoryInfo(proc, &pmc, sizeof(pmc))) {
                         mem_bytes = pmc.WorkingSetSize;
                     }
+                    
+                    FILETIME creation_time, exit_time, kernel_time, user_time;
+                    if (GetProcessTimes(proc, &creation_time, &exit_time, &kernel_time, &user_time)) {
+                        ULARGE_INTEGER k, u;
+                        k.LowPart = kernel_time.dwLowDateTime; k.HighPart = kernel_time.dwHighDateTime;
+                        u.LowPart = user_time.dwLowDateTime; u.HighPart = user_time.dwHighDateTime;
+                        unsigned long long total_ticks = k.QuadPart + u.QuadPart;
+                        if (ticks_cache.count(pe.th32ProcessID) > 0) {
+                            unsigned long long prev_ticks = ticks_cache[pe.th32ProcessID];
+                            if (total_ticks >= prev_ticks && dt > 0.0) {
+                                cpu_percent = static_cast<float>(((total_ticks - prev_ticks) / 10000000.0) / dt * 100.0);
+                                unsigned int num_cores = std::thread::hardware_concurrency();
+                                if (num_cores > 0) {
+                                    cpu_percent /= num_cores;
+                                }
+                                if (cpu_percent > 100.0f) {
+                                    cpu_percent = 100.0f;
+                                }
+                            }
+                        }
+                        ticks_cache[pe.th32ProcessID] = total_ticks;
+                    }
                     CloseHandle(proc);
                 }
-                list.push_back({(int)pe.th32ProcessID, pe.szExeFile, 0.0f, mem_bytes, "R"});
+                list.push_back({(int)pe.th32ProcessID, pe.szExeFile, cpu_percent, mem_bytes, "R"});
             } while (Process32Next(snapshot, &pe));
         }
         CloseHandle(snapshot);
     }
+    
+    std::unordered_set<int> active_pids;
+    for (const auto& p : list) {
+        active_pids.insert(p.pid);
+    }
+    for (auto it = ticks_cache.begin(); it != ticks_cache.end(); ) {
+        if (active_pids.count(it->first) == 0) {
+            it = ticks_cache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     std::sort(list.begin(), list.end(), [](const ProcessInfo& a, const ProcessInfo& b) {
         return a.memory_bytes > b.memory_bytes;
     });
@@ -169,51 +209,88 @@ void read_ram_usage(size_t& total, size_t& free) {
     }
 }
 
-std::vector<ProcessInfo> read_process_list() {
+bool parse_proc_stat(const std::string& line, int& pid, std::string& comm, char& state, unsigned long long& utime, unsigned long long& stime, long long& rss) {
+    size_t start_paren = line.find('(');
+    size_t end_paren = line.rfind(')');
+    if (start_paren == std::string::npos || end_paren == std::string::npos || end_paren <= start_paren) {
+        return false;
+    }
+    
+    pid = std::stoi(line.substr(0, start_paren));
+    comm = line.substr(start_paren + 1, end_paren - start_paren - 1);
+    
+    std::string rest = line.substr(end_paren + 2);
+    std::stringstream ss(rest);
+    
+    ss >> state;
+    int ppid, pgrp, session, tty_nr, tpgid;
+    unsigned int flags;
+    unsigned long minflt, cminflt, majflt, cmajflt;
+    ss >> ppid >> pgrp >> session >> tty_nr >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt;
+    ss >> utime >> stime;
+    
+    long long cutime, cstime, priority, nice, num_threads, itrealvalue;
+    unsigned long long starttime;
+    unsigned long vsize;
+    ss >> cutime >> cstime >> priority >> nice >> num_threads >> itrealvalue >> starttime >> vsize >> rss;
+    
+    return true;
+}
+
+std::vector<ProcessInfo> read_process_list(double dt, std::unordered_map<int, unsigned long long>& ticks_cache) {
     std::vector<ProcessInfo> list;
     try {
+        long ticks_per_sec = sysconf(_SC_CLK_TCK);
         for (const auto& entry : std::filesystem::directory_iterator("/proc")) {
             if (!entry.is_directory()) continue;
             std::string filename = entry.path().filename().string();
             if (!std::all_of(filename.begin(), filename.end(), ::isdigit)) continue;
             int pid = std::stoi(filename);
             
-            std::string comm = "unknown";
-            {
-                std::ifstream f(entry.path() / "comm");
-                if (f) std::getline(f, comm);
-            }
-
-            size_t mem_bytes = 0;
-            std::string status = "S";
-            {
-                std::ifstream f(entry.path() / "status");
-                std::string line;
-                while (f && std::getline(f, line)) {
-                    if (line.rfind("State:", 0) == 0) {
-                        std::stringstream ss(line.substr(6));
-                        ss >> status;
-                    } else if (line.rfind("VmRSS:", 0) == 0) {
-                        std::stringstream ss(line.substr(6));
-                        size_t val_kb = 0;
-                        ss >> val_kb;
-                        mem_bytes = val_kb * 1024;
+            std::ifstream f(entry.path() / "stat");
+            std::string line;
+            if (f && std::getline(f, line)) {
+                int parsed_pid;
+                std::string comm;
+                char state;
+                unsigned long long utime = 0, stime = 0;
+                long long rss_pages = 0;
+                if (parse_proc_stat(line, parsed_pid, comm, state, utime, stime, rss_pages)) {
+                    unsigned long long total_ticks = utime + stime;
+                    float cpu_percent = 0.0f;
+                    if (ticks_cache.count(pid) > 0) {
+                        unsigned long long prev_ticks = ticks_cache[pid];
+                        if (total_ticks >= prev_ticks && dt > 0.0) {
+                            cpu_percent = static_cast<float>(((total_ticks - prev_ticks) / static_cast<double>(ticks_per_sec)) / dt * 100.0);
+                            unsigned int num_cores = std::thread::hardware_concurrency();
+                            if (num_cores > 0) {
+                                cpu_percent /= num_cores;
+                            }
+                            if (cpu_percent > 100.0f) {
+                                cpu_percent = 100.0f;
+                            }
+                        }
                     }
+                    ticks_cache[pid] = total_ticks;
+                    size_t mem_bytes = rss_pages * 4096;
+                    list.push_back({pid, comm, cpu_percent, mem_bytes, std::string(1, state)});
                 }
             }
-            if (mem_bytes == 0) {
-                std::ifstream f(entry.path() / "statm");
-                if (f) {
-                    size_t size, resident;
-                    if (f >> size >> resident) {
-                        mem_bytes = resident * 4096;
-                    }
-                }
-            }
-            list.push_back({pid, comm, 0.0f, mem_bytes, status});
         }
     } catch (...) {}
     
+    std::unordered_set<int> active_pids;
+    for (const auto& p : list) {
+        active_pids.insert(p.pid);
+    }
+    for (auto it = ticks_cache.begin(); it != ticks_cache.end(); ) {
+        if (active_pids.count(it->first) == 0) {
+            it = ticks_cache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     std::sort(list.begin(), list.end(), [](const ProcessInfo& a, const ProcessInfo& b) {
         return a.memory_bytes > b.memory_bytes;
     });
@@ -244,13 +321,11 @@ public:
     }
 
     void draw(ooey::IRenderTarget& target) const override {
-        // Draw card background based on active styling parameters
         if (corner_radius_ > 0 || stroke_thickness_ > 0.0f) {
             RoundedRectPrimitive(layout_bounds, corner_radius_, fill_color_, stroke_color_, stroke_thickness_).draw(target);
         } else {
             RectPrimitive(layout_bounds, fill_color_).draw(target);
         }
-        // Draw children on top of background
         Column::draw(target);
     }
 
@@ -277,12 +352,13 @@ private:
     std::shared_ptr<ThemeManager> theme_manager_;
     CPUUsage prev_cpu_{};
     float elapsed_time_{0.0f};
+    std::unordered_map<int, unsigned long long> ticks_cache_;
 
 public:
     explicit SystemMonitorViewModel(std::shared_ptr<ThemeManager> theme_manager)
         : theme_manager_(std::move(theme_manager)) {
         prev_cpu_ = read_cpu_usage();
-        update_metrics();
+        update_metrics(1.0f);
     }
 
     Property<std::string> cpu_text{"0.0 %"};
@@ -293,13 +369,13 @@ public:
     Property<std::string> ram_desc{"0% Memory Used"};
     Property<std::string> disk_desc{"0% Disk Space Used"};
     
-    Property<std::vector<std::string>> process_names;
+    Property<std::vector<std::vector<std::string>>> process_rows;
 
     void update(float dt) {
         elapsed_time_ += dt;
         if (elapsed_time_ >= 1.0f) {
+            update_metrics(elapsed_time_);
             elapsed_time_ = 0.0f;
-            update_metrics();
         }
     }
 
@@ -309,7 +385,7 @@ public:
         }
     }
 
-    void update_metrics() {
+    void update_metrics(float dt) {
         // CPU
         CPUUsage curr_cpu = read_cpu_usage();
         float cpu_pct = calculate_cpu_percent(prev_cpu_, curr_cpu);
@@ -353,20 +429,28 @@ public:
         disk_desc.set(ss_disk_desc.str());
 
         // Processes
-        auto procs = read_process_list();
-        std::vector<std::string> names;
-        size_t limit = std::min(procs.size(), size_t(25));
+        auto procs = read_process_list(dt, ticks_cache_);
+        std::vector<std::vector<std::string>> rows;
+        size_t limit = std::min(procs.size(), size_t(100));
         for (size_t i = 0; i < limit; ++i) {
             const auto& p = procs[i];
             double mem_mb = p.memory_bytes / (1024.0 * 1024.0);
-            std::stringstream ss_proc;
-            ss_proc << "PID " << std::left << std::setw(6) << p.pid 
-                    << "  |  " << std::left << std::setw(15) << p.name.substr(0, 15)
-                    << "  |  " << std::right << std::fixed << std::setprecision(1) << mem_mb << " MB"
-                    << "  |  State: " << p.status;
-            names.push_back(ss_proc.str());
+            
+            std::stringstream ss_proc_cpu;
+            ss_proc_cpu << std::fixed << std::setprecision(1) << p.cpu_usage << " %";
+
+            std::stringstream ss_proc_mem;
+            ss_proc_mem << std::fixed << std::setprecision(1) << mem_mb << " MB";
+
+            rows.push_back({
+                std::to_string(p.pid),
+                p.name,
+                ss_proc_cpu.str(),
+                ss_proc_mem.str(),
+                p.status
+            });
         }
-        process_names.set(names);
+        process_rows.set(rows);
     }
 };
 
@@ -378,13 +462,11 @@ public:
     explicit SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> view_model)
         : view_model_(std::move(view_model)) {
         
-        // Match parent size
         set_width(SizePolicy::MatchParent);
         set_height(SizePolicy::MatchParent);
         set_padding(25);
-        set_style_name("window"); // Style for main window background
+        set_style_name("window");
 
-        // Main outer frame card
         auto main_card = std::make_shared<StyledPanel>();
         main_card->set_width(SizePolicy::MatchParent);
         main_card->set_height(SizePolicy::MatchParent);
@@ -392,7 +474,6 @@ public:
         main_card->set_style_name("window-card");
         add_child(main_card);
 
-        // Dashboard Header Inside Card
         auto header = std::make_shared<Column>();
         header->set_width(SizePolicy::MatchParent);
         header->set_height(SizePolicy::WrapContent);
@@ -422,13 +503,12 @@ public:
 
         main_card->add_child(header);
 
-        // Top Row: 3 Metrics Cards
         auto metrics_row = std::make_shared<Row>();
         metrics_row->set_width(SizePolicy::MatchParent);
         metrics_row->set_height(SizePolicy::WrapContent);
         metrics_row->set_margin(0, 0, 0, 15);
 
-        // Sub-Card 1: CPU Metrics
+        // CPU Card
         auto cpu_card = std::make_shared<StyledPanel>();
         cpu_card->set_style_name("card-bg");
         cpu_card->set_width(SizePolicy::Fixed, 235.0f);
@@ -456,7 +536,7 @@ public:
 
         metrics_row->add_child(cpu_card);
 
-        // Sub-Card 2: RAM Metrics
+        // RAM Card
         auto ram_card = std::make_shared<StyledPanel>();
         ram_card->set_style_name("card-bg");
         ram_card->set_width(SizePolicy::Fixed, 235.0f);
@@ -484,7 +564,7 @@ public:
 
         metrics_row->add_child(ram_card);
 
-        // Sub-Card 3: Disk Metrics
+        // Disk Card
         auto disk_card = std::make_shared<StyledPanel>();
         disk_card->set_style_name("card-bg");
         disk_card->set_width(SizePolicy::Fixed, 235.0f);
@@ -514,20 +594,20 @@ public:
 
         main_card->add_child(metrics_row);
 
-        // Bottom Row: Process List and Theme Selection
+        // Bottom Row
         auto bottom_row = std::make_shared<Row>();
         bottom_row->set_width(SizePolicy::MatchParent);
-        bottom_row->set_height(SizePolicy::MatchParent); // Dynamically expands to fill remainder of screen
+        bottom_row->set_height(SizePolicy::MatchParent);
         bottom_row->set_margin(0, 0, 0, 10);
 
-        // Left column in bottom: List Panel
-        auto list_container = std::make_shared<Column>();
-        list_container->set_width(SizePolicy::Fixed, 510.0f);
-        list_container->set_height(SizePolicy::MatchParent);
-        list_container->set_margin(0, 5, 10, 5);
+        // Process DataGrid Panel
+        auto grid_container = std::make_shared<Column>();
+        grid_container->set_width(SizePolicy::Fixed, 510.0f);
+        grid_container->set_height(SizePolicy::MatchParent);
+        grid_container->set_margin(0, 5, 10, 5);
 
         auto list_lbl = std::make_shared<Label>(
-            "Top System Processes (Sorted by RSS Memory)",
+            "Top System Processes (RSS Memory Sorted)",
             Font{"sans-serif", 13, FontWeight::Bold},
             Point{0, 0},
             Color{180, 180, 195}
@@ -535,29 +615,35 @@ public:
         list_lbl->set_absolute(false);
         list_lbl->set_margin(0, 0, 0, 5);
         list_lbl->set_style_name("section-header");
-        list_container->add_child(list_lbl);
+        grid_container->add_child(list_lbl);
 
-        auto proc_list = std::make_shared<ListControl>(
+        auto proc_grid = std::make_shared<DataGrid>(
             Rect{0, 0, 510, 240},
-            34,
-            Font{"monospace", 13},
-            Color{200, 200, 205},
-            Color{36, 36, 42},
-            Color{0, 120, 215},
-            Color{255, 255, 255}
+            26, // row height
+            Font{"monospace", 12}
         );
-        proc_list->set_absolute(false);
-        proc_list->set_width(SizePolicy::MatchParent);
-        proc_list->set_height(SizePolicy::MatchParent); // Fill container!
-        proc_list->set_style_name("list-box");
-        bind(view_model_->process_names, [proc_list](const std::vector<std::string>& list) {
-            proc_list->set_items(list);
+        proc_grid->set_absolute(false);
+        proc_grid->set_width(SizePolicy::MatchParent);
+        proc_grid->set_height(SizePolicy::MatchParent);
+        proc_grid->set_style_name("list-box");
+
+        // Define columns matching standard process specs: PID, Name, CPU, RAM, State
+        proc_grid->set_columns({
+            {"PID", 65},
+            {"Process Name", 160},
+            {"CPU %", 80},
+            {"Memory", 110},
+            {"State", 60}
         });
-        list_container->add_child(proc_list);
 
-        bottom_row->add_child(list_container);
+        bind(view_model_->process_rows, [proc_grid](const std::vector<std::vector<std::string>>& rows) {
+            proc_grid->set_rows(rows);
+        });
 
-        // Right column in bottom: Theme Selection
+        grid_container->add_child(proc_grid);
+        bottom_row->add_child(grid_container);
+
+        // Right column: Theme Selection
         auto theme_card = std::make_shared<StyledPanel>();
         theme_card->set_style_name("card-bg");
         theme_card->set_width(SizePolicy::Fixed, 220.0f);
@@ -575,7 +661,6 @@ public:
         theme_lbl->set_style_name("theme-header");
         theme_card->add_child(theme_lbl);
 
-        // Layout Theme Buttons inside column
         auto btn_dark = std::make_shared<Button>(Rect{0, 0, 190, 34}, Color{45, 45, 52});
         btn_dark->set_absolute(false);
         btn_dark->set_margin(0, 0, 0, 8);
@@ -609,12 +694,10 @@ public:
         theme_card->add_child(btn_lofi);
 
         bottom_row->add_child(theme_card);
-
         main_card->add_child(bottom_row);
 
-        // Footnote inside card
         auto footnote = std::make_shared<Label>(
-            "Note: Processes list refreshed dynamically in real time (once per second). Responsive Layout Flow enabled.",
+            "Note: Processes grid view is fully virtualized and refreshed once per second. Responsive DataGrid layout enabled.",
             Font{"sans-serif", 11},
             Point{0, 0},
             Color{110, 110, 120}
@@ -663,6 +746,7 @@ int main() {
     dark_theme->set_style("section-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{200, 200, 210}});
     dark_theme->set_style("theme-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{150, 150, 165}});
     dark_theme->set_style("list-box", Style{Color{20, 20, 24}, Color{50, 50, 60}, 1.5f, Color{210, 210, 215}, 8});
+    dark_theme->set_style("scrollbar", Style{Color{25, 25, 30}, Color{70, 70, 80}, 0.0f, Color{0, 0, 0, 0}, 4});
     dark_theme->set_style("footnote-text", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{120, 120, 130}});
     dark_theme->set_style("btn-dark", Style{Color{0, 120, 215}, Color{0,0,0,0}, 0.0f, Color{255, 255, 255}, 6});
     dark_theme->set_style("btn-light", Style{Color{45, 45, 52}, Color{75, 75, 85}, 1.5f, Color{200, 200, 205}, 6});
@@ -688,6 +772,7 @@ int main() {
     light_theme->set_style("section-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{60, 60, 75}});
     light_theme->set_style("theme-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{110, 110, 125}});
     light_theme->set_style("list-box", Style{Color{255, 255, 255}, Color{210, 210, 220}, 1.5f, Color{50, 50, 60}, 8});
+    light_theme->set_style("scrollbar", Style{Color{240, 240, 245}, Color{180, 180, 185}, 0.0f, Color{0, 0, 0, 0}, 4});
     light_theme->set_style("footnote-text", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{120, 120, 135}});
     light_theme->set_style("btn-dark", Style{Color{230, 230, 235}, Color{195, 195, 205}, 1.0f, Color{50, 50, 60}, 6});
     light_theme->set_style("btn-light", Style{Color{0, 90, 180}, Color{0,0,0,0}, 0.0f, Color{255, 255, 255}, 6});
@@ -713,6 +798,7 @@ int main() {
     hacker_theme->set_style("section-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{0, 255, 0}});
     hacker_theme->set_style("theme-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{0, 255, 0}});
     hacker_theme->set_style("list-box", Style{Color{0, 0, 0}, Color{0, 255, 0}, 2.0f, Color{0, 255, 0}, 0});
+    hacker_theme->set_style("scrollbar", Style{Color{0, 0, 0}, Color{0, 255, 0}, 0.0f, Color{0, 0, 0, 0}, 0});
     hacker_theme->set_style("footnote-text", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{0, 180, 0}});
     hacker_theme->set_style("btn-dark", Style{Color{0, 0, 0}, Color{0, 255, 0}, 1.5f, Color{0, 255, 0}, 0});
     hacker_theme->set_style("btn-light", Style{Color{0, 0, 0}, Color{0, 255, 0}, 1.5f, Color{0, 255, 0}, 0});
@@ -738,6 +824,7 @@ int main() {
     lofi_theme->set_style("section-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{100, 80, 75}});
     lofi_theme->set_style("theme-header", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{125, 105, 100}});
     lofi_theme->set_style("list-box", Style{Color{242, 232, 226}, Color{200, 185, 178}, 1.5f, Color{100, 82, 76}, 12});
+    lofi_theme->set_style("scrollbar", Style{Color{235, 224, 217}, Color{160, 140, 132}, 0.0f, Color{0, 0, 0, 0}, 6});
     lofi_theme->set_style("footnote-text", Style{Color{0,0,0,0}, Color{0,0,0,0}, 0.0f, Color{140, 125, 120}});
     lofi_theme->set_style("btn-dark", Style{Color{228, 214, 208}, Color{195, 180, 173}, 1.0f, Color{110, 90, 85}, 12});
     lofi_theme->set_style("btn-light", Style{Color{228, 214, 208}, Color{195, 180, 173}, 1.0f, Color{110, 90, 85}, 12});
@@ -753,7 +840,6 @@ int main() {
     auto root_view = std::make_shared<SystemMonitorView>(view_model);
     app.set_root_view(root_view);
 
-    // Metric update ticker callback on every frame iteration, throttle to 1s in VM
     auto last_time = std::chrono::high_resolution_clock::now();
     app.set_before_render_callback([view_model, &last_time](IRenderTarget*) {
         auto now = std::chrono::high_resolution_clock::now();

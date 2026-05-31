@@ -437,3 +437,50 @@ TEST(LayoutTest, MeasureAndLayoutCaching) {
     EXPECT_EQ(view->layout_count, 2);
 }
 
+#include "gooey/controls/scrollbar.hpp"
+#include "gooey/controls/datagrid.hpp"
+
+TEST(LayoutTest, ScrollBarRangeAndValue) {
+    ScrollBar scroll(Rect{0, 0, 100, 10}, ScrollBarOrientation::Horizontal);
+    scroll.set_range(0, 100, 20);
+    EXPECT_EQ(scroll.get_value(), 0);
+
+    scroll.set_value(50);
+    EXPECT_EQ(scroll.get_value(), 50);
+
+    // Value should clamp to max_val - page_size = 80
+    scroll.set_value(90);
+    EXPECT_EQ(scroll.get_value(), 80);
+}
+
+TEST(LayoutTest, DataGridVirtualizationAndSetup) {
+    Font font{"sans-serif", 12};
+    DataGrid grid(Rect{0, 0, 400, 300}, 20, font);
+
+    std::vector<DataGridColumn> cols = {
+        {"Col 1", 100},
+        {"Col 2", 150},
+        {"Col 3", 150}
+    };
+    grid.set_columns(cols);
+
+    std::vector<std::vector<std::string>> rows = {
+        {"A1", "B1", "C1"},
+        {"A2", "B2", "C2"},
+        {"A3", "B3", "C3"},
+        {"A4", "B4", "C4"},
+        {"A5", "B5", "C5"}
+    };
+    grid.set_rows(rows);
+
+    EXPECT_EQ(grid.get_columns().size(), 3);
+    EXPECT_EQ(grid.get_rows().size(), 5);
+
+    // Grid measure/layout should execute fine
+    Size measured = grid.measure(Size{400, 300});
+    EXPECT_EQ(measured.width, 400);
+    EXPECT_EQ(measured.height, 300);
+
+    grid.layout(Rect{0, 0, 400, 300});
+}
+

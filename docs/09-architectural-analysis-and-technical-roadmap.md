@@ -59,6 +59,10 @@ Since the initial architectural layout, several high-impact rendering, layout, a
 *   **Vulkan Persistent Cache Buffers:** Implemented persistent allocations of GPU vertex/index buffers keyed on shape addresses (`cache_key`), bypassing dynamic PCIe bus transfers. Included collision bypass detection for stack-reused addresses (temporary primitives) to ensure correct rendering.
 *   **Epoch-Based Garbage Collection:** Unused cached GPU geometry buffers are automatically reaped after 300 unused frames.
 
+### G. Custom Composed ScrollBar & Virtualized DataGrid Controls
+*   **Custom ScrollBar Widget:** A composable, orientation-configurable control managing a drag-and-drop thumb with precise value-to-pixel mapping. Supports mouse-drag tracking, track-click page jumping, and dynamic styling from stylesheets.
+*   **Virtualized DataGrid Control:** A high-performance grid driven by the reactive MVVM-C pattern. Calculates the visible rows in the viewport dynamically ($viewport\_height / row\_height$) and recycles existing text/background visual structures instead of instantiating new widgets. Integrates automatic dual scrollbars and applies clipping/culling to horizontal cell columns out of bounds.
+
 ---
 
 ## 3. What is Still Missing (Framework Gaps)
@@ -90,7 +94,7 @@ As applications scale in complexity (such as the `hello_sysinfo` dashboard), sev
 ### A. Footprint Analysis: Why the System Monitor Demo Uses ~100MB of RAM
 During profiling of the `hello_sysinfo` application, memory usage rose to ~100MB of RSS. The following factors contribute to this memory footprint:
 1.  **Graphics Driver & Compilation Contexts:** Loading Wayland, Vulkan, OpenGL, and X11 libraries dynamically introduces substantial runtime memory allocations. Specifically, the Mesa driver software fallback (LLVMpipe) allocates heavy internal heaps for compiler pipelines, command streams, and shader caches which immediately consume 60MB - 90MB of RAM.
-2.  **Inefficient `/proc` Directory Crawling:** Every single second, the ViewModel polls `/proc` via `std::filesystem::directory_iterator`, opening `/proc/[pid]/comm` and `/proc/[pid]/status` for every active process. This creates hundreds of temporary file streams, allocates and resizes strings and vectors, and sorts lists, resulting in high heap allocation pressure and RSS bloat.
+2.  **Inefficient `/proc` Directory Crawling (Remediated):** Previously, the ViewModel opened `/proc/[pid]/comm` and `/proc/[pid]/status` for every active process. This has been remediated by parsing the space-separated fields of `/proc/[pid]/stat` in a single read per process. utime, stime, PID, state, and VmRSS pages are extracted in a single pass, and terminated process entries are cleaned from the delta tracking cache, dramatically reducing heap allocation thrashing.
 3.  **Pixel-by-Pixel Glyph Callback Overheads:** Because the font engine iterates every pixel of a glyph to trigger rasterization callbacks, drawing a 25-line list containing hundreds of characters generates millions of coordinate conversions, vertex calculations, and lambda allocations every second, causing severe cache thrashing and memory bloat.
 4.  **No Event-Driven Idle Throttling:** The application runs the measure, layout, and raster loops at VSync (60Hz) or uncapped speed, even when visual data has not changed. Running CPU-heavy font drawing 60 times a second for metric values that update once a second consumes excessive CPU and RAM.
 
@@ -117,7 +121,7 @@ gantt
     section Phase 2: Performance
     Layout & Measure Caching           :done, p1, 2026-05-28, 2026-06-12
     Dirty-Flag Geometry Caching        :done, p2, 2026-06-10, 2026-06-25
-    Virtualized ListControls           :active, p3, 2026-06-20, 2026-07-05
+    Virtualized ScrollBar & DataGrid   :done, p3, 2026-05-30, 2026-05-31
     section Phase 3: Modern Font System
     OS System Font Matching            :done, f1, 2026-05-15, 2026-05-29
     Glyph Texture Atlases              :active, f2, 2026-06-01, 2026-06-20
@@ -143,7 +147,7 @@ gantt
 #### Phase 2: Rendering Performance & Layout Caching (Completed)
 - Write layout result caching in `gooey::View` to bypass layout trees on static frames. (Done)
 - Add `dirty` states to scene graph nodes, skipping VBO data updates for clean elements. (Done)
-- Implement virtual scrolling in `ListControl` to recycle visual slots, bypassing layout/drawing for non-visible rows. (Pending)
+- Implement virtual scrolling in `DataGrid` and custom `ScrollBar` to recycle visual slots, bypassing layout/drawing for non-visible rows. (Done)
 
 #### Phase 3: Modern Font System (Short-term)
 - Implement a static glyph texture atlas populated at startup or lazily during char matches.
