@@ -14,11 +14,21 @@ namespace ooey {}
 namespace gooey {
     using namespace ooey;
 
+Application* Application::instance_ = nullptr;
+
+Application* Application::get_instance() {
+    return instance_;
+}
+
 Application::Application() {
+    instance_ = this;
     OOEY_LOG_DEBUG("Application", "Application constructed");
 }
 
 Application::~Application() {
+    if (instance_ == this) {
+        instance_ = nullptr;
+    }
     OOEY_LOG_DEBUG("Application", "Destroying application");
     if (window_backend_) {
         window_backend_->destroy();
@@ -114,6 +124,17 @@ void Application::run_iteration() {
         return;
     }
 
+    std::vector<std::function<void()>> local_tasks;
+    {
+        std::lock_guard<std::mutex> lock(dispatcher_mutex_);
+        local_tasks = std::move(dispatcher_tasks_);
+    }
+    for (auto& task : local_tasks) {
+        if (task) {
+            task();
+        }
+    }
+
     if (window_backend_) {
         float scale = get_dpi_scale();
         input_manager_.set_scale(scale);
@@ -149,6 +170,9 @@ void Application::run_iteration() {
                 static Size last_size{0, 0};
                 bool size_changed = (size.width != last_size.width || size.height != last_size.height);
                 last_size = size;
+                if (size_changed) {
+                    last_resize_time_ = std::chrono::steady_clock::now();
+                }
 
                 bool layout_dirty = root_view_ && (!root_view_->is_layout_clean() || !root_view_->is_measure_clean());
                 bool should_render = needs_render_ || size_changed || layout_dirty || had_input;
@@ -185,7 +209,7 @@ void Application::run_iteration() {
                     needs_render_ = false;
                 } else {
 #ifndef __EMSCRIPTEN__
-                    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif
                 }
             }
@@ -231,4 +255,31 @@ float Application::get_dpi_scale() const {
     return 1.0f;
 }
 
+bool Application::is_user_interacting() const {
+    if (!input_manager_.get_active_pointers().empty()) {
+        return true;
+    }
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration<float>(now - last_resize_time_).count();
+    if (elapsed < 1.5f) {
+        return true;
+    }
+    return false;
+}
+
+void Application::dispatch(std::function<void()>&& task) {
+    {
+        std::lock_guard<std::mutex> lock(dispatcher_mutex_);
+        dispatcher_tasks_.push_back(std::move(task));
+    }
+    request_render();
+}
+
+void request_render() {
+    if (Application::get_instance()) {
+        Application::get_instance()->request_render();
+    }
+}
+
 } // namespace gooey
+

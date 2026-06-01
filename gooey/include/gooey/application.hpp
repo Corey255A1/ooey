@@ -5,6 +5,9 @@ namespace ooey {}
 
 #include <memory>
 #include <functional>
+#include <chrono>
+#include <mutex>
+#include <vector>
 
 #include "ooey/i_window_backend.hpp"
 #include "ooey/renderer/i_render_target.hpp"
@@ -68,6 +71,15 @@ public:
     // Resolve the active DPI scale factor
     float get_dpi_scale() const;
 
+    // Check if the user is actively interacting (dragging or window resizing)
+    bool is_user_interacting() const;
+
+    // Retrieve the active application singleton instance
+    static Application* get_instance();
+
+    // Safely dispatch a task from a background thread to run on the main UI thread
+    void dispatch(std::function<void()>&& task);
+
 private:
     std::unique_ptr<IWindowBackend> window_backend_;
     std::shared_ptr<mvvmc::View> root_view_;
@@ -82,6 +94,10 @@ private:
     std::shared_ptr<mvvmc::ThemeManager> theme_manager_;
     mvvmc::ScopedSubscription theme_subscription_;
     bool dpi_scale_enabled_{true};
+    std::chrono::steady_clock::time_point last_resize_time_;
+    static Application* instance_;
+    std::mutex dispatcher_mutex_;
+    std::vector<std::function<void()>> dispatcher_tasks_;
 };
 
 } // namespace gooey

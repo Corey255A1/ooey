@@ -23,6 +23,7 @@ DataGrid::DataGrid(Rect bounds, int row_height, Font font)
         if (scroll_offset_y_ != value) {
             scroll_offset_y_ = value;
             update_cell_values();
+            invalidate_layout();
         }
     };
     add_child(v_scroll_);
@@ -32,6 +33,7 @@ DataGrid::DataGrid(Rect bounds, int row_height, Font font)
         if (scroll_offset_x_ != value) {
             scroll_offset_x_ = value;
             update_layout_elements();
+            invalidate_layout();
         }
     };
     add_child(h_scroll_);

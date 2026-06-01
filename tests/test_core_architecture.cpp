@@ -244,3 +244,45 @@ TEST(OoeyApplication, CustomControllerExecution) {
 
     EXPECT_EQ(controller_ptr->process_count, 2);
 }
+
+TEST(OoeyApplication, DispatchAndSingleton) {
+    EXPECT_EQ(gooey::Application::get_instance(), nullptr);
+
+    {
+        gooey::Application app;
+        EXPECT_EQ(gooey::Application::get_instance(), &app);
+
+        auto mock_backend = std::make_unique<MockWindowBackend>();
+        app.set_window_backend(std::move(mock_backend));
+
+        bool task_executed = false;
+        app.dispatch([&task_executed]() {
+            task_executed = true;
+        });
+
+        EXPECT_FALSE(task_executed);
+
+        app.run();
+
+        EXPECT_TRUE(task_executed);
+    }
+
+    EXPECT_EQ(gooey::Application::get_instance(), nullptr);
+}
+
+TEST(OoeyApplication, PropertyChangeInvalidation) {
+    EXPECT_EQ(gooey::Application::get_instance(), nullptr);
+
+    {
+        gooey::Application app;
+        EXPECT_EQ(gooey::Application::get_instance(), &app);
+
+        gooey::Property<int> prop{0};
+        prop.set(42);
+        EXPECT_EQ(prop.get(), 42);
+    }
+
+    EXPECT_EQ(gooey::Application::get_instance(), nullptr);
+}
+
+

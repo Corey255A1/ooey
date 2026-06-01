@@ -9,6 +9,10 @@ namespace ooey {}
 #include <memory>
 #include "gooey/mvvmc/scoped_subscription.hpp"
 
+namespace gooey {
+    void request_render();
+}
+
 namespace gooey::mvvmc {
     using namespace ooey;
 
@@ -57,6 +61,7 @@ public:
     void set(T new_value) {
         value_ = std::move(new_value);
         notify();
+        gooey::request_render();
     }
 
     const T& get() const {

@@ -20,6 +20,8 @@
 #include <limits.h>
 #include <cstdlib>
 #include <string>
+#include <poll.h>
+#include <errno.h>
 
 namespace ooey::wayland {
 
@@ -460,9 +462,34 @@ bool WindowBackend::poll_events() {
     if (!display_ || should_close_) {
         return false;
     }
-    // Dispatch pending events; return true to keep running
-    wl_display_dispatch_pending(display_);
+
+    // Flush any pending requests to the compositor
     wl_display_flush(display_);
+
+    // Dispatch any events already in the client-side queue
+    wl_display_dispatch_pending(display_);
+
+    // Read new events from the display socket without blocking
+    int fd = wl_display_get_fd(display_);
+    struct pollfd pfd;
+    pfd.fd = fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+
+    if (wl_display_prepare_read(display_) == 0) {
+        // Non-blocking poll
+        int ret = poll(&pfd, 1, 0);
+        if (ret > 0 && (pfd.revents & POLLIN)) {
+            if (wl_display_read_events(display_) < 0) {
+                return false; // Error reading events
+            }
+        } else {
+            wl_display_cancel_read(display_);
+        }
+    }
+
+    // Dispatch any newly read events
+    wl_display_dispatch_pending(display_);
     return true;
 }
 

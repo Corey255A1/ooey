@@ -19,7 +19,7 @@ void InputManager::push_pointer_event(const Pointer& pointer) {
         if (scaled_pointer.state == PointerState::Released) {
             pointers_.erase(it);
         }
-    } else if (scaled_pointer.state != PointerState::Released) {
+    } else if (scaled_pointer.state == PointerState::Pressed) {
         pointers_.push_back(scaled_pointer);
     }
 }

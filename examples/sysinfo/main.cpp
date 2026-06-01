@@ -38,14 +38,6 @@ int main() {
     root_view->set_child(view);
     app.set_root_view(root_view);
 
-    auto last_time = std::chrono::high_resolution_clock::now();
-    app.set_before_render_callback([view_model, &last_time](IRenderTarget*) {
-        auto now = std::chrono::high_resolution_clock::now();
-        float dt = std::chrono::duration<float>(now - last_time).count();
-        last_time = now;
-        view_model->update(dt);
-    });
-
     app.run();
     return 0;
 }

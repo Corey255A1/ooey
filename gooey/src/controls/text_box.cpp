@@ -50,16 +50,22 @@ bool TextBox::on_pointer_event(const Pointer& e) {
                 e.y >= bounds_.y && e.y <= bounds_.y + bounds_.height);
     
     if (hit && e.state == PointerState::Pressed) {
-        is_focused_ = true;
-        // Accent focus outline (blue)
-        bg_->set_stroke_color(Color{0, 120, 215});
-        bg_->set_stroke_thickness(2.0f);
+        if (!is_focused_) {
+            is_focused_ = true;
+            // Accent focus outline (blue)
+            bg_->set_stroke_color(Color{0, 120, 215});
+            bg_->set_stroke_thickness(2.0f);
+            invalidate_layout();
+        }
         return true;
     } else if (!hit && e.state == PointerState::Pressed) {
-        is_focused_ = false;
-        // Default subtle outline
-        bg_->set_stroke_color(current_style_.stroke_color);
-        bg_->set_stroke_thickness(current_style_.stroke_thickness);
+        if (is_focused_) {
+            is_focused_ = false;
+            // Default subtle outline
+            bg_->set_stroke_color(current_style_.stroke_color);
+            bg_->set_stroke_thickness(current_style_.stroke_thickness);
+            invalidate_layout();
+        }
     }
     
     return false;
