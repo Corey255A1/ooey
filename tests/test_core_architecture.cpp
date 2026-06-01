@@ -432,6 +432,41 @@ TEST(OoeyControls, CodeEditorEditingAndHighlighting) {
     EXPECT_EQ(tokens_ret[0].type, gooey::TokenType::Keyword);
 }
 
+TEST(OoeyControls, RichTextBoxSelectionAndCopyPaste) {
+    ooey::Font font{"monospace", 14};
+    gooey::RichTextBox box{ooey::Rect{0, 0, 400, 300}, font, ooey::Color{255, 255, 255}, ooey::Color{30, 30, 30}};
+
+    box.set_text("Hello World");
+    box.on_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+
+    // Press Shift+Right five times to select "Hello"
+    box.on_key_event({0xFFE1, ooey::KeyState::Pressed}); // Shift Pressed
+    for (int i = 0; i < 5; ++i) {
+        box.on_key_event({0xFF53, ooey::KeyState::Pressed}); // Right arrow
+    }
+    box.on_key_event({0xFFE1, ooey::KeyState::Released}); // Shift Released
+
+    // Verify selection text
+    EXPECT_TRUE(box.has_selection());
+    EXPECT_EQ(box.get_selected_text(), "Hello");
+
+    // Copy selected text to string clipboard (emulating high-level notepad logic)
+    std::string clipboard = box.get_selected_text();
+    EXPECT_EQ(clipboard, "Hello");
+
+    // Clear selection by moving cursor to end
+    box.on_key_event({0xFF57, ooey::KeyState::Pressed}); // End
+    EXPECT_FALSE(box.has_selection());
+
+    // Insert hyphen and paste "Hello" back at the end
+    box.on_text_event({static_cast<char32_t>(' ')});
+    box.on_text_event({static_cast<char32_t>('-')});
+    box.on_text_event({static_cast<char32_t>(' ')});
+    box.insert_text(clipboard);
+
+    EXPECT_EQ(box.get_text(), "Hello World - Hello");
+}
+
 
 
 

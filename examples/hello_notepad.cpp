@@ -34,28 +34,42 @@ public:
         
         // 1. File Path Input Box
         file_input_ = std::make_shared<gooey::TextBox>(
-            ooey::Rect{50, 20, 430, 30},
+            ooey::Rect{50, 20, 390, 30},
             default_font,
-            ooey::Color{220, 220, 220}, // Text color (white/gray)
-            ooey::Color{40, 40, 42}     // Background color (dark)
+            ooey::Color{220, 220, 220}, // Text color
+            ooey::Color{40, 40, 42}     // Background color
         );
         file_input_->set_text("main.cpp");
         
         // 2. Load button
         auto load_btn = std::make_shared<gooey::Button>(
-            ooey::Rect{490, 20, 100, 30},
+            ooey::Rect{450, 20, 70, 30},
             ooey::Color{50, 50, 55}
         );
         load_btn->set_label_text("Load");
         
         // 3. Save button
         auto save_btn = std::make_shared<gooey::Button>(
-            ooey::Rect{600, 20, 100, 30},
+            ooey::Rect{530, 20, 70, 30},
             ooey::Color{50, 50, 55}
         );
         save_btn->set_label_text("Save");
+
+        // 4. Copy button
+        auto copy_btn = std::make_shared<gooey::Button>(
+            ooey::Rect{610, 20, 70, 30},
+            ooey::Color{50, 50, 55}
+        );
+        copy_btn->set_label_text("Copy");
+
+        // 5. Paste button
+        auto paste_btn = std::make_shared<gooey::Button>(
+            ooey::Rect{690, 20, 70, 30},
+            ooey::Color{50, 50, 55}
+        );
+        paste_btn->set_label_text("Paste");
         
-        // 4. Code editor
+        // 6. Code editor
         code_editor_ = std::make_shared<gooey::CodeEditor>(
             ooey::Rect{50, 70, 700, 480},
             code_font,
@@ -71,6 +85,8 @@ public:
         add_child(file_input_);
         add_child(load_btn);
         add_child(save_btn);
+        add_child(copy_btn);
+        add_child(paste_btn);
         add_child(code_editor_);
         
         // Action Handlers
@@ -84,6 +100,17 @@ public:
             std::string path = file_input_->get_text();
             std::string content = code_editor_->get_text();
             save_file_content(path, content);
+        };
+
+        copy_btn->on_click = [this]() {
+            clipboard_ = code_editor_->get_selected_text();
+            std::cout << "[Notepad] Copied selected text: \"" << clipboard_ << "\"\n";
+        };
+
+        paste_btn->on_click = [this]() {
+            if (!clipboard_.empty()) {
+                code_editor_->insert_text(clipboard_);
+            }
         };
         
         // Put a default hello world program in the editor initially
@@ -100,6 +127,7 @@ public:
 private:
     std::shared_ptr<gooey::TextBox> file_input_;
     std::shared_ptr<gooey::CodeEditor> code_editor_;
+    std::string clipboard_;
 };
 
 int main() {
