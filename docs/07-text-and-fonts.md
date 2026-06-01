@@ -47,3 +47,39 @@ The `TextBox` control provides editable single or multiline text surfaces.
 
 ## 4. MVVM-C Integration
 The `TextBox` control utilizes reactive properties (`Property<std::string>`) to bind its contents to a `ViewModel`. When the user types, the `TextBox` updates the property, pushing the new string to the ViewModel, which can then perform validation or state updates.
+
+## 5. RichText and Code Editing
+
+To support code editing, the framework provides the `CodeEditor` control alongside an extensible syntax highlighting engine.
+
+### Extensible Syntax Highlighting
+
+The syntax highlighting architecture is built on the `ISyntaxHighlighter` interface, allowing custom lexical parsing rules to be defined and updated reactively:
+
+```cpp
+class ISyntaxHighlighter {
+public:
+    virtual ~ISyntaxHighlighter() = default;
+    virtual std::vector<HighlightedToken> highlight(const std::string& line, int start_state, int& out_end_state) = 0;
+};
+```
+
+* **State-Based Parsing:** To ensure high performance with large files, the highlight loop accepts a `start_state` and returns an `out_end_state`. This allows the highlighter to parse multi-line elements (like C++ `/* ... */` block comments) efficiently.
+* **Token Classification:** Highlighting maps source code segments to a set of distinct categories defined by `TokenType`:
+  - `Normal` (default text)
+  - `Keyword` (control flow, compiler keywords)
+  - `Type` (data types)
+  - `Comment` (single-line or multi-line comments)
+  - `String` (string and char literals)
+  - `Number` (integers, floats, hex values)
+  - `Preprocessor` (macro defines and imports)
+  - `Operator` (punctuation, math, logic symbols)
+
+### CodeEditor Control
+
+The `CodeEditor` control is a highly responsive, feature-rich editing component:
+* **Interactive Line Numbers:** Displays line numbering in a dedicated left column that adjusts width dynamically based on the document size.
+* **Composition-Based Scrollbar:** Embeds a vertical `ScrollBar` child widget to allow intuitive scrolling through large files.
+* **Caret Navigation:** Supports standard coding shortcuts, including Left/Right/Up/Down arrows, Home/End (line margins), and PageUp/PageDown (page scrolling).
+* **Code Editing Operations:** Implements standard text insertion/deletion (Backspace/Delete at any offset) and auto-indents newlines to match the leading whitespace of the preceding line.
+* **Custom Styling:** Exposes a `token_colors` map allowing themes or users to customize colors for keywords, comments, preprocessors, types, background, divider lines, and carets.

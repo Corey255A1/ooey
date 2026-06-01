@@ -2,6 +2,7 @@
 #include "ooey/types.hpp"
 #include "gooey/application.hpp"
 #include "gooey/controls/text_box.hpp"
+#include "gooey/controls/code_editor.hpp"
 #include "gooey/controls/list_control.hpp"
 #include "gooey/mvvmc/navigation_coordinator.hpp"
 #include "gooey/mvvmc/controller.hpp"
@@ -380,6 +381,57 @@ TEST(OoeyMvvmc, RealRealElementDeletions) {
     input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Released});
     controller.process_events();
 }
+
+TEST(OoeyControls, CodeEditorEditingAndHighlighting) {
+    ooey::Font font{"monospace", 14};
+    gooey::CodeEditor editor{ooey::Rect{0, 0, 400, 300}, font, ooey::Color{255, 255, 255}, ooey::Color{30, 30, 30}};
+
+    // Focus CodeEditor
+    editor.on_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+
+    // Type text: "int x = 42;"
+    editor.on_text_event({static_cast<char32_t>('i')});
+    editor.on_text_event({static_cast<char32_t>('n')});
+    editor.on_text_event({static_cast<char32_t>('t')});
+    editor.on_text_event({static_cast<char32_t>(' ')});
+    editor.on_text_event({static_cast<char32_t>('x')});
+    editor.on_text_event({static_cast<char32_t>(' ')});
+    editor.on_text_event({static_cast<char32_t>('=')});
+    editor.on_text_event({static_cast<char32_t>(' ')});
+    editor.on_text_event({static_cast<char32_t>('4')});
+    editor.on_text_event({static_cast<char32_t>('2')});
+    editor.on_text_event({static_cast<char32_t>(';')});
+
+    EXPECT_EQ(editor.get_text(), "int x = 42;");
+
+    // Press Backspace
+    editor.on_key_event({0xFF08, ooey::KeyState::Pressed}); // XK_BackSpace
+    EXPECT_EQ(editor.get_text(), "int x = 42");
+
+    // Move cursor left twice to be before "42"
+    editor.on_key_event({0xFF51, ooey::KeyState::Pressed}); // Left
+    editor.on_key_event({0xFF51, ooey::KeyState::Pressed}); // Left
+
+    // Press Return to split line
+    editor.on_key_event({0xFF0D, ooey::KeyState::Pressed}); // XK_Return
+    EXPECT_EQ(editor.get_text(), "int x = \n42");
+
+    // Verify syntax highlighting works
+    auto highlighter = std::make_shared<gooey::CppSyntaxHighlighter>();
+    editor.set_syntax_highlighter(highlighter);
+    
+    int end_state = 0;
+    auto tokens = highlighter->highlight("int main() {", 0, end_state);
+    ASSERT_GE(tokens.size(), 1);
+    EXPECT_EQ(tokens[0].text, "int");
+    EXPECT_EQ(tokens[0].type, gooey::TokenType::Type);
+
+    auto tokens_ret = highlighter->highlight("return 0;", 0, end_state);
+    ASSERT_GE(tokens_ret.size(), 1);
+    EXPECT_EQ(tokens_ret[0].text, "return");
+    EXPECT_EQ(tokens_ret[0].type, gooey::TokenType::Keyword);
+}
+
 
 
 

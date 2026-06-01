@@ -277,6 +277,7 @@ target_sources(gooey PRIVATE
     gooey/src/controls/button.cpp
     gooey/src/controls/label.cpp
     gooey/src/controls/text_box.cpp
+    gooey/src/controls/code_editor.cpp
     gooey/src/controls/image_control.cpp
     gooey/src/controls/list_control.cpp
     gooey/src/controls/column.cpp
