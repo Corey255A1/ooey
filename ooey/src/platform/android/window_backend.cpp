@@ -6,12 +6,18 @@
 #include <android/keycodes.h>
 #include <android/asset_manager.h>
 #include <android_native_app_glue.h>
+#include <android/log.h>
 #include <iostream>
 #include <algorithm>
+
+#define LOG_TAG "OOEY_WINDOW"
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 
 namespace ooey::android {
 
 AAssetManager* g_asset_manager = nullptr;
+struct android_app* g_android_app = nullptr;
 
 WindowBackend::WindowBackend(struct android_app* app) : app_(app) {
     if (app_) {
@@ -29,6 +35,8 @@ void WindowBackend::on_window_created(ANativeWindow* window) {
     if (native_window_) {
         width_ = ANativeWindow_getWidth(native_window_);
         height_ = ANativeWindow_getHeight(native_window_);
+        LOGI("on_window_created: width=%d, height=%d, setting buffer geometry to RGBA_8888", width_, height_);
+        ANativeWindow_setBuffersGeometry(native_window_, width_, height_, WINDOW_FORMAT_RGBA_8888);
         init_software_surface();
     }
 }
@@ -42,6 +50,8 @@ void WindowBackend::on_window_resized() {
     if (native_window_) {
         width_ = ANativeWindow_getWidth(native_window_);
         height_ = ANativeWindow_getHeight(native_window_);
+        LOGI("on_window_resized: width=%d, height=%d, updating buffer geometry to RGBA_8888", width_, height_);
+        ANativeWindow_setBuffersGeometry(native_window_, width_, height_, WINDOW_FORMAT_RGBA_8888);
         init_software_surface();
     }
 }
@@ -68,7 +78,8 @@ void WindowBackend::present_software_frame() {
     if (!native_window_ || software_buffer_.empty()) return;
 
     ANativeWindow_Buffer buffer;
-    if (ANativeWindow_lock(native_window_, &buffer, nullptr) == 0) {
+    int lock_result = ANativeWindow_lock(native_window_, &buffer, nullptr);
+    if (lock_result == 0) {
         // Copy software_buffer_ to native window buffer row-by-row to handle pitch/stride adjustments
         uint8_t* src = software_buffer_.data();
         uint8_t* dst = static_cast<uint8_t*>(buffer.bits);
@@ -78,11 +89,16 @@ void WindowBackend::present_software_frame() {
         int rows = std::min(height_, buffer.height);
         int copy_bytes = std::min(width_, buffer.width) * 4;
 
+        LOGI("present_software_frame: width=%d, height=%d, stride=%d, format=%d. src_stride=%d, dst_stride=%d, rows=%d, copy_bytes=%d",
+             buffer.width, buffer.height, buffer.stride, buffer.format, src_stride, dst_stride, rows, copy_bytes);
+
         for (int y = 0; y < rows; ++y) {
             std::memcpy(dst + y * dst_stride, src + y * src_stride, copy_bytes);
         }
 
         ANativeWindow_unlockAndPost(native_window_);
+    } else {
+        LOGE("ANativeWindow_lock failed with error: %d", lock_result);
     }
 }
 

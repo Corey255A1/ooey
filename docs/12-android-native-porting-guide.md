@@ -178,6 +178,13 @@ Standard Linux rendering relies on Fontconfig for system TTF resolution. On Andr
 ### Energy-Saving Event Polling
 To avoid draining device battery, C++ event loops must not spin at 100% CPU when in the background. The `WindowBackend` checks the window state. When backgrounded or minimized, it uses a blocking `-1` timeout on the `ALooper` poll thread, going to sleep until the OS issues a resume or creation event.
 
+### Window Buffer Format Synchronization
+By default, the Android system may allocate `ANativeWindow` buffers in formats other than 32-bit RGBA (such as 16-bit RGB_565). To prevent memory access violations (`SIGSEGV` / `SEGV_ACCERR`) when copying standard 32-bit pixel buffers into the native window via raw pointer arithmetic in `memcpy`, the backend must explicitly configure the buffer geometry:
+```cpp
+ANativeWindow_setBuffersGeometry(native_window_, width_, height_, WINDOW_FORMAT_RGBA_8888);
+```
+This configuration must be updated during both window creation and window resize commands to keep the native window's buffer format in lockstep with the software rasterizer.
+
 ---
 
 ## 6. Project Manifest Configuration
@@ -251,7 +258,11 @@ cmake --build ${BUILD_DIR} --target hello_ooey
 
 echo "=== 2. Structuring APK directory ==="
 mkdir -p ${BUILD_DIR}/apk/lib/${ABI}
-cp ${BUILD_DIR}/lib/libhello_ooey.so ${BUILD_DIR}/apk/lib/${ABI}/
+if [ -f "${BUILD_DIR}/examples/libhello_ooey.so" ]; then
+    cp ${BUILD_DIR}/examples/libhello_ooey.so ${BUILD_DIR}/apk/lib/${ABI}/
+else
+    cp ${BUILD_DIR}/lib/libhello_ooey.so ${BUILD_DIR}/apk/lib/${ABI}/
+fi
 
 # Copy assets if any
 if [ -d "assets" ]; then
@@ -282,12 +293,13 @@ if [ ! -f my-key.keystore ]; then
 fi
 
 echo "=== 6. Signing APK package ==="
-apksigner sign --keystore my-key.keystore \
+apksigner sign --ks my-key.keystore \
                --ks-key-alias ooey_key \
                --ks-pass pass:password \
                --key-pass pass:password \
                --out ${BUILD_DIR}/app.apk \
                ${BUILD_DIR}/app-aligned.apk
+
 
 echo "=== 7. Build complete! ==="
 echo "APK location: ${BUILD_DIR}/app.apk"

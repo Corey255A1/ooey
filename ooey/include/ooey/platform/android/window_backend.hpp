@@ -11,6 +11,7 @@ struct AAssetManager;
 namespace ooey::android {
 
 extern AAssetManager* g_asset_manager;
+extern struct android_app* g_android_app;
 
 class WindowBackend : public IWindowBackend {
 public:

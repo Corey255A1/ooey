@@ -125,6 +125,8 @@ static int32_t android_handle_input(struct android_app* app, AInputEvent* event)
     return 0;
 }
 
+extern int main();
+
 // Entry point called by android_native_app_glue
 void android_main(struct android_app* state) {
     LOGI("OOEY: android_main bootstrapper started");
@@ -132,22 +134,14 @@ void android_main(struct android_app* state) {
     // Prevent NDK glue code from stripping symbols
     app_dummy();
 
-    // Create the window backend and bind it to the Android app context
-    auto backend = std::make_unique<ooey::android::WindowBackend>(state);
+    // Store the global app state
+    ooey::android::g_android_app = state;
+
+    // Register OS event callbacks
     state->onAppCmd = android_handle_cmd;
     state->onInputEvent = android_handle_input;
 
-    // Standard Application instance
-    gooey::Application app;
-    app.set_window_backend(std::move(backend));
-
-    // Optional clear color (sleek dark)
-    app.set_clear_color(ooey::Color{28, 28, 33});
-
-    // Run the main event loop
-    // Notice: The custom application will load its root views and controllers.
-    // In actual use, developers will subclass gooey::Application or inject a view tree.
-    app.run();
-
-    LOGI("OOEY: android_main loop terminated");
+    LOGI("OOEY: Handing control over to user main()");
+    int result = main();
+    LOGI("OOEY: user main() terminated with exit code %d", result);
 }

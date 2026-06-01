@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(EMSCRIPTEN)
+if(EMSCRIPTEN OR ANDROID)
     set(OOEY_BUILD_X11 OFF CACHE BOOL "Build X11" FORCE)
     set(OOEY_BUILD_WAYLAND OFF CACHE BOOL "Build Wayland" FORCE)
     set(OOEY_BUILD_FRAMEBUFFER OFF CACHE BOOL "Build Framebuffer" FORCE)
@@ -140,7 +140,6 @@ set(OOEY_SRCS
     ooey/src/renderer/glyph_atlas.cpp
     ooey/src/renderer/linux_font_backend.cpp
     ooey/src/renderer/win32_font_backend.cpp
-    ooey/src/renderer/gl_render_target.cpp
     ooey/src/renderer/software_render_target.cpp
     ooey/src/renderer/image.cpp
     ooey/src/renderer/image_decoder_registry.cpp
@@ -155,6 +154,12 @@ set(OOEY_SRCS
     ooey/src/renderer/primitives/sinusoid_primitive.cpp
     ooey/src/renderer/primitives/text_primitive.cpp
 )
+
+if(NOT ANDROID)
+    list(APPEND OOEY_SRCS
+        ooey/src/renderer/gl_render_target.cpp
+    )
+endif()
 
 if(NOT EMSCRIPTEN)
     list(APPEND OOEY_SRCS
@@ -175,6 +180,20 @@ if(EMSCRIPTEN)
 endif()
 
 if(ANDROID)
+    if(NOT ANDROID_NDK_HOME)
+        if(CMAKE_ANDROID_NDK)
+            set(ANDROID_NDK_HOME ${CMAKE_ANDROID_NDK})
+        elseif(ANDROID_NDK)
+            set(ANDROID_NDK_HOME ${ANDROID_NDK})
+        elseif(DEFINED ENV{ANDROID_NDK_HOME})
+            set(ANDROID_NDK_HOME $ENV{ANDROID_NDK_HOME})
+        endif()
+    endif()
+
+    if(NOT ANDROID_NDK_HOME)
+        message(FATAL_ERROR "ANDROID_NDK_HOME is not set. Please set it as a CMake variable or environment variable.")
+    endif()
+
     # Find NDK native_app_glue
     include_directories(${ANDROID_NDK_HOME}/sources/android/native_app_glue)
     add_library(native_app_glue STATIC
@@ -203,6 +222,12 @@ target_include_directories(ooey PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ooey/include>
     $<INSTALL_INTERFACE:include>
 )
+
+if(ANDROID)
+    target_include_directories(ooey PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gooey/include>
+    )
+endif()
 
 if(OOEY_BUILD_X11)
     target_compile_definitions(ooey PUBLIC OOEY_BUILD_X11)
@@ -234,6 +259,7 @@ elseif(ANDROID)
         GLESv2
         vulkan
     )
+    target_link_options(ooey INTERFACE "-Wl,-u,ANativeActivity_onCreate")
 else()
     find_package(Vulkan REQUIRED)
     target_link_libraries(ooey PUBLIC 

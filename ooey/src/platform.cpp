@@ -36,6 +36,9 @@ namespace ooey {
 
 std::unique_ptr<IWindowBackend> create_default_window_backend() {
 #ifdef OOEY_BUILD_ANDROID
+    if (android::g_android_app) {
+        return std::make_unique<android::WindowBackend>(android::g_android_app);
+    }
     return nullptr;
 #endif
 
