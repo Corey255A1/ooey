@@ -25,7 +25,7 @@ public:
 
     // Poll for events (keyboard, mouse, window close, etc.)
     // Returns true if the application should keep running, false if it should exit
-    virtual bool poll_events() = 0;
+    virtual bool poll_events(int timeout_ms = 0) = 0;
 
     // Get the render target associated with this window
     virtual renderer::IRenderTarget* get_render_target() = 0;

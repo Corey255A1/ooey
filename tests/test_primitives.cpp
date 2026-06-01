@@ -321,7 +321,7 @@ class MockWindowBackend : public ooey::IWindowBackend {
 public:
     bool create(const ooey::Size& /*size*/, const char* /*title*/) override { return true; }
     void destroy() override {}
-    bool poll_events() override { return true; }
+    bool poll_events(int timeout_ms = 0) override { (void)timeout_ms; return true; }
     void poll_input() override {}
     ooey::IRenderTarget* get_render_target() override { return nullptr; }
     void set_input_manager(ooey::InputManager* /*manager*/) override {}

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <string>
+#include <poll.h>
 
 namespace ooey::x11 {
 
@@ -139,10 +140,19 @@ void WindowBackend::handle_key_release_event(const void* event_ptr) {
     input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Released});
 }
 
-bool WindowBackend::poll_events() {
+bool WindowBackend::poll_events(int timeout_ms) {
     if (!display_ || should_close_) {
         return false;
     }
+
+    if (timeout_ms > 0 && XPending(display_) == 0) {
+        XFlush(display_);
+        struct pollfd pfd;
+        pfd.fd = ConnectionNumber(display_);
+        pfd.events = POLLIN;
+        poll(&pfd, 1, timeout_ms);
+    }
+
     XEvent event;
     while (XPending(display_)) {
         XNextEvent(display_, &event);

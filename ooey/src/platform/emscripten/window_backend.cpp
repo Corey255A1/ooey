@@ -137,7 +137,8 @@ void WindowBackend::destroy() {
     // WebGL context is managed by browser
 }
 
-bool WindowBackend::poll_events() {
+bool WindowBackend::poll_events(int timeout_ms) {
+    (void)timeout_ms;
     if (should_close_) {
         return false;
     }

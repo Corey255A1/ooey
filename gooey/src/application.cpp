@@ -139,7 +139,7 @@ void Application::run_iteration() {
         float scale = get_dpi_scale();
         input_manager_.set_scale(scale);
 
-        if (!window_backend_->poll_events()) {
+        if (!window_backend_->poll_events(next_poll_timeout_ms_)) {
             OOEY_LOG_INFO("Application", "Poll events returned false, shutting down");
             running_ = false;
         }
@@ -209,10 +209,28 @@ void Application::run_iteration() {
                     needs_render_ = false;
                 } else {
 #ifndef __EMSCRIPTEN__
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    if (next_poll_timeout_ms_ == 0) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
 #endif
                 }
             }
+        }
+
+        // Determine timeout for the next iteration's poll_events
+        bool has_dispatched_tasks = false;
+        {
+            std::lock_guard<std::mutex> lock(dispatcher_mutex_);
+            has_dispatched_tasks = !dispatcher_tasks_.empty();
+        }
+
+        if (needs_render_ ||
+            before_render_callback_ ||
+            has_dispatched_tasks ||
+            is_user_interacting()) {
+            next_poll_timeout_ms_ = 0;
+        } else {
+            next_poll_timeout_ms_ = 100;
         }
     } else {
         // Without a window backend, we'll just exit for now to avoid an infinite busy loop.

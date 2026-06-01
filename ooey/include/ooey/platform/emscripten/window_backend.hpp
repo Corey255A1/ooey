@@ -17,7 +17,7 @@ public:
 
     bool create(const Size& size, const char* title) override;
     void destroy() override;
-    bool poll_events() override;
+    bool poll_events(int timeout_ms = 0) override;
     void poll_input() override;
     renderer::IRenderTarget* get_render_target() override;
 

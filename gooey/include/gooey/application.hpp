@@ -98,6 +98,7 @@ private:
     static Application* instance_;
     std::mutex dispatcher_mutex_;
     std::vector<std::function<void()>> dispatcher_tasks_;
+    int next_poll_timeout_ms_{0};
 };
 
 } // namespace gooey

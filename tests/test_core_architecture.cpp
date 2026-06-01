@@ -40,7 +40,8 @@ public:
     void destroy() override {
     }
 
-    bool poll_events() override {
+    bool poll_events(int timeout_ms = 0) override {
+        (void)timeout_ms;
         poll_count++;
         if (poll_count >= 3) {
             return false; // Exit after 3 polls

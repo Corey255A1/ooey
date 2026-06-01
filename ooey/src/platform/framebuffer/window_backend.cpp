@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <iostream>
+#include <thread>
+#include <chrono>
 
 namespace ooey::framebuffer {
 
@@ -134,7 +136,10 @@ void WindowBackend::destroy() {
     }
 }
 
-bool WindowBackend::poll_events() {
+bool WindowBackend::poll_events(int timeout_ms) {
+    if (timeout_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+    }
     if (should_close_) {
         return false;
     }

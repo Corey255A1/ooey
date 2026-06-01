@@ -21,7 +21,7 @@ public:
 
     bool create(const Size& size, const char* title) override;
     void destroy() override;
-    bool poll_events() override;
+    bool poll_events(int timeout_ms = 0) override;
     void poll_input() override;
     IRenderTarget* get_render_target() override;
     int get_logical_width() const { return logical_w_; }

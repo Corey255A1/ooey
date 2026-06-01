@@ -44,11 +44,17 @@ However, sleeping for the full frame duration beats destructively against the ha
 4.  Once awake, the application processes the pending input, renders, and calls `present()`, which must now wait another 16ms for the *next* VSync interval.
 5.  This cuts the active frame rate in half (from 60 FPS to 30 FPS or lower), making scrolling and resizing feel extremely laggy and stuttery.
 
-### The 1ms Yield Solution
-To align with the display refresh cycle while minimizing CPU usage, the idle sleep duration is set to **`1ms`** on desktop targets. 
-*   A `1ms` sleep successfully suspends the execution thread, yielding CPU time to the operating system scheduler and dropping idle core utilization to ~0%.
-*   Waking up every `1ms` ensures that incoming OS events are polled at a high frequency. When a pointer drag or resize configuration event arrives, it is processed within a maximum of 1ms of latency.
-*   The application renders on time for the upcoming VSync deadline, ensuring a fluid 60 FPS rendering cycle during interactions.
+### The 1ms Yield and Adaptive Polling Solution
+To align with the display refresh cycle during active interactions while achieving a true ~0% CPU utilization when completely idle, the main loop employs an adaptive event-polling mechanism.
+
+The loop dynamically shifts between two states:
+1. **Active/Interacting State (`timeout_ms = 0`)**:
+   * When there are pending renders, active animations, dispatched background tasks, or recent user interactions, the event poll timeout is set to `0ms` (non-blocking).
+   * If the frame is skipped in this state (no render is needed), the thread yields via a **`1ms`** sleep. This sleep suspends the execution thread and yields CPU time to the OS scheduler, avoiding busy-loops and allowing the application to process new events with at most 1ms of latency. This keeps interactive frame rates fluid.
+2. **Idle State (`timeout_ms = 100`)**:
+   * When there are no pending renders, active animations, background tasks, or user interactions, the main loop transitions to an idle state with a poll timeout of `100ms`.
+   * The application blocks inside the OS kernel's event socket polling call (e.g., `poll`, `select`, or `ALooper_pollOnce`) for up to `100ms` at a time.
+   * If a user event (such as mouse movement or a keystroke) occurs, the kernel immediately wakes up the thread with zero latency, and the loop returns to the active state (`timeout_ms = 0`). If no events occur, the thread wakes up 10 times a second to perform housekeeping, resulting in ~0.0% CPU usage.
 
 ---
 
@@ -205,10 +211,10 @@ This clean abstraction bridges MVVM viewmodel state updates directly to the rend
 
 On Wayland targets (`ooey/src/platform/wayland/window_backend.cpp`), event polling behaves differently than on X11:
 1. **The Issue**: A traditional Wayland client reads and dispatches events from the compositor socket inside the buffer presentation (`present()`) cycle when swapping buffers. When we transitioned to event-driven idle throttling (where the rendering loop sleeps during idle periods and does not call `present()`), no new events were read from the Wayland socket. Consequently, `poll_events()` only called `wl_display_dispatch_pending()`, which processed already-queued events but never pulled new mouse clicks, drags, key presses, or configuration events from the socket connection. This caused the application to immediately freeze upon going idle.
-2. **The Remedy**: To solve this socket starvation without CPU busy-waiting, we updated `WindowBackend::poll_events()` to implement a robust, non-blocking Wayland socket polling loop using `<poll.h>` and Wayland's thread-safe display read API:
+2. **The Remedy**: To solve this socket starvation without CPU busy-waiting, we updated `WindowBackend::poll_events(int timeout_ms)` to implement a robust Wayland socket polling loop using `<poll.h>` and Wayland's thread-safe display read API, passing the adaptive timeout to the OS `poll` function:
 
 ```cpp
-bool WindowBackend::poll_events() {
+bool WindowBackend::poll_events(int timeout_ms) {
     if (!display_ || should_close_) {
         return false;
     }
@@ -219,7 +225,7 @@ bool WindowBackend::poll_events() {
     // Dispatch any events already in the client-side queue
     wl_display_dispatch_pending(display_);
 
-    // Read new events from the display socket without blocking
+    // Read new events from the display socket
     int fd = wl_display_get_fd(display_);
     struct pollfd pfd;
     pfd.fd = fd;
@@ -227,8 +233,8 @@ bool WindowBackend::poll_events() {
     pfd.revents = 0;
 
     if (wl_display_prepare_read(display_) == 0) {
-        // Non-blocking poll
-        int ret = poll(&pfd, 1, 0);
+        // Poll with timeout (0ms when active, up to 100ms when idle)
+        int ret = poll(&pfd, 1, timeout_ms);
         if (ret > 0 && (pfd.revents & POLLIN)) {
             if (wl_display_read_events(display_) < 0) {
                 return false; // Error reading events
@@ -244,4 +250,4 @@ bool WindowBackend::poll_events() {
 }
 ```
 
-This ensures that incoming user gestures are pulled immediately from the OS socket even when the rendering loop is throttled, allowing the application to wake up, re-render, and remain fully interactive.
+This ensures that incoming user gestures are pulled immediately from the OS socket, and the application blocks efficiently on the file descriptor when idle, allowing the thread to sleep in the kernel with zero active CPU usage while remaining completely responsive.

@@ -136,7 +136,7 @@ void WindowBackend::destroy() {
     running_ = false;
 }
 
-bool WindowBackend::poll_events() {
+bool WindowBackend::poll_events(int timeout_ms) {
     if (!app_ || !running_) {
         return false;
     }
@@ -146,11 +146,12 @@ bool WindowBackend::poll_events() {
     struct android_poll_source* source;
 
     // If the window is not ready/visible, block indefinitely to avoid spinning the CPU.
-    // When the window is visible, poll instantly (0ms timeout).
-    int timeout_ms = (native_window_ == nullptr) ? -1 : 0;
+    // When the window is visible, poll using the requested timeout.
+    int poll_timeout_ms = (native_window_ == nullptr) ? -1 : timeout_ms;
+    int current_timeout = poll_timeout_ms;
 
     // Poll command/sensor queue and dispatch events
-    while ((ident = ALooper_pollOnce(timeout_ms, nullptr, &events, (void**)&source)) >= 0) {
+    while ((ident = ALooper_pollOnce(current_timeout, nullptr, &events, (void**)&source)) >= 0) {
         if (source != nullptr) {
             source->process(app_, source);
         }
@@ -158,10 +159,8 @@ bool WindowBackend::poll_events() {
             running_ = false;
             break;
         }
-        // If we were in blocking mode, process one event and break so the main loop can check states.
-        if (timeout_ms == -1) {
-            break;
-        }
+        // Once we process one event (possibly after blocking), switch to non-blocking mode to drain the queue.
+        current_timeout = 0;
     }
 
     return running_;

@@ -65,7 +65,7 @@ Next, you need to tell the OS to give you a window.
 You must implement:
 - `create(const Size& size, const char* title)`
 - `destroy()`
-- `poll_events()`
+- `poll_events(int timeout_ms)`
 - `get_render_target()`
 
 ```cpp
@@ -87,8 +87,9 @@ public:
         // 2. Destroy OS window
     }
 
-    bool poll_events() override {
+    bool poll_events(int timeout_ms = 0) override {
         // Ask the OS if the user clicked 'X' to close, or pressed a key.
+        // Blocks for up to timeout_ms when idle to avoid high CPU usage.
         // Return TRUE to keep the app running.
         // Return FALSE if the user requested the app to close.
         return true; 
