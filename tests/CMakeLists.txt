@@ -14,6 +14,7 @@ set(OOEY_TEST_SRCS
     test_layout.cpp
     test_image.cpp
     test_font.cpp
+    test_dpi_scaling.cpp
 )
 
 if(OOEY_BUILD_FRAMEBUFFER)

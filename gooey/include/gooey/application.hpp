@@ -58,6 +58,13 @@ public:
     // Quit the application
     void quit();
 
+    // Enable/disable DPI aware auto-scaling
+    void set_dpi_scale_enabled(bool enabled) { dpi_scale_enabled_ = enabled; }
+    bool is_dpi_scale_enabled() const { return dpi_scale_enabled_; }
+
+    // Resolve the active DPI scale factor
+    float get_dpi_scale() const;
+
 private:
     std::unique_ptr<IWindowBackend> window_backend_;
     std::shared_ptr<mvvmc::View> root_view_;
@@ -70,6 +77,7 @@ private:
     bool running_{false};
     std::shared_ptr<mvvmc::ThemeManager> theme_manager_;
     mvvmc::ScopedSubscription theme_subscription_;
+    bool dpi_scale_enabled_{true};
 };
 
 } // namespace gooey

@@ -202,6 +202,7 @@ if(ANDROID)
     
     list(APPEND OOEY_SRCS
         ooey/src/platform/android/window_backend.cpp
+        ooey/src/platform/android/vulkan_window_backend.cpp
         ooey/src/platform/android/android_main.cpp
     )
 endif()
@@ -284,6 +285,8 @@ target_sources(gooey PRIVATE
     gooey/src/controls/flow_layout.cpp
     gooey/src/controls/scrollbar.cpp
     gooey/src/controls/datagrid.cpp
+    gooey/src/controls/adaptive_stack.cpp
+    gooey/src/controls/scroll_container.cpp
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
     gooey/src/mvvmc/view.cpp

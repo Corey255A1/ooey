@@ -163,4 +163,8 @@ void WindowBackend::set_window_chrome(std::shared_ptr<WindowChrome> chrome) {
     }
 }
 
+float WindowBackend::get_content_scale() const {
+    return static_cast<float>(emscripten_get_device_pixel_ratio());
+}
+
 } // namespace ooey::emscripten

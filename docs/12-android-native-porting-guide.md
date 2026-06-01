@@ -309,3 +309,35 @@ if [ "$1" == "--install" ]; then
     adb install -r ${BUILD_DIR}/app.apk
 fi
 ```
+
+---
+
+## 8. Hardware-Accelerated Rendering via Vulkan
+
+By default, OOEY uses hardware-accelerated rendering via Vulkan on Android. 
+
+### Architecture
+We subclass the Android `WindowBackend` class into `VulkanWindowBackend` to handle Vulkan initialization and surface mapping. This separation ensures the core event routing and input mapping are not cluttered with Vulkan APIs.
+
+### Setup & Creation
+1. **Instance Extensions**: The backend enables the `VK_KHR_surface` and `VK_KHR_android_surface` extensions on instance startup.
+2. **Surface Binding**: When the native activity creates the window (`ANativeWindow*`), the backend binds it to a Vulkan surface:
+   ```cpp
+   VkAndroidSurfaceCreateInfoKHR create_info{};
+   create_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+   create_info.window = native_window_;
+   vkCreateAndroidSurfaceKHR(instance_, &create_info, nullptr, &vk_surface_);
+   ```
+3. **Target Pipeline**: Re-creates a `VulkanRenderTarget` bound to the surface, which uses push constants to translate pixel coords into normalized device coordinates (NDC) dynamically in the shader.
+
+### Runtime Controls & Overrides
+You can choose the rendering backend or enable diagnostics at runtime using environment variables:
+* **Backend Selection (`OOEY_ANDROID_BACKEND`)**:
+  - `vulkan` (Default): Uses the `VulkanWindowBackend` hardware-accelerated pipeline.
+  - `software`: Forces the app to bypass Vulkan and use CPU-based rasterization.
+* **Validation Layers (`OOEY_VULKAN_VALIDATION`)**:
+  - Set to `1` to query and enable `VK_LAYER_KHRONOS_validation` inside the Vulkan instance and device configurations (requires the Vulkan validation layers to be installed on the device).
+
+### Graceful Fallback
+If Vulkan initialization fails (e.g. because of driver incompatibilities or missing surface layers), the backend logs the error and dynamically toggles the `use_software_fallback_` flag. Subsequent frames are automatically routed to the CPU rasterizer, maintaining layout compliance and preventing application crashes.
+

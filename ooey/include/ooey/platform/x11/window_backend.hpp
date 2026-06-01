@@ -33,6 +33,7 @@ public:
     void start_interactive_resize(WindowResizeEdge edge) override;
     void request_close() override { should_close_ = true; }
     Size get_size() const override { return Size{width_, height_}; }
+    float get_content_scale() const override;
 
 private:
     Display* display_{nullptr};

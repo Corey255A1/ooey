@@ -43,7 +43,14 @@ if(OOEY_BUILD_CONTROLS)
     add_ooey_executable(hello_fonts hello_fonts.cpp)
     target_link_libraries(hello_fonts PRIVATE ooey ooey_controls)
 
-    add_ooey_executable(hello_sysinfo hello_sysinfo.cpp)
+    add_ooey_executable(hello_sysinfo
+        sysinfo/metrics.cpp
+        sysinfo/styled_panel.cpp
+        sysinfo/view_model.cpp
+        sysinfo/view.cpp
+        sysinfo/themes.cpp
+        sysinfo/main.cpp
+    )
     target_link_libraries(hello_sysinfo PRIVATE ooey ooey_controls)
 
 

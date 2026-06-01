@@ -5,6 +5,9 @@ namespace ooey {}
 #include "gooey/mvvmc/theme.hpp"
 #include "ooey/logging.hpp"
 #include "ooey/renderer/window_chrome.hpp"
+#include "ooey/renderer/scaled_render_target.hpp"
+#include <cstdlib>
+#include <string>
 
 namespace gooey {
     using namespace ooey;
@@ -110,6 +113,9 @@ void Application::run_iteration() {
     }
 
     if (window_backend_) {
+        float scale = get_dpi_scale();
+        input_manager_.set_scale(scale);
+
         if (!window_backend_->poll_events()) {
             OOEY_LOG_INFO("Application", "Poll events returned false, shutting down");
             running_ = false;
@@ -131,14 +137,20 @@ void Application::run_iteration() {
                 target->clear(clear_color_);
 
                 if (root_view_) {
-                    Size size = window_backend_->get_size();
+                    Size physical_size = window_backend_->get_size();
+                    Size size{
+                        static_cast<int>(physical_size.width / scale),
+                        static_cast<int>(physical_size.height / scale)
+                    };
                     if (auto chrome = window_backend_->get_window_chrome()) {
-                        size.width -= 2 * chrome->get_border_width();
-                        size.height -= (2 * chrome->get_border_width() + chrome->get_title_bar_height());
+                        size.width -= static_cast<int>((2 * chrome->get_border_width()) / scale);
+                        size.height -= static_cast<int>((2 * chrome->get_border_width() + chrome->get_title_bar_height()) / scale);
                     }
                     root_view_->measure(size);
                     root_view_->layout(Rect{0, 0, size.width, size.height});
-                    root_view_->draw(*target);
+                    
+                    ScaledRenderTarget scaled_target(target, scale);
+                    root_view_->draw(scaled_target);
                 }
 
                 if (after_render_callback_) {
@@ -163,6 +175,35 @@ void Application::run_iteration() {
 void Application::quit() {
     OOEY_LOG_INFO("Application", "Quit requested");
     running_ = false;
+}
+
+float Application::get_dpi_scale() const {
+    if (!dpi_scale_enabled_) {
+        return 1.0f;
+    }
+
+    // 1. Check environment variable override
+    const char* scale_env = std::getenv("OOEY_SCALE");
+    if (scale_env) {
+        try {
+            float env_scale = std::stof(scale_env);
+            if (env_scale > 0.0f) {
+                return env_scale;
+            }
+        } catch (...) {
+            std::string s(scale_env);
+            if (s == "false" || s == "off" || s == "disabled" || s == "0") {
+                return 1.0f;
+            }
+        }
+    }
+
+    // 2. Query window backend if available
+    if (window_backend_) {
+        return window_backend_->get_content_scale();
+    }
+
+    return 1.0f;
 }
 
 } // namespace gooey

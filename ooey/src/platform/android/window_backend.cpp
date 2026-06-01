@@ -5,6 +5,7 @@
 #include <android/input.h>
 #include <android/keycodes.h>
 #include <android/asset_manager.h>
+#include <android/configuration.h>
 #include <android_native_app_glue.h>
 #include <android/log.h>
 #include <iostream>
@@ -35,25 +36,45 @@ void WindowBackend::on_window_created(ANativeWindow* window) {
     if (native_window_) {
         width_ = ANativeWindow_getWidth(native_window_);
         height_ = ANativeWindow_getHeight(native_window_);
-        LOGI("on_window_created: width=%d, height=%d, setting buffer geometry to RGBA_8888", width_, height_);
-        ANativeWindow_setBuffersGeometry(native_window_, width_, height_, WINDOW_FORMAT_RGBA_8888);
-        init_software_surface();
+        LOGI("on_window_created: width=%d, height=%d", width_, height_);
+        if (init_graphics_context()) {
+            recreate_render_target(width_, height_);
+        } else {
+            LOGE("init_graphics_context failed during on_window_created");
+        }
     }
 }
 
 void WindowBackend::on_window_destroyed() {
-    native_window_ = nullptr;
     render_target_.reset();
+    cleanup_graphics_context();
+    native_window_ = nullptr;
 }
 
 void WindowBackend::on_window_resized() {
     if (native_window_) {
         width_ = ANativeWindow_getWidth(native_window_);
         height_ = ANativeWindow_getHeight(native_window_);
-        LOGI("on_window_resized: width=%d, height=%d, updating buffer geometry to RGBA_8888", width_, height_);
-        ANativeWindow_setBuffersGeometry(native_window_, width_, height_, WINDOW_FORMAT_RGBA_8888);
-        init_software_surface();
+        LOGI("on_window_resized: width=%d, height=%d", width_, height_);
+        recreate_render_target(width_, height_);
     }
+}
+
+bool WindowBackend::init_graphics_context() {
+    return true;
+}
+
+void WindowBackend::cleanup_graphics_context() {
+    // Software fallback doesn't hold graphics context states
+}
+
+void WindowBackend::recreate_render_target(int width, int height) {
+    if (width <= 0 || height <= 0) return;
+    if (native_window_) {
+        LOGI("recreate_render_target (Software): setting buffer geometry to RGBA_8888, size %dx%d", width, height);
+        ANativeWindow_setBuffersGeometry(native_window_, width, height, WINDOW_FORMAT_RGBA_8888);
+    }
+    init_software_surface();
 }
 
 void WindowBackend::init_software_surface() {
@@ -202,6 +223,22 @@ void WindowBackend::request_close() {
 
 Size WindowBackend::get_size() const {
     return Size{width_, height_};
+}
+
+float WindowBackend::get_content_scale() const {
+    float scale = 1.0f;
+    if (app_ && app_->activity && app_->activity->assetManager) {
+        AConfiguration* config = AConfiguration_new();
+        if (config) {
+            AConfiguration_fromAssetManager(config, app_->activity->assetManager);
+            int32_t density = AConfiguration_getDensity(config);
+            AConfiguration_delete(config);
+            if (density > 0) {
+                scale = static_cast<float>(density) / 160.0f;
+            }
+        }
+    }
+    return scale;
 }
 
 } // namespace ooey::android

@@ -30,6 +30,7 @@ namespace ooey::android {
 
 #ifdef OOEY_BUILD_ANDROID
 #include "ooey/platform/android/window_backend.hpp"
+#include "ooey/platform/android/vulkan_window_backend.hpp"
 #endif
 
 namespace ooey {
@@ -37,7 +38,17 @@ namespace ooey {
 std::unique_ptr<IWindowBackend> create_default_window_backend() {
 #ifdef OOEY_BUILD_ANDROID
     if (android::g_android_app) {
-        return std::make_unique<android::WindowBackend>(android::g_android_app);
+        const char* backend_env = std::getenv("OOEY_ANDROID_BACKEND");
+        if (backend_env != nullptr) {
+            std::string type(backend_env);
+            if (type == "vulkan") {
+                return std::make_unique<android::VulkanWindowBackend>(android::g_android_app);
+            } else if (type == "software") {
+                return std::make_unique<android::WindowBackend>(android::g_android_app);
+            }
+        }
+        // Default to Vulkan backend, which handles its own software fallback if initialization fails
+        return std::make_unique<android::VulkanWindowBackend>(android::g_android_app);
     }
     return nullptr;
 #endif

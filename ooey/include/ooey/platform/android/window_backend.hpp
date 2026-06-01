@@ -41,8 +41,14 @@ public:
     void start_interactive_resize(WindowResizeEdge edge) override;
     void request_close() override;
     Size get_size() const override;
+    float get_content_scale() const override;
 
-private:
+protected:
+    // Virtual graphics hooks for subclasses to customize behavior
+    virtual bool init_graphics_context();
+    virtual void cleanup_graphics_context();
+    virtual void recreate_render_target(int width, int height);
+
     void init_software_surface();
     void present_software_frame();
 
@@ -60,3 +66,4 @@ private:
 };
 
 } // namespace ooey::android
+

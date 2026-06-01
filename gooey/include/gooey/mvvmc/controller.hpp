@@ -26,6 +26,10 @@ private:
     InputManager& input_manager_;
     std::shared_ptr<View> root_view_;
     IInteractive* focused_element_{nullptr};
+    IInteractive* captured_element_{nullptr};
+    int pointer_pressed_x_{0};
+    int pointer_pressed_y_{0};
+    bool captured_element_stolen_{false};
 };
 
 } // namespace gooey::mvvmc

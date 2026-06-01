@@ -6,6 +6,9 @@
 #include "gooey/controls/flow_layout.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
+#include "gooey/controls/adaptive_stack.hpp"
+#include "gooey/controls/scroll_container.hpp"
+#include "gooey/mvvmc/controller.hpp"
 
 using namespace gooey;
 using namespace ooey;
@@ -510,4 +513,205 @@ TEST(LayoutTest, DataGridVirtualizationAndSetup) {
     grid.set_row_line_style(LineStyle::Dotted);
     EXPECT_EQ(grid.get_row_line_style(), LineStyle::Dotted);
 }
+
+TEST(LayoutTest, AdaptiveStackHorizontal) {
+    auto stack = std::make_shared<AdaptiveStack>();
+    stack->set_breakpoint(600);
+    stack->set_width(SizePolicy::MatchParent);
+    stack->set_height(SizePolicy::MatchParent);
+    stack->set_padding(10);
+
+    auto child1 = std::make_shared<View>();
+    child1->set_width(SizePolicy::Fixed, 100.0f);
+    child1->set_height(SizePolicy::Fixed, 50.0f);
+    child1->set_margin(5);
+
+    auto child2 = std::make_shared<View>();
+    child2->set_width(SizePolicy::Fixed, 150.0f);
+    child2->set_height(SizePolicy::Fixed, 60.0f);
+    child2->set_margin(5);
+
+    stack->add_child(child1);
+    stack->add_child(child2);
+
+    // Measure with width > breakpoint (800 > 600) -> Horizontal/Row mode
+    Size constraints{800, 300};
+    Size measured = stack->measure(constraints);
+
+    // Width: padding (20) + child1 (100 + 10) + child2 (150 + 10) = 290
+    EXPECT_EQ(measured.width, 800); // MatchParent
+    EXPECT_EQ(measured.height, 300); // MatchParent
+
+    stack->layout(Rect{0, 0, 800, 300});
+
+    // Check horizontal positions
+    EXPECT_EQ(child1->layout_bounds.x, 15); // padding(10) + margin(5)
+    EXPECT_EQ(child2->layout_bounds.x, 125); // child1.x(15) + child1.width(100) + child1.margin_right(5) + child2.margin_left(5)
+    EXPECT_EQ(child1->layout_bounds.y, 15);
+    EXPECT_EQ(child2->layout_bounds.y, 15);
+}
+
+TEST(LayoutTest, AdaptiveStackVertical) {
+    auto stack = std::make_shared<AdaptiveStack>();
+    stack->set_breakpoint(600);
+    stack->set_width(SizePolicy::MatchParent);
+    stack->set_height(SizePolicy::MatchParent);
+    stack->set_padding(10);
+    stack->set_stretch_when_vertical(true);
+
+    auto child1 = std::make_shared<View>();
+    child1->set_width(SizePolicy::Fixed, 100.0f);
+    child1->set_height(SizePolicy::Fixed, 50.0f);
+    child1->set_margin(5);
+
+    auto child2 = std::make_shared<View>();
+    child2->set_width(SizePolicy::Fixed, 150.0f);
+    child2->set_height(SizePolicy::MatchParent); // vertical flex height child
+    child2->set_margin(5);
+
+    stack->add_child(child1);
+    stack->add_child(child2);
+
+    // Measure with width <= breakpoint (400 <= 600) -> Vertical/Column mode
+    Size constraints{400, 300};
+    Size measured = stack->measure(constraints);
+
+    EXPECT_EQ(measured.width, 400); // MatchParent
+    EXPECT_EQ(measured.height, 300); // MatchParent
+
+    stack->layout(Rect{0, 0, 400, 300});
+
+    // Check vertical stack positioning and stretching
+    // Width should stretch to content width: 400 - padding(20) - margins(10) = 370
+    EXPECT_EQ(child1->layout_bounds.width, 370);
+    EXPECT_EQ(child2->layout_bounds.width, 370);
+
+    // Check positions
+    EXPECT_EQ(child1->layout_bounds.x, 15);
+    EXPECT_EQ(child2->layout_bounds.x, 15);
+    EXPECT_EQ(child1->layout_bounds.y, 15);
+    // child1 height total: 50 + 10 = 60
+    // child2 y: child1.y(15) + child1.height(50) + child1.margin_bottom(5) + child2.margin_top(5) = 75
+    EXPECT_EQ(child2->layout_bounds.y, 75);
+
+    // Remaining height: 300 - padding(20) - child1 total(60) = 220
+    // child2 is MatchParent height, so it should get allocated the remaining height minus its margins (10) = 210
+    EXPECT_EQ(child2->layout_bounds.height, 210);
+}
+
+TEST(LayoutTest, ScrollContainerNoScroll) {
+    auto scroll = std::make_shared<ScrollContainer>();
+    scroll->set_width(SizePolicy::MatchParent);
+    scroll->set_height(SizePolicy::MatchParent);
+    scroll->set_padding(10);
+
+    auto child = std::make_shared<View>();
+    child->set_width(SizePolicy::MatchParent);
+    child->set_height(SizePolicy::Fixed, 100.0f);
+    scroll->set_child(child);
+
+    Size constraints{400, 300};
+    Size measured = scroll->measure(constraints);
+    EXPECT_EQ(measured.width, 400);
+    EXPECT_EQ(measured.height, 300);
+
+    scroll->layout(Rect{0, 0, 400, 300});
+    // With no scroll needed, child occupies the full height (offset y = 0)
+    EXPECT_EQ(child->layout_bounds.x, 10); // padding
+    EXPECT_EQ(child->layout_bounds.y, 10);
+    EXPECT_EQ(child->layout_bounds.width, 380); // 400 - padding(20)
+    EXPECT_EQ(child->layout_bounds.height, 100);
+}
+
+TEST(LayoutTest, ScrollContainerWithScrollAndDrag) {
+    auto scroll = std::make_shared<ScrollContainer>();
+    scroll->set_width(SizePolicy::MatchParent);
+    scroll->set_height(SizePolicy::MatchParent);
+    scroll->set_padding(10);
+
+    auto child = std::make_shared<View>();
+    child->set_width(SizePolicy::MatchParent);
+    child->set_height(SizePolicy::Fixed, 600.0f);
+    scroll->set_child(child);
+
+    Size constraints{400, 300};
+    Size measured = scroll->measure(constraints);
+    EXPECT_EQ(measured.width, 400);
+    EXPECT_EQ(measured.height, 300);
+
+    scroll->layout(Rect{0, 0, 400, 300});
+
+    // Content height (600) > viewport height (300 - padding(20) = 280) -> Scroll is needed.
+    // Child width should subtract scrollbar width (12px): 380 - 12 = 368
+    EXPECT_EQ(child->layout_bounds.width, 368);
+    EXPECT_EQ(child->layout_bounds.height, 600);
+    EXPECT_EQ(scroll->get_scroll_offset_y(), 0);
+
+    // Simulated drag scroll pointer events
+    // 1. Pressed inside container
+    scroll->on_pointer_event(Pointer{0, 200, 150, PointerState::Pressed});
+    // 2. Dragged up by 50px (e.y = 100) -> dy = -50 -> scroll offset increases by 50
+    scroll->on_pointer_event(Pointer{0, 200, 100, PointerState::Moved});
+    EXPECT_EQ(scroll->get_scroll_offset_y(), 50);
+
+    // Apply layout again with new scroll offset
+    scroll->layout(Rect{0, 0, 400, 300});
+    // Child is offset upwards: y = padding(10) - scroll_offset(50) = -40
+    EXPECT_EQ(child->layout_bounds.y, -40);
+
+    // 3. Drag release
+    scroll->on_pointer_event(Pointer{0, 200, 100, PointerState::Released});
+}
+
+TEST(LayoutTest, ScrollContainerControllerInterception) {
+    using namespace gooey::mvvmc;
+    using namespace gooey::controls;
+
+    InputManager input_manager;
+    auto scroll = std::make_shared<ScrollContainer>();
+    scroll->set_width(SizePolicy::MatchParent);
+    scroll->set_height(SizePolicy::MatchParent);
+
+    auto button = std::make_shared<Button>(Rect{10, 10, 100, 40}, Color{255, 255, 255});
+    button->set_width(SizePolicy::Fixed, 100);
+    button->set_height(SizePolicy::Fixed, 40);
+
+    auto content = std::make_shared<View>();
+    content->set_width(SizePolicy::MatchParent);
+    content->set_height(SizePolicy::Fixed, 600.0f);
+    content->add_child(button);
+
+    scroll->set_child(content);
+
+    scroll->measure(Size{400, 300});
+    scroll->layout(Rect{0, 0, 400, 300});
+
+    EXPECT_EQ(button->layout_bounds.x, 10);
+    EXPECT_EQ(button->layout_bounds.y, 10);
+
+    Controller controller(input_manager, scroll);
+
+    // 1. Press on the button
+    input_manager.push_pointer_event(Pointer{0, 50, 30, PointerState::Pressed});
+    controller.process_events();
+    input_manager.update();
+
+    // 2. Drag pointer vertically by 20 pixels (from y=30 to y=10)
+    input_manager.push_pointer_event(Pointer{0, 50, 10, PointerState::Moved});
+    controller.process_events();
+    input_manager.update();
+
+    // The scroll container should intercept the gesture, cancel button press, and drag scroll by 20 pixels
+    EXPECT_EQ(scroll->get_scroll_offset_y(), 20);
+
+    // 3. Release pointer
+    input_manager.push_pointer_event(Pointer{0, 50, 10, PointerState::Released});
+    controller.process_events();
+    input_manager.update();
+
+    // Offset should remain at 20
+    EXPECT_EQ(scroll->get_scroll_offset_y(), 20);
+}
+
+
 

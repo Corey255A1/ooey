@@ -53,6 +53,7 @@ public:
 
     Size get_size() const override { return Size{width_, height_}; }
     Size get_window_size() const { return get_size(); }
+    float get_content_scale() const override;
 
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);

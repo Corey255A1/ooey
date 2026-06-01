@@ -4,9 +4,12 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <X11/Xresource.h>
 #include <GL/glx.h>
 #include <GL/gl.h>
 #include <iostream>
+#include <cstdlib>
+#include <string>
 
 namespace ooey::x11 {
 
@@ -252,6 +255,45 @@ void WindowBackend::start_interactive_resize(WindowResizeEdge edge) {
         XSendEvent(display_, DefaultRootWindow(display_), False, SubstructureRedirectMask | SubstructureNotifyMask, reinterpret_cast<XEvent*>(&xev));
         XUngrabPointer(display_, CurrentTime);
     }
+}
+
+float WindowBackend::get_content_scale() const {
+    if (display_) {
+        XrmInitialize();
+        char* resource_manager = XResourceManagerString(display_);
+        if (resource_manager) {
+            XrmDatabase db = XrmGetStringDatabase(resource_manager);
+            if (db) {
+                char* type = nullptr;
+                XrmValue value;
+                if (XrmGetResource(db, "Xft.dpi", "Xft.Dpi", &type, &value)) {
+                    if (value.addr) {
+                        try {
+                            float dpi = std::stof(value.addr);
+                            XrmDestroyDatabase(db);
+                            if (dpi > 0.0f) {
+                                return dpi / 96.0f;
+                            }
+                        } catch (...) {}
+                    }
+                }
+                XrmDestroyDatabase(db);
+            }
+        }
+    }
+    
+    // Fallback to environment variable common on Linux desktops
+    const char* gdk_scale = std::getenv("GDK_SCALE");
+    if (gdk_scale) {
+        try {
+            float scale = std::stof(gdk_scale);
+            if (scale > 0.0f) {
+                return scale;
+            }
+        } catch (...) {}
+    }
+    
+    return 1.0f;
 }
 
 } // namespace ooey::x11

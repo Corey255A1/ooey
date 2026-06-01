@@ -58,11 +58,15 @@ public:
     // Clear transient states like 'Moved' if no longer moving, etc.
     void update();
 
+    void set_scale(float scale) { scale_ = scale; }
+    float get_scale() const { return scale_; }
+
 private:
     std::vector<Pointer> pointers_; // active pointers
     std::vector<Pointer> pointer_events_; // events for this frame
     std::vector<KeyEvent> key_events_; // For this frame
     std::vector<TextEvent> text_events_; // For this frame
+    float scale_{1.0f};
 };
 
 } // namespace ooey

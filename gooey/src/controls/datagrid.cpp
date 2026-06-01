@@ -95,8 +95,8 @@ bool DataGrid::on_key_event(const ooey::KeyEvent& /*e*/) {
 }
 
 Size DataGrid::do_measure(Size constraints) {
-    int w = resolve_width(constraints.width, bounds_.width);
-    int h = resolve_height(constraints.height, bounds_.height);
+    int w = resolve_width(constraints.width, absolute_bounds.width);
+    int h = resolve_height(constraints.height, absolute_bounds.height);
     return Size{w, h};
 }
 

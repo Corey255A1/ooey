@@ -39,6 +39,9 @@ public:
 
     // Get the window size
     virtual Size get_size() const = 0;
+
+    // Get the scale factor for High-DPI screens. Defaults to 1.0f.
+    virtual float get_content_scale() const { return 1.0f; }
 };
 
 } // namespace ooey

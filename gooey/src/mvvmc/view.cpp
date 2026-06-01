@@ -152,7 +152,11 @@ int View::resolve_width(int constraint_w, int content_w) const {
     if (width.policy == SizePolicy::Fixed) {
         w = static_cast<int>(width.value);
     } else if (width.policy == SizePolicy::MatchParent) {
-        w = constraint_w;
+        if (constraint_w >= 50000) {
+            w = content_w;
+        } else {
+            w = constraint_w;
+        }
     } else {
         w = content_w;
     }
@@ -164,7 +168,11 @@ int View::resolve_height(int constraint_h, int content_h) const {
     if (height.policy == SizePolicy::Fixed) {
         h = static_cast<int>(height.value);
     } else if (height.policy == SizePolicy::MatchParent) {
-        h = constraint_h;
+        if (constraint_h >= 50000) {
+            h = content_h;
+        } else {
+            h = constraint_h;
+        }
     } else {
         h = content_h;
     }

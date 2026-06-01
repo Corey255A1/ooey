@@ -18,6 +18,8 @@
 #include <cstring>
 #include <iostream>
 #include <limits.h>
+#include <cstdlib>
+#include <string>
 
 namespace ooey::wayland {
 
@@ -640,6 +642,19 @@ void WindowBackend::handle_xdg_toplevel_configure(int32_t width, int32_t height)
             recreate_render_target(this->width_, this->height_);
         }
     }
+}
+
+float WindowBackend::get_content_scale() const {
+    const char* gdk_scale = std::getenv("GDK_SCALE");
+    if (gdk_scale) {
+        try {
+            float scale = std::stof(gdk_scale);
+            if (scale > 0.0f) {
+                return scale;
+            }
+        } catch (...) {}
+    }
+    return 1.0f;
 }
 
 } // namespace ooey::wayland

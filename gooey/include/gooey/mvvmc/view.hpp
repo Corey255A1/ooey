@@ -89,6 +89,7 @@ public:
 
     virtual void set_theme_manager(std::shared_ptr<ThemeManager> manager);
     std::shared_ptr<ThemeManager> get_theme_manager() const { return theme_manager_.lock(); }
+    View* get_parent() const { return parent_; }
 
     virtual void apply_style(const Style& style);
 

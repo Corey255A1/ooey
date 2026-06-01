@@ -21,14 +21,14 @@ cmake -B ${BUILD_DIR} \
       -DANDROID_PLATFORM=android-${API_LEVEL} \
       -DCMAKE_BUILD_TYPE=Release
 
-cmake --build ${BUILD_DIR} --target hello_ooey
+cmake --build ${BUILD_DIR} --target hello_sysinfo
 
 echo "=== 2. Structuring APK directory ==="
 mkdir -p ${BUILD_DIR}/apk/lib/${ABI}
-if [ -f "${BUILD_DIR}/examples/libhello_ooey.so" ]; then
-    cp ${BUILD_DIR}/examples/libhello_ooey.so ${BUILD_DIR}/apk/lib/${ABI}/
+if [ -f "${BUILD_DIR}/examples/libhello_sysinfo.so" ]; then
+    cp ${BUILD_DIR}/examples/libhello_sysinfo.so ${BUILD_DIR}/apk/lib/${ABI}/
 else
-    cp ${BUILD_DIR}/lib/libhello_ooey.so ${BUILD_DIR}/apk/lib/${ABI}/
+    cp ${BUILD_DIR}/lib/libhello_sysinfo.so ${BUILD_DIR}/apk/lib/${ABI}/
 fi
 
 # Copy assets if any

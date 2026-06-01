@@ -4,18 +4,23 @@
 namespace ooey {
 
 void InputManager::push_pointer_event(const Pointer& pointer) {
-    pointer_events_.push_back(pointer);
+    Pointer scaled_pointer = pointer;
+    if (scale_ != 1.0f && scale_ > 0.0f) {
+        scaled_pointer.x = static_cast<int>(pointer.x / scale_);
+        scaled_pointer.y = static_cast<int>(pointer.y / scale_);
+    }
+    pointer_events_.push_back(scaled_pointer);
 
     auto it = std::find_if(pointers_.begin(), pointers_.end(),
-                           [&](const Pointer& p) { return p.id == pointer.id; });
+                           [&](const Pointer& p) { return p.id == scaled_pointer.id; });
                            
     if (it != pointers_.end()) {
-        *it = pointer;
-        if (pointer.state == PointerState::Released) {
+        *it = scaled_pointer;
+        if (scaled_pointer.state == PointerState::Released) {
             pointers_.erase(it);
         }
-    } else if (pointer.state != PointerState::Released) {
-        pointers_.push_back(pointer);
+    } else if (scaled_pointer.state != PointerState::Released) {
+        pointers_.push_back(scaled_pointer);
     }
 }
 
