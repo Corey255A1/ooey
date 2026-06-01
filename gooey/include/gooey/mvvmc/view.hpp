@@ -57,6 +57,8 @@ public:
     bool is_absolute{false};
     Rect absolute_bounds{0, 0, 0, 0};
 
+    bool clip_children{false};
+
     // Builder setters for chaining configuration
     View& set_width(SizePolicy policy, float value = 0.0f) { width = {policy, value}; return *this; }
     View& set_height(SizePolicy policy, float value = 0.0f) { height = {policy, value}; return *this; }
@@ -67,6 +69,7 @@ public:
     View& set_align_self(Align align) { align_self = align; return *this; }
     View& set_absolute(bool absolute) { is_absolute = absolute; return *this; }
     View& set_absolute_bounds(Rect bounds) { absolute_bounds = bounds; return *this; }
+    View& set_clip_children(bool clip) { clip_children = clip; return *this; }
 
     // Two-pass reactive layout system
     Size measure(Size constraints);
@@ -90,6 +93,8 @@ public:
     virtual void set_theme_manager(std::shared_ptr<ThemeManager> manager);
     std::shared_ptr<ThemeManager> get_theme_manager() const { return theme_manager_.lock(); }
     View* get_parent() const { return parent_; }
+    bool is_layout_clean() const { return is_layout_clean_; }
+    bool is_measure_clean() const { return is_measure_clean_; }
 
     virtual void apply_style(const Style& style);
 

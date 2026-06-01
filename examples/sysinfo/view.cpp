@@ -15,7 +15,7 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
     : view_model_(std::move(view_model)) {
     
     set_width(SizePolicy::MatchParent);
-    set_height(SizePolicy::WrapContent);
+    set_height(SizePolicy::MatchParent);
     set_padding(25);
     set_style_name("window");
 
@@ -38,6 +38,8 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
         Color{255, 255, 255}
     );
     title->set_absolute(false);
+    title->set_width(SizePolicy::MatchParent);
+    title->set_overflow(TextOverflow::Wrapped);
     title->set_margin(0, 0, 0, 5);
     title->set_style_name("title-text");
     header->add_child(title);
@@ -49,6 +51,8 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
         Color{140, 140, 150}
     );
     subtitle->set_absolute(false);
+    subtitle->set_width(SizePolicy::MatchParent);
+    subtitle->set_overflow(TextOverflow::Wrapped);
     subtitle->set_margin(0, 0, 0, 10);
     subtitle->set_style_name("subtitle-text");
     header->add_child(subtitle);
@@ -151,13 +155,13 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
     auto bottom_row = std::make_shared<AdaptiveStack>();
     bottom_row->set_breakpoint(740);
     bottom_row->set_width(SizePolicy::MatchParent);
-    bottom_row->set_height(SizePolicy::MatchParent);
+    bottom_row->set_height(SizePolicy::WrapContent);
     bottom_row->set_margin(0, 0, 0, 10);
 
     // Process DataGrid Panel
     auto grid_container = std::make_shared<Column>();
     grid_container->set_width(SizePolicy::MatchParent);
-    grid_container->set_height(SizePolicy::MatchParent);
+    grid_container->set_height(SizePolicy::WrapContent);
     grid_container->set_margin(0, 5, 10, 5);
 
     auto list_lbl = std::make_shared<Label>(
@@ -178,7 +182,7 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
     );
     proc_grid->set_absolute(false);
     proc_grid->set_width(SizePolicy::MatchParent);
-    proc_grid->set_height(SizePolicy::MatchParent);
+    proc_grid->set_height(SizePolicy::WrapContent);
     proc_grid->set_style_name("list-box");
 
     // Define columns matching standard process specs: PID, Name, CPU, RAM, State
@@ -263,6 +267,8 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
         Color{110, 110, 120}
     );
     footnote->set_absolute(false);
+    footnote->set_width(SizePolicy::MatchParent);
+    footnote->set_overflow(TextOverflow::Wrapped);
     footnote->set_style_name("footnote-text");
     main_card->add_child(footnote);
 }

@@ -266,6 +266,23 @@ void ChromeRenderTarget::resize(int width, int height) {
     target_->resize(width, height);
 }
 
+void ChromeRenderTarget::push_clip(const Rect& rect) {
+    if (!chrome_) {
+        target_->push_clip(rect);
+        return;
+    }
+    int dx = chrome_->get_border_width();
+    int dy = chrome_->get_border_width() + chrome_->get_title_bar_height();
+    Rect shifted = rect;
+    shifted.x += dx;
+    shifted.y += dy;
+    target_->push_clip(shifted);
+}
+
+void ChromeRenderTarget::pop_clip() {
+    target_->pop_clip();
+}
+
 void ChromeRenderTarget::present() {
     if (chrome_) {
         chrome_->draw(*target_, physical_size_);

@@ -88,6 +88,24 @@ public:
         wrapped_->present();
     }
 
+    void push_clip(const Rect& rect) override {
+        if (scale_ == 1.0f) {
+            wrapped_->push_clip(rect);
+            return;
+        }
+        Rect scaled_rect{
+            static_cast<int>(rect.x * scale_),
+            static_cast<int>(rect.y * scale_),
+            static_cast<int>(rect.width * scale_),
+            static_cast<int>(rect.height * scale_)
+        };
+        wrapped_->push_clip(scaled_rect);
+    }
+
+    void pop_clip() override {
+        wrapped_->pop_clip();
+    }
+
 private:
     IRenderTarget* wrapped_;
     float scale_;

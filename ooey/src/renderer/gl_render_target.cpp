@@ -25,6 +25,7 @@ void GlRenderTarget::resize(int width, int height) {
 }
 
 void GlRenderTarget::clear(Color color) {
+    clip_stack_.clear();
     glViewport(0, 0, width_, height_);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -32,8 +33,18 @@ void GlRenderTarget::clear(Color color) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    // Disable scissor temporarily for clear
+    bool scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
+    if (scissor_enabled) {
+        glDisable(GL_SCISSOR_TEST);
+    }
+
     glClearColor(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    if (scissor_enabled) {
+        glEnable(GL_SCISSOR_TEST);
+    }
 }
 
 void GlRenderTarget::draw_geometry(const Geometry& geometry) {
@@ -143,6 +154,37 @@ void GlRenderTarget::draw_text(const std::string& text, const Font& font, const 
     glDisable(GL_TEXTURE_2D);
 }
 
+
+void GlRenderTarget::push_clip(const Rect& rect) {
+    Rect current = rect;
+    if (!clip_stack_.empty()) {
+        const Rect& parent = clip_stack_.back();
+        int x1 = std::max(parent.x, rect.x);
+        int y1 = std::max(parent.y, rect.y);
+        int x2 = std::min(parent.x + parent.width, rect.x + rect.width);
+        int y2 = std::min(parent.y + parent.height, rect.y + rect.height);
+        int w = std::max(0, x2 - x1);
+        int h = std::max(0, y2 - y1);
+        current = Rect{x1, y1, w, h};
+    }
+    clip_stack_.push_back(current);
+
+    glEnable(GL_SCISSOR_TEST);
+    // Translate top-left y boundary to bottom-left y boundary
+    glScissor(current.x, height_ - (current.y + current.height), current.width, current.height);
+}
+
+void GlRenderTarget::pop_clip() {
+    if (!clip_stack_.empty()) {
+        clip_stack_.pop_back();
+    }
+    if (clip_stack_.empty()) {
+        glDisable(GL_SCISSOR_TEST);
+    } else {
+        const Rect& current = clip_stack_.back();
+        glScissor(current.x, height_ - (current.y + current.height), current.width, current.height);
+    }
+}
 
 void GlRenderTarget::present() {
     if (present_callback_) {

@@ -37,6 +37,7 @@ void SoftwareRenderTarget::initialize_buffer(uint8_t* data, int width, int heigh
 }
 
 void SoftwareRenderTarget::clear(Color color) {
+    clip_stack_.clear();
     if (!data_) {
         return;
     }
@@ -124,10 +125,11 @@ void SoftwareRenderTarget::draw_text(const std::string& text, const Font& font, 
                 int x0 = pen_x + metrics.offset_x;
                 int y0 = pen_y + metrics.offset_y;
 
-                int start_y = std::max(0, y0);
-                int end_y = std::min(height_, y0 + metrics.height);
-                int start_x = std::max(0, x0);
-                int end_x = std::min(width_, x0 + metrics.width);
+                Rect clip = get_current_clip();
+                int start_y = std::max(clip.y, y0);
+                int end_y = std::min(clip.y + clip.height, y0 + metrics.height);
+                int start_x = std::max(clip.x, x0);
+                int end_x = std::min(clip.x + clip.width, x0 + metrics.width);
 
                 for (int yy = start_y; yy < end_y; ++yy) {
                     uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
@@ -181,16 +183,45 @@ void SoftwareRenderTarget::present() {
     }
 }
 
+void SoftwareRenderTarget::push_clip(const Rect& rect) {
+    Rect current = rect;
+    if (!clip_stack_.empty()) {
+        const Rect& parent = clip_stack_.back();
+        int x1 = std::max(parent.x, rect.x);
+        int y1 = std::max(parent.y, rect.y);
+        int x2 = std::min(parent.x + parent.width, rect.x + rect.width);
+        int y2 = std::min(parent.y + parent.height, rect.y + rect.height);
+        int w = std::max(0, x2 - x1);
+        int h = std::max(0, y2 - y1);
+        current = Rect{x1, y1, w, h};
+    }
+    clip_stack_.push_back(current);
+}
+
+void SoftwareRenderTarget::pop_clip() {
+    if (!clip_stack_.empty()) {
+        clip_stack_.pop_back();
+    }
+}
+
+Rect SoftwareRenderTarget::get_current_clip() const {
+    if (clip_stack_.empty()) {
+        return Rect{0, 0, width_, height_};
+    }
+    return clip_stack_.back();
+}
+
 void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color color) {
     if (!data_) {
         return;
     }
     // Performance optimization: Pre-clamp rect bounds to the render target resolution.
     // This allows us to avoid expensive per-pixel clipping checks inside the nested rendering loop.
-    int start_y = std::max(0, y);
-    int end_y = std::min(height_, y + h);
-    int start_x = std::max(0, x);
-    int end_x = std::min(width_, x + w);
+    Rect clip = get_current_clip();
+    int start_y = std::max(clip.y, y);
+    int end_y = std::min(clip.y + clip.height, y + h);
+    int start_x = std::max(clip.x, x);
+    int end_x = std::min(clip.x + clip.width, x + w);
     if (start_x >= end_x || start_y >= end_y) {
         return;
     }
@@ -210,10 +241,11 @@ void SoftwareRenderTarget::draw_filled_rect_blended(int x, int y, int w, int h, 
     if (!data_ || color.a == 0) {
         return;
     }
-    int start_y = std::max(0, y);
-    int end_y = std::min(height_, y + h);
-    int start_x = std::max(0, x);
-    int end_x = std::min(width_, x + w);
+    Rect clip = get_current_clip();
+    int start_y = std::max(clip.y, y);
+    int end_y = std::min(clip.y + clip.height, y + h);
+    int start_x = std::max(clip.x, x);
+    int end_x = std::min(clip.x + clip.width, x + w);
     if (start_x >= end_x || start_y >= end_y) {
         return;
     }
@@ -263,8 +295,9 @@ void SoftwareRenderTarget::draw_line(int start_x, int start_y, int end_x, int en
     int error = delta_x + delta_y;
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
 
+    Rect clip = get_current_clip();
     while (true) {
-        if (start_x >= 0 && start_x < width_ && start_y >= 0 && start_y < height_) {
+        if (start_x >= clip.x && start_x < clip.x + clip.width && start_y >= clip.y && start_y < clip.y + clip.height) {
             uint32_t* row = reinterpret_cast<uint32_t*>(data_ + start_y * stride_);
             row[start_x] = pixel;
         }
@@ -284,10 +317,8 @@ void SoftwareRenderTarget::draw_line(int start_x, int start_y, int end_x, int en
 }
 
 void SoftwareRenderTarget::draw_pixel(int x, int y, Color color) {
-    if (!data_) {
-        return;
-    }
-    if (x >= 0 && x < width_ && y >= 0 && y < height_) {
+    Rect clip = get_current_clip();
+    if (x >= clip.x && x < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height) {
         uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y * stride_);
         uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
         row[x] = pixel;
@@ -311,9 +342,10 @@ void SoftwareRenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Ver
 
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
 
+    Rect clip = get_current_clip();
     for (int scanline_y = y_start; scanline_y < y_end; scanline_y++) {
         // Vertical clipping check at scanline level (outer loop)
-        if (scanline_y >= 0 && scanline_y < height_) {
+        if (scanline_y >= clip.y && scanline_y < clip.y + clip.height) {
             int x1 = static_cast<int>(std::round(curx1));
             int x2 = static_cast<int>(std::round(curx2));
             if (x1 > x2) {
@@ -321,8 +353,8 @@ void SoftwareRenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Ver
             }
             // Performance optimization: Clamp the horizontal scanline bounds to target width.
             // Avoids per-pixel clipping checks inside the inner loop.
-            int start_x = std::max(0, x1);
-            int end_x = std::min(width_ - 1, x2);
+            int start_x = std::max(clip.x, x1);
+            int end_x = std::min(clip.x + clip.width - 1, x2);
             if (start_x <= end_x) {
                 // Performance optimization: Cache row pointer per scanline (outer loop).
                 // Minimizes address calculation overhead for individual pixel writes.
@@ -354,9 +386,10 @@ void SoftwareRenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex
 
     uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
 
+    Rect clip = get_current_clip();
     for (int scanline_y = y_start; scanline_y > y_end; scanline_y--) {
         // Vertical clipping check at scanline level (outer loop)
-        if (scanline_y >= 0 && scanline_y < height_) {
+        if (scanline_y >= clip.y && scanline_y < clip.y + clip.height) {
             int x1 = static_cast<int>(std::round(curx1));
             int x2 = static_cast<int>(std::round(curx2));
             if (x1 > x2) {
@@ -364,8 +397,8 @@ void SoftwareRenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex
             }
             // Performance optimization: Clamp the horizontal scanline bounds to target width.
             // Avoids per-pixel clipping checks inside the inner loop.
-            int start_x = std::max(0, x1);
-            int end_x = std::min(width_ - 1, x2);
+            int start_x = std::max(clip.x, x1);
+            int end_x = std::min(clip.x + clip.width - 1, x2);
             if (start_x <= end_x) {
                 // Performance optimization: Cache row pointer per scanline (outer loop).
                 // Minimizes address calculation overhead for individual pixel writes.
@@ -418,10 +451,11 @@ void SoftwareRenderTarget::draw_image(const Image& image, const Rect& dest_rect)
     int img_w = image.width();
     int img_h = image.height();
 
-    int start_y = std::max(0, -dest_rect.y);
-    int end_y = std::min(dest_rect.height, height_ - dest_rect.y);
-    int start_x = std::max(0, -dest_rect.x);
-    int end_x = std::min(dest_rect.width, width_ - dest_rect.x);
+    Rect clip = get_current_clip();
+    int start_y = std::max(0, clip.y - dest_rect.y);
+    int end_y = std::min(dest_rect.height, clip.y + clip.height - dest_rect.y);
+    int start_x = std::max(0, clip.x - dest_rect.x);
+    int end_x = std::min(dest_rect.width, clip.x + clip.width - dest_rect.x);
 
     if (start_x >= end_x || start_y >= end_y) {
         return;

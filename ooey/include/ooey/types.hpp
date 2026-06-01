@@ -57,6 +57,13 @@ enum class LineStyle {
     Dotted
 };
 
+enum class TextOverflow {
+    None,
+    Clipped,
+    Shrunk,
+    Wrapped
+};
+
 enum class FontWeight {
     Normal,
     Bold

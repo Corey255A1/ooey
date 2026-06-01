@@ -4,6 +4,7 @@
 namespace gooey::controls {
 
 ScrollContainer::ScrollContainer() {
+    clip_children = true;
     v_scroll_ = std::make_shared<ScrollBar>(Rect{0, 0, 12, 100}, ScrollBarOrientation::Vertical);
     v_scroll_->on_value_changed = [this](int value) {
         set_scroll_offset_y(value);

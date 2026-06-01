@@ -188,6 +188,13 @@ void ScrollBar::do_layout(Rect bounds) {
     update_thumb_bounds();
 }
 
+void ScrollBar::draw(ooey::IRenderTarget& target) const {
+    if (bounds_.width <= 0 || bounds_.height <= 0) {
+        return;
+    }
+    View::draw(target);
+}
+
 void ScrollBar::apply_style(const mvvmc::Style& style) {
     track_color_ = style.fill_color;
     if (style.stroke_color.a > 0) {

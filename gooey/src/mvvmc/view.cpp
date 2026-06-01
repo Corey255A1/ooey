@@ -24,8 +24,14 @@ const std::vector<std::shared_ptr<IDrawable>>& View::get_children() const {
 }
 
 void View::draw(ooey::IRenderTarget& target) const {
+    if (clip_children) {
+        target.push_clip(layout_bounds);
+    }
     for (const auto& child : children_) {
         child->draw(target);
+    }
+    if (clip_children) {
+        target.pop_clip();
     }
 }
 

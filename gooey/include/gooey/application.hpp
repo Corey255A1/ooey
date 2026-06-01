@@ -55,6 +55,9 @@ public:
     // Run a single frame iteration (useful for Emscripten or custom loop scheduling)
     void run_iteration();
 
+    // Request a rendering pass on the next iteration
+    void request_render() { needs_render_ = true; }
+
     // Quit the application
     void quit();
 
@@ -75,6 +78,7 @@ private:
     InputManager input_manager_;
     int frame_count_{0};
     bool running_{false};
+    bool needs_render_{true};
     std::shared_ptr<mvvmc::ThemeManager> theme_manager_;
     mvvmc::ScopedSubscription theme_subscription_;
     bool dpi_scale_enabled_{true};

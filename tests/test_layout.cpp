@@ -713,5 +713,137 @@ TEST(LayoutTest, ScrollContainerControllerInterception) {
     EXPECT_EQ(scroll->get_scroll_offset_y(), 20);
 }
 
+class ClipSpyRenderTarget : public ooey::IRenderTarget {
+public:
+    std::vector<Rect> clips;
+    std::vector<Rect> geometry_draws;
+    std::vector<std::string> text_draws;
+    std::vector<int> text_font_sizes;
+
+    void clear(Color) override {}
+    void draw_geometry(const Geometry& geometry) override {
+        if (!geometry.vertices.empty()) {
+            int min_x = geometry.vertices[0].x;
+            int min_y = geometry.vertices[0].y;
+            int max_x = geometry.vertices[0].x;
+            int max_y = geometry.vertices[0].y;
+            for (const auto& v : geometry.vertices) {
+                min_x = std::min(min_x, (int)v.x);
+                min_y = std::min(min_y, (int)v.y);
+                max_x = std::max(max_x, (int)v.x);
+                max_y = std::max(max_y, (int)v.y);
+            }
+            geometry_draws.push_back(Rect{min_x, min_y, max_x - min_x, max_y - min_y});
+        }
+    }
+    void draw_image(const Image&, const Rect&) override {}
+    Size measure_text(const std::string& text, const Font& font) override {
+        // Mock measure: 10 pixels wide per char, 15 pixels high
+        return Size{static_cast<int>(text.length() * 10), 15};
+    }
+    void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override {
+        text_draws.push_back(text);
+        text_font_sizes.push_back(font.size);
+    }
+    void push_clip(const Rect& rect) override {
+        clips.push_back(rect);
+        clips_history.push_back(rect);
+    }
+    void pop_clip() override {
+        if (!clips.empty()) {
+            clips.pop_back();
+        }
+    }
+    void present() override {}
+
+    std::vector<Rect> clips_history;
+};
+
+TEST(LayoutTest, ViewClippingStack) {
+    using namespace gooey::mvvmc;
+
+    ClipSpyRenderTarget target;
+    auto parent = std::make_shared<View>();
+    parent->set_clip_children(true);
+    parent->layout(Rect{10, 20, 100, 100});
+
+    parent->draw(target);
+
+    // Parent has clip_children, so push_clip is called with layout bounds
+    ASSERT_FALSE(target.clips_history.empty());
+    EXPECT_EQ(target.clips_history[0].x, 10);
+    EXPECT_EQ(target.clips_history[0].y, 20);
+    EXPECT_EQ(target.clips_history[0].width, 100);
+    EXPECT_EQ(target.clips_history[0].height, 100);
+}
+
+TEST(LayoutTest, TextOverflowClipped) {
+    using namespace gooey::controls;
+
+    ClipSpyRenderTarget target;
+    Label lbl("Hello Clipping", Font("sans-serif", 12), Point{0,0}, Color{255,255,255});
+    lbl.set_overflow(TextOverflow::Clipped);
+    lbl.layout(Rect{5, 10, 50, 20});
+
+    lbl.draw(target);
+
+    // Clipped text should push/pop clip around layout bounds
+    ASSERT_FALSE(target.clips_history.empty());
+    EXPECT_EQ(target.clips_history[0].x, 5);
+    EXPECT_EQ(target.clips_history[0].y, 10);
+    EXPECT_EQ(target.clips_history[0].width, 50);
+    EXPECT_EQ(target.clips_history[0].height, 20);
+}
+
+TEST(LayoutTest, TextOverflowShrunk) {
+    using namespace gooey::controls;
+
+    ClipSpyRenderTarget target;
+    Label lbl("Hello Shrunk", Font("sans-serif", 12), Point{0,0}, Color{255,255,255});
+    lbl.set_overflow(TextOverflow::Shrunk);
+    // Hello Shrunk length is 12. At 10px per character mock, width is 120.
+    // If layout width is 60, scaling factor is 60/120 = 0.5. Font size 12 * 0.5 = 6.
+    lbl.layout(Rect{5, 10, 60, 20});
+
+    lbl.draw(target);
+
+    ASSERT_FALSE(target.text_font_sizes.empty());
+    EXPECT_LE(target.text_font_sizes[0], 6);
+}
+
+TEST(LayoutTest, TextOverflowWrapped) {
+    using namespace gooey::controls;
+
+    ClipSpyRenderTarget target;
+    Label lbl("Hello Wrapped Text Layout", Font("sans-serif", 12), Point{0,0}, Color{255,255,255});
+    lbl.set_overflow(TextOverflow::Wrapped);
+    // At 10px per char, "Hello Wrapped Text Layout" is 25 chars -> 250px wide.
+    // If layout width is 60, it must wrap into multiple lines.
+    lbl.layout(Rect{5, 10, 60, 100});
+
+    lbl.draw(target);
+
+    EXPECT_GT(target.text_draws.size(), 1);
+}
+
+TEST(LayoutTest, ScrollBarDrawZeroBounds) {
+    using namespace gooey::controls;
+    ClipSpyRenderTarget target;
+    auto scrollbar = std::make_shared<ScrollBar>(Rect{0, 0, 0, 0}, ScrollBarOrientation::Vertical);
+    scrollbar->draw(target);
+    EXPECT_TRUE(target.geometry_draws.empty());
+}
+
+TEST(LayoutTest, ScrollBarLayoutZeroBounds) {
+    using namespace gooey::controls;
+    ClipSpyRenderTarget target;
+    auto scrollbar = std::make_shared<ScrollBar>(Rect{0, 0, 12, 100}, ScrollBarOrientation::Vertical);
+    scrollbar->layout(Rect{0, 0, 0, 0});
+    scrollbar->draw(target);
+    EXPECT_TRUE(target.geometry_draws.empty());
+}
+
+
+
 
 

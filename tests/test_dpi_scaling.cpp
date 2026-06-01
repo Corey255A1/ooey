@@ -41,8 +41,20 @@ public:
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override {
         texts.push_back({text, font, position, color});
     }
+
+    void push_clip(const Rect& rect) override {
+        clips.push_back(rect);
+    }
+
+    void pop_clip() override {
+        if (!clips.empty()) {
+            clips.pop_back();
+        }
+    }
     
     void present() override {}
+
+    mutable std::vector<Rect> clips;
 };
 
 // 1. Test geometry scaling

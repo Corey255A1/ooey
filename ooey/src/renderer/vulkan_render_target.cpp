@@ -162,6 +162,7 @@ void VulkanRenderTarget::resize(int width, int height) {
 
 void VulkanRenderTarget::clear(Color color) {
     clear_color_ = color;
+    clip_stack_.clear();
 }
 
 void VulkanRenderTarget::draw_geometry(const Geometry& geometry) {
@@ -225,6 +226,7 @@ void VulkanRenderTarget::draw_geometry(const Geometry& geometry, const void* cac
             call.type = geometry.type;
             call.vertex_buffer = it->second.vertex_buffer;
             call.index_buffer = it->second.index_buffer;
+            call.scissor_rect = get_current_clip();
             draw_calls_.push_back(call);
             return;
         } else {
@@ -261,6 +263,7 @@ void VulkanRenderTarget::draw_geometry(const Geometry& geometry, const void* cac
             call.type = geometry.type;
             call.vertex_buffer = entry.vertex_buffer;
             call.index_buffer = entry.index_buffer;
+            call.scissor_rect = get_current_clip();
             draw_calls_.push_back(call);
             return;
         }
@@ -273,6 +276,7 @@ void VulkanRenderTarget::draw_geometry(const Geometry& geometry, const void* cac
     call.type = geometry.type;
     call.vertex_buffer = VK_NULL_HANDLE;
     call.index_buffer = VK_NULL_HANDLE;
+    call.scissor_rect = get_current_clip();
 
     frame_vertices_.insert(frame_vertices_.end(), geometry.vertices.begin(), geometry.vertices.end());
     frame_indices_.insert(frame_indices_.end(), geometry.indices.begin(), geometry.indices.end());
@@ -300,6 +304,7 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
     call.first_index = static_cast<uint32_t>(start_indices);
     call.vertex_offset = static_cast<int32_t>(start_vertices);
     call.type = PrimitiveType::Triangles;
+    call.scissor_rect = get_current_clip();
 
     uint32_t quad_count = 0;
 
@@ -479,6 +484,13 @@ void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t im
         VkBuffer last_index_buffer = VK_NULL_HANDLE;
 
         for (const auto& call : draw_calls_) {
+            VkRect2D vk_scissor{};
+            vk_scissor.offset.x = std::max(0, call.scissor_rect.x);
+            vk_scissor.offset.y = std::max(0, call.scissor_rect.y);
+            vk_scissor.extent.width = std::max(0, call.scissor_rect.width);
+            vk_scissor.extent.height = std::max(0, call.scissor_rect.height);
+            vkCmdSetScissor(cmd, 0, 1, &vk_scissor);
+
             VkPipeline active_pipeline = (call.type == PrimitiveType::Triangles) ? triangle_pipeline_ : line_pipeline_;
             if (active_pipeline != last_pipeline) {
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, active_pipeline);
@@ -547,6 +559,34 @@ void VulkanRenderTarget::submit_and_present(VkCommandBuffer cmd, uint32_t image_
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("Vulkan: Failed to present swapchain image!");
     }
+}
+
+void VulkanRenderTarget::push_clip(const Rect& rect) {
+    Rect current = rect;
+    if (!clip_stack_.empty()) {
+        const Rect& parent = clip_stack_.back();
+        int x1 = std::max(parent.x, rect.x);
+        int y1 = std::max(parent.y, rect.y);
+        int x2 = std::min(parent.x + parent.width, rect.x + rect.width);
+        int y2 = std::min(parent.y + parent.height, rect.y + rect.height);
+        int w = std::max(0, x2 - x1);
+        int h = std::max(0, y2 - y1);
+        current = Rect{x1, y1, w, h};
+    }
+    clip_stack_.push_back(current);
+}
+
+void VulkanRenderTarget::pop_clip() {
+    if (!clip_stack_.empty()) {
+        clip_stack_.pop_back();
+    }
+}
+
+Rect VulkanRenderTarget::get_current_clip() const {
+    if (clip_stack_.empty()) {
+        return Rect{0, 0, width_, height_};
+    }
+    return clip_stack_.back();
 }
 
 void VulkanRenderTarget::present() {
@@ -1039,6 +1079,7 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
     call.vertex_offset = static_cast<int32_t>(start_vertices);
     call.type = PrimitiveType::Triangles;
     call.index_count = static_cast<uint32_t>(cached.indices.size());
+    call.scissor_rect = get_current_clip();
 
     // Copy indices direct with offset adjustments
     frame_indices_.insert(frame_indices_.end(), cached.indices.begin(), cached.indices.end());

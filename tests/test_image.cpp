@@ -137,6 +137,8 @@ public:
         return ooey::Size{0, 0};
     }
     void draw_text(const std::string& /*text*/, const ooey::Font& /*font*/, const ooey::Point& /*position*/, ooey::Color /*color*/) override {}
+    void push_clip(const ooey::Rect& /*rect*/) override {}
+    void pop_clip() override {}
     void present() override {}
 };
 

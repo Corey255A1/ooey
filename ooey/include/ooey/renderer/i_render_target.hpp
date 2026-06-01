@@ -31,6 +31,10 @@ public:
     // Resize the render target
     virtual void resize(int width, int height) {}
 
+    // Clipping stack
+    virtual void push_clip(const Rect& rect) = 0;
+    virtual void pop_clip() = 0;
+
     // Swap the frame buffers or present the render output
     virtual void present() = 0;
 };

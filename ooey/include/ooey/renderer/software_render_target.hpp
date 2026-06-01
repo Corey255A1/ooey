@@ -1,8 +1,8 @@
 #pragma once
-
 #include "ooey/renderer/i_render_target.hpp"
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 namespace ooey {
 
@@ -21,6 +21,8 @@ public:
     void draw_image(const Image& image, const Rect& dest_rect) override;
     Size measure_text(const std::string& text, const Font& font) override;
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override;
+    void push_clip(const Rect& rect) override;
+    void pop_clip() override;
     void present() override;
 
 protected:
@@ -29,6 +31,9 @@ protected:
     int height_{0};
     int stride_{0};
     std::function<void()> present_callback_;
+    std::vector<Rect> clip_stack_;
+
+    Rect get_current_clip() const;
 
     void draw_pixel(int x, int y, Color color);
     void draw_line(int start_x, int start_y, int end_x, int end_y, Color color);

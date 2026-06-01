@@ -15,6 +15,8 @@ Let's imagine you are making a `MyCustomRenderTarget`. You must implement:
 - `draw_geometry(const Geometry& geometry)`
 - `measure_text(const std::string& text, const Font& font)`
 - `draw_text(const std::string& text, const Font& font, const Point& position, Color color)`
+- `push_clip(const Rect& rect)`
+- `pop_clip()`
 - `present()`
 
 ```cpp
@@ -41,6 +43,14 @@ public:
         ooey::BitmapFont::draw_text(text, font.size, position, [this, color](int x, int y, int w, int h) {
             // Draw a filled pixel/rect at (x, y) with size (w, h)
         });
+    }
+
+    void push_clip(const ooey::Rect& rect) override {
+        // Compute intersection with active clip bounds and push to the stack/pipeline scissor
+    }
+
+    void pop_clip() override {
+        // Pop the current clip bounds from stack/pipeline scissor
     }
 
     void present() override {

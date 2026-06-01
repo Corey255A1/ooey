@@ -71,6 +71,23 @@ stateDiagram-v2
      $$V_{\text{new}} = \text{min\_val} + \text{Ratio} \times (\text{max\_val} - P - \text{min\_val})$$
    - Updates trigger `on_value_changed` callbacks, which alert parent containers.
 
+### 2.3 Collapsed Sizing and Rendering Culling
+
+When a scrollbar is not needed by its parent viewport (e.g. inside `ScrollContainer` when content height fits the viewport, or `DataGrid` when row/column count fits constraints), the layout manager positions it using collapsed layout bounds:
+$$\text{bounds}_{\text{collapsed}} = \text{Rect}\{0, 0, 0, 0\}$$
+
+To prevent rendering artifacts:
+1. **Early Draw Termination**: The `ScrollBar::draw` function checks bounds dimensions before initiating drawing recursion. If either dimension is collapsed, it returns immediately without drawing track or thumb primitives:
+   ```cpp
+   void ScrollBar::draw(ooey::IRenderTarget& target) const {
+       if (bounds_.width <= 0 || bounds_.height <= 0) {
+           return;
+       }
+       View::draw(target);
+   }
+   ```
+2. **Min-Size Overrides Prevention**: Without this early check, because the control clamps thumb handles to a minimum of 12px for cursor visibility, track/thumb primitives would be computed with positive dimensions (e.g. `Rect{2, 0, 4, 12}`) and render at physical position `(0, 0)`.
+
 ---
 
 ## 3. DataGrid Viewport Virtualization

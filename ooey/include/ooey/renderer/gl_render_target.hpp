@@ -3,6 +3,7 @@
 #include "ooey/renderer/i_render_target.hpp"
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 namespace ooey {
 
@@ -20,6 +21,8 @@ public:
     void draw_image(const Image& image, const Rect& dest_rect) override;
     Size measure_text(const std::string& text, const Font& font) override;
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override;
+    void push_clip(const Rect& rect) override;
+    void pop_clip() override;
     void present() override;
 
 protected:
@@ -27,6 +30,7 @@ protected:
     int height_{0};
     std::function<void()> present_callback_;
     std::unordered_map<const Image*, unsigned int> texture_cache_;
+    std::vector<Rect> clip_stack_;
 };
 
 } // namespace ooey

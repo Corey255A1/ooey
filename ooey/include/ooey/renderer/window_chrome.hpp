@@ -105,6 +105,8 @@ public:
     Size measure_text(const std::string& text, const Font& font) override;
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override;
     void resize(int width, int height) override;
+    void push_clip(const Rect& rect) override;
+    void pop_clip() override;
     void present() override;
 
 private:

@@ -35,6 +35,8 @@ public:
     void draw_image(const Image& image, const Rect& dest_rect) override;
     Size measure_text(const std::string& text, const Font& font) override;
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override;
+    void push_clip(const Rect& rect) override;
+    void pop_clip() override;
     void present() override;
 
     // Vulkan resource getters
@@ -134,10 +136,14 @@ private:
         PrimitiveType type;
         VkBuffer vertex_buffer{VK_NULL_HANDLE};
         VkBuffer index_buffer{VK_NULL_HANDLE};
+        Rect scissor_rect{0, 0, 0, 0};
     };
     std::vector<DrawCall> draw_calls_;
     std::vector<Vertex> frame_vertices_;
     std::vector<uint32_t> frame_indices_;
+    std::vector<Rect> clip_stack_;
+
+    Rect get_current_clip() const;
 
     void create_pipelines();
     void create_pipeline_layout();

@@ -8,6 +8,8 @@ namespace ooey {}
 #include "ooey/renderer/scaled_render_target.hpp"
 #include <cstdlib>
 #include <string>
+#include <thread>
+#include <chrono>
 
 namespace gooey {
     using namespace ooey;
@@ -126,42 +128,65 @@ void Application::run_iteration() {
                 controller_->process_events();
             }
 
+            bool had_input = !input_manager_.get_pointer_events().empty() ||
+                             !input_manager_.get_key_events().empty() ||
+                             !input_manager_.get_text_events().empty();
+
             input_manager_.update(); // clear transient states
 
             auto* target = window_backend_->get_render_target();
             if (target) {
+                Size physical_size = window_backend_->get_size();
+                Size size{
+                    static_cast<int>(physical_size.width / scale),
+                    static_cast<int>(physical_size.height / scale)
+                };
+                if (auto chrome = window_backend_->get_window_chrome()) {
+                    size.width -= static_cast<int>((2 * chrome->get_border_width()) / scale);
+                    size.height -= static_cast<int>((2 * chrome->get_border_width() + chrome->get_title_bar_height()) / scale);
+                }
+
+                static Size last_size{0, 0};
+                bool size_changed = (size.width != last_size.width || size.height != last_size.height);
+                last_size = size;
+
+                bool layout_dirty = root_view_ && (!root_view_->is_layout_clean() || !root_view_->is_measure_clean());
+                bool should_render = needs_render_ || size_changed || layout_dirty || had_input;
+
                 if (before_render_callback_) {
                     before_render_callback_(target);
                 }
 
-                target->clear(clear_color_);
+                if (root_view_ && (!root_view_->is_layout_clean() || !root_view_->is_measure_clean())) {
+                    should_render = true;
+                }
 
-                if (root_view_) {
-                    Size physical_size = window_backend_->get_size();
-                    Size size{
-                        static_cast<int>(physical_size.width / scale),
-                        static_cast<int>(physical_size.height / scale)
-                    };
-                    if (auto chrome = window_backend_->get_window_chrome()) {
-                        size.width -= static_cast<int>((2 * chrome->get_border_width()) / scale);
-                        size.height -= static_cast<int>((2 * chrome->get_border_width() + chrome->get_title_bar_height()) / scale);
+                if (should_render) {
+                    target->clear(clear_color_);
+
+                    if (root_view_) {
+                        root_view_->measure(size);
+                        root_view_->layout(Rect{0, 0, size.width, size.height});
+                        
+                        ScaledRenderTarget scaled_target(target, scale);
+                        root_view_->draw(scaled_target);
                     }
-                    root_view_->measure(size);
-                    root_view_->layout(Rect{0, 0, size.width, size.height});
+
+                    if (after_render_callback_) {
+                        after_render_callback_(target);
+                    }
+
+                    target->present();
                     
-                    ScaledRenderTarget scaled_target(target, scale);
-                    root_view_->draw(scaled_target);
-                }
-
-                if (after_render_callback_) {
-                    after_render_callback_(target);
-                }
-
-                target->present();
-                
-                frame_count_++;
-                if (frame_count_ % 300 == 0) {
-                    OOEY_LOG_DEBUG("Application", "Rendered " << frame_count_ << " frames");
+                    frame_count_++;
+                    if (frame_count_ % 300 == 0) {
+                        OOEY_LOG_DEBUG("Application", "Rendered " << frame_count_ << " frames");
+                    }
+                    needs_render_ = false;
+                } else {
+#ifndef __EMSCRIPTEN__
+                    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+#endif
                 }
             }
         }

@@ -124,12 +124,18 @@ metrics_row->add_child(disk_card);
 auto bottom_row = std::make_shared<AdaptiveStack>();
 bottom_row->set_breakpoint(740);
 bottom_row->set_width(SizePolicy::MatchParent);
-bottom_row->set_height(SizePolicy::MatchParent);
+bottom_row->set_height(SizePolicy::WrapContent); // Prevents swallowing vertical space from sibling widgets
 
-// Process grid takes all remaining space
+// Process grid container
 auto grid_container = std::make_shared<Column>();
 grid_container->set_width(SizePolicy::MatchParent);
-grid_container->set_height(SizePolicy::MatchParent);
+grid_container->set_height(SizePolicy::WrapContent); // Set to WrapContent to resolve vertical collisions
+
+auto proc_grid = std::make_shared<DataGrid>(Rect{0, 0, 510, 240}, 26, Font{"monospace", 12});
+proc_grid->set_absolute(false);
+proc_grid->set_width(SizePolicy::MatchParent);
+proc_grid->set_height(SizePolicy::WrapContent); // WrapContent height enforces absolute row constraints in layout calculations
+grid_container->add_child(proc_grid);
 
 // Theme card has a fixed width of 220px on desktop
 auto theme_card = std::make_shared<StyledPanel>();
@@ -152,4 +158,116 @@ button_flow->add_child(btn_dark);
 theme_card->add_child(button_flow);
 bottom_row->add_child(grid_container);
 bottom_row->add_child(theme_card);
+
+// Top level card containing the main content
+auto main_card = std::make_shared<StyledPanel>();
+main_card->set_width(SizePolicy::MatchParent);
+main_card->set_height(SizePolicy::MatchParent); // Fills available viewport vertical area
+main_card->add_child(metrics_row);
+main_card->add_child(bottom_row);
+
+// Footnote description at the bottom
+auto footnote = std::make_shared<Label>(
+    "Note: Processes grid view is fully virtualized and refreshed once per second. Responsive DataGrid layout enabled.",
+    Font{"sans-serif", 11},
+    Point{0, 0},
+    Color{110, 110, 120}
+);
+footnote->set_absolute(false);
+footnote->set_width(SizePolicy::MatchParent); // Stretch horizontally
+footnote->set_overflow(TextOverflow::Wrapped); // Wraps text onto multiple lines
+main_card->add_child(footnote);
 ```
+
+---
+
+## 4. Visual Clipping Stack
+
+To prevent views and child components from rendering outside their visual parents (such as inside a `ScrollContainer` viewport or inside custom layout boundaries), OOEY incorporates a recursive, stack-based clipping system.
+
+### 4.1 Sizing Philosophy
+
+Views can enable clipping by setting `set_clip_children(true)`. By default, this is disabled for standard layout views to optimize render-cycle throughput, but is automatically activated for viewport containers like `ScrollContainer`.
+
+*   `virtual void push_clip(const Rect& rect) = 0;`: Computes the intersection of `rect` with the current clipping rectangle at the top of the stack and pushes it as the active clipping rectangle.
+*   `virtual void pop_clip() = 0;`: Pops the current clipping bounds from the stack, restoring the previous clip.
+
+### 4.2 Renderer Implementations
+
+Each rendering backend implements scissor testing optimized for its hardware pipeline:
+*   **Vulkan (`VulkanRenderTarget`)**: Because drawing is buffered as `DrawCall` objects, scissor boundaries are attached to each `DrawCall`. During rendering pass recording, `vkCmdSetScissor` is called dynamically per draw call.
+*   **OpenGL (`GlRenderTarget`)**: Manipulates `glScissor` coordinates. Since OpenGL systems use a bottom-left origin, top-left logical coordinates are translated:
+    $$y_{gl} = H_{target} - (y + H_{rect})$$
+    Scissoring is temporarily suspended during buffer clearing so the entire screen is reset.
+*   **Software Renderer (`SoftwareRenderTarget`)**: Clamps rasterization bounds in pixel-drawing loops. Lines, triangles, images, filled rectangles, and glyph arrays are cropped to the active scissor rectangle before memory buffer writes.
+*   **Decorators (`ScaledRenderTarget` & `ChromeRenderTarget`)**: `ScaledRenderTarget` scales the clip rectangle up by the DPI scaling factor $S$. `ChromeRenderTarget` translates the clip rectangle by window border and title bar offsets $(dx, dy)$ before delegating.
+
+---
+
+## 5. Text Overflow Policies
+
+When labels and text fields contain text exceeding the visual boundaries of their container, developers can customize the handling policy via the `TextOverflow` enum property on the `Label` control:
+
+```cpp
+enum class TextOverflow {
+    None,     // Allows text to overflow bounds normally
+    Clipped,  // Clips text drawing bounds using the target's clipping stack
+    Shrunk,   // Scales down the font size proportionally to fit the bounds
+    Wrapped   // Wraps the text by space tokens into multiple lines
+};
+```
+
+### 5.1 API Configuration
+
+*   `set_overflow(TextOverflow policy)`: Chains the policy directly to the `Label` control.
+*   `set_overflow_policy(TextOverflow policy)`: Explicitly sets the overflow mode on the control.
+
+### 5.2 Layout and Drawing Resolution
+
+*   **Wrapped Sizing (`do_measure`)**: When `TextOverflow::Wrapped` is selected, `Label::do_measure` computes text lines by checking character widths using target-aware measurement metrics. The layout engine returns the height scaled by the line-count:
+    $$H_{measured} = \text{line\_count} \times H_{line}$$
+*   **Shrunk Sizing**: Measures the text at the default font size. During draw cycles, if the text's bounding width/height exceeds the allocated container layout bounds, the rendering scale factor is calculated:
+    $$scale = \min\left(1.0, \frac{W_{avail}}{W_{text}}, \frac{H_{avail}}{H_{text}}\right)$$
+    The font size is scaled down dynamically:
+    $$\text{size}_{font} = \max(1, \text{size}_{default} \times scale)$$
+
+---
+
+## 6. Layout Resolution Pitfalls & Rendering Bug Fixes
+
+Building responsive, multi-device layouts introduces specific UI rendering bugs when views size-collapse or compete for space in layout stacks. This section documents specific resolution bugs and their fixes:
+
+### 6.1 Collapsed Scrollbar Artifacts (Fixed)
+
+**The Bug:** In both `ScrollContainer` and `DataGrid`, when scrollbars are not required, they are laid out with collapsed bounds `Rect{0, 0, 0, 0}`. However, because `ScrollBar` clamps its slider handle to a minimum thickness (12px) for user accessibility, calling `update_thumb_bounds()` on a collapsed scrollbar would compute internal bounds such as `Rect{2, 0, 4, 12}`. Under default `View::draw` implementation, these track and thumb primitives were rendered in the top-left corner of the screen `(0, 0)`.
+
+**The Fix:** Overrode the `draw(ooey::IRenderTarget& target) const` method in the `ScrollBar` control:
+```cpp
+void ScrollBar::draw(ooey::IRenderTarget& target) const {
+    if (bounds_.width <= 0 || bounds_.height <= 0) {
+        return; // Suppress rendering for collapsed bounds
+    }
+    View::draw(target);
+}
+```
+This halts drawing recursion for any scrollbar widget that has been collapsed by its layout manager, preventing invalid rendering calls entirely.
+
+### 6.2 Vertical Spacing Collisions & Missing Sibling Widgets (Fixed)
+
+**The Bug:** Stacking layouts with height constraints (like the main vertical `Column` in a dashboard) process height allocations sequentially:
+1. When a child container in a vertical `Column` is configured with `MatchParent` height (such as the original `bottom_row` adaptive stack), the column allocator assigns **all remaining available vertical layout height** to that container.
+2. When the layout engine progresses to subsequent sibling widgets (such as the bottom `footnote` label), the available layout height `avail_h` is already reduced to `0`. Consequently, those siblings measure and layout with height `0` and vanish from the screen.
+
+**The Fix:**
+* Enforce `WrapContent` height on all intermediate vertical layout nodes (`bottom_row`, `grid_container`, and the virtualized `proc_grid`) so they stack snugly based on their content boundaries.
+* Change the parent dashboard view (`SystemMonitorView`) height from `WrapContent` to `MatchParent` (in [view.cpp](file:///home/corey/code/ooey/examples/sysinfo/view.cpp#L18)). This ensures the view stretches to fill the physical screen viewport when room permits, but naturally falls back to scrolling heights in smaller screen ratios under `ScrollContainer` unconstrained height measurement rules.
+
+### 6.3 Responsive Text Wrapping
+
+**The Design Pattern:** When displaying text elements under constrained layouts (such as on portrait phone displays), default labels with `WrapContent` width do not wrap and get clipped horizontally. Configuring header titles, subtitles, and footer text with:
+```cpp
+label->set_width(SizePolicy::MatchParent);
+label->set_overflow(TextOverflow::Wrapped);
+```
+tells the text engine to split text lines by spaces relative to parent container width constraints, dynamically increasing container height and reflowing sentences.
+
