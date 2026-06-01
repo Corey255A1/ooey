@@ -332,10 +332,17 @@ public:
     void request_close() override { close_called = true; }
     ooey::Size get_size() const override { return ooey::Size{800, 600}; }
 
+    bool is_maximized() const override { return maximized_; }
+    void request_maximize() override { maximize_called = true; maximized_ = true; }
+    void request_restore() override { restore_called = true; maximized_ = false; }
+
     bool move_called{false};
     bool resize_called{false};
     ooey::WindowResizeEdge last_edge{ooey::WindowResizeEdge::None};
     bool close_called{false};
+    bool maximize_called{false};
+    bool restore_called{false};
+    bool maximized_{false};
 };
 
 } // namespace
@@ -354,8 +361,10 @@ TEST(WindowChromeTest, HitTesting) {
     // Test Close Button (right side of title bar)
     // close_x starts at 800 - 4 - 30 = 766
     EXPECT_EQ(chrome.hit_test(780, 15, win_size), ooey::ChromeHitTest::CloseButton);
-    // Test Minimize Button (starts at 736)
-    EXPECT_EQ(chrome.hit_test(750, 15, win_size), ooey::ChromeHitTest::MinimizeButton);
+    // Test Maximize Button (starts at 800 - 4 - 60 = 736)
+    EXPECT_EQ(chrome.hit_test(750, 15, win_size), ooey::ChromeHitTest::MaximizeButton);
+    // Test Minimize Button (starts at 800 - 4 - 90 = 706)
+    EXPECT_EQ(chrome.hit_test(720, 15, win_size), ooey::ChromeHitTest::MinimizeButton);
     // Test Client Area
     EXPECT_EQ(chrome.hit_test(400, 300, win_size), ooey::ChromeHitTest::Client);
 }
@@ -384,6 +393,22 @@ TEST(WindowChromeTest, HandlePointerEventMoveResizeClose) {
     ooey::Pointer p_close_release{0, 780, 15, ooey::PointerState::Released};
     EXPECT_TRUE(chrome->handle_pointer_event(p_close_release, win_size, &backend));
     EXPECT_TRUE(backend.close_called);
+
+    // 4. Maximize/Restore test
+    ooey::Pointer p_max_press{0, 750, 15, ooey::PointerState::Pressed};
+    EXPECT_TRUE(chrome->handle_pointer_event(p_max_press, win_size, &backend));
+    EXPECT_FALSE(backend.maximize_called); // only called on release
+    
+    ooey::Pointer p_max_release{0, 750, 15, ooey::PointerState::Released};
+    EXPECT_TRUE(chrome->handle_pointer_event(p_max_release, win_size, &backend));
+    EXPECT_TRUE(backend.maximize_called);
+    EXPECT_TRUE(backend.is_maximized());
+
+    // Pressing maximize button again should call restore
+    EXPECT_TRUE(chrome->handle_pointer_event(p_max_press, win_size, &backend));
+    EXPECT_TRUE(chrome->handle_pointer_event(p_max_release, win_size, &backend));
+    EXPECT_TRUE(backend.restore_called);
+    EXPECT_FALSE(backend.is_maximized());
 }
 
 TEST(ChromeRenderTargetTest, CoordinateShifting) {

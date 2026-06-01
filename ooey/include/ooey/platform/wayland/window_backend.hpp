@@ -55,9 +55,13 @@ public:
     Size get_window_size() const { return get_size(); }
     float get_content_scale() const override;
 
+    bool is_maximized() const override;
+    void request_maximize() override;
+    void request_restore() override;
+
     // Handlers invoked by generated/static listeners
     void handle_xdg_surface_configure(uint32_t serial);
-    void handle_xdg_toplevel_configure(int32_t width, int32_t height);
+    void handle_xdg_toplevel_configure(int32_t width, int32_t height, bool maximized);
 
 protected:
     // Virtual graphics hooks for subclasses to customize behavior
@@ -97,6 +101,7 @@ protected:
     std::shared_ptr<ooey::WindowChrome> window_chrome_;
     std::unique_ptr<ooey::ChromeRenderTarget> decorated_render_target_;
     bool should_close_{false};
+    bool is_maximized_{false};
 
 private:
     bool connect_to_display();

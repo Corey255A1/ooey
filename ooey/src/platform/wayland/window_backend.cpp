@@ -283,12 +283,22 @@ static void xdg_surface_configure(void* data, xdg_surface* surface, uint32_t ser
     backend->handle_xdg_surface_configure(serial);
 }
 
-static void xdg_toplevel_configure(void* data, xdg_toplevel* /*toplevel*/, int32_t width, int32_t height, wl_array* /*states*/) {
+static void xdg_toplevel_configure(void* data, xdg_toplevel* /*toplevel*/, int32_t width, int32_t height, wl_array* states) {
     WindowBackend* backend = static_cast<WindowBackend*>(data);
     if (!backend) {
         return;
     }
-    backend->handle_xdg_toplevel_configure(width, height);
+    bool maximized = false;
+    if (states) {
+        uint32_t* states_data = static_cast<uint32_t*>(states->data);
+        size_t count = states->size / sizeof(uint32_t);
+        for (size_t i = 0; i < count; ++i) {
+            if (states_data[i] == XDG_TOPLEVEL_STATE_MAXIMIZED) {
+                maximized = true;
+            }
+        }
+    }
+    backend->handle_xdg_toplevel_configure(width, height, maximized);
 }
 
 WindowBackend::WindowBackend() {
@@ -659,7 +669,11 @@ void WindowBackend::handle_xdg_surface_configure(uint32_t serial) {
     }
 }
 
-void WindowBackend::handle_xdg_toplevel_configure(int32_t width, int32_t height) {
+void WindowBackend::handle_xdg_toplevel_configure(int32_t width, int32_t height, bool maximized) {
+    is_maximized_ = maximized;
+    if (window_chrome_) {
+        window_chrome_->set_maximized(maximized);
+    }
     if (width > 0 && height > 0) {
         pending_width_ = width;
         pending_height_ = height;
@@ -682,6 +696,22 @@ float WindowBackend::get_content_scale() const {
         } catch (...) {}
     }
     return 1.0f;
+}
+
+bool WindowBackend::is_maximized() const {
+    return is_maximized_;
+}
+
+void WindowBackend::request_maximize() {
+    if (xdg_toplevel_) {
+        xdg_toplevel_set_maximized(xdg_toplevel_);
+    }
+}
+
+void WindowBackend::request_restore() {
+    if (xdg_toplevel_) {
+        xdg_toplevel_unset_maximized(xdg_toplevel_);
+    }
 }
 
 } // namespace ooey::wayland

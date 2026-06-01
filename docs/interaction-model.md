@@ -32,3 +32,27 @@ For devices without pointer tracking (keyboards, gamepads, external hardware), w
 
 ## Summary
 By keeping pointer routing strictly geometric (hit-testing) and keyboard routing strictly state-based (focus management), OOEY can natively support everything from an X11 desktop with a mouse, to an embedded Raspberry Pi controlled solely by hardware buttons.
+
+## 5. Input Routing Memory Safety and Dynamic Lifecycle Auditing
+
+In a dynamic MVVMC environment (such as the wizard navigation flow in `hello_wizard`), user interactions (e.g., clicking a "Start" or "Continue" button) often trigger state updates that mutate the visual scene graph immediately. For example, a button click can trigger a page transition, which clears the parent container's children and destroys the clicked button itself.
+
+### The Danger: Dangling Pointers and Iterator Invalidation
+Because event loops dispatch multiple events in sequence and the `Controller` caches interactive elements (such as `captured_element_` for pointer drags and `focused_element_` for key focus), page transitions can result in:
+1. An event handler executing navigation and clearing/destroying the active view object.
+2. The traversal stack holding a dangling reference to a deleted child `shared_ptr` or an iterator over a destroyed child vector.
+3. Subsequent events routing to a deleted object or calling virtual functions on a dangling pointer, leading to a **pure virtual function call exception** or a segmentation fault.
+
+### The Remedy: Strong Shared Pointer Ownership and Stack Frame Preservation
+To guarantee complete memory safety and lifecycle synchronization across dynamic view-swapping gestures, the `Controller` implements a two-fold safety mechanism:
+
+1. **Stack Frame Preservation via Value Passing & Vector Copying**:
+   - In `Controller::route_pointer_event`, the visual tree node is passed by value (`std::shared_ptr<IDrawable> node`), incrementing its reference count.
+   - Before traversing children, the controller copies the children vector: `auto children = view->get_children()`. This ensures that even if a child callback clears the parent's children (mutating the original vector), the copy on the stack keeps all children alive and maintains iterator stability.
+
+2. **Strong Shared Reference Caching**:
+   - The `captured_element_` and `focused_element_` are stored as `std::shared_ptr<IDrawable>` instead of raw pointers. This prevents their reference count from dropping to 0 and keeps the elements alive until the routing phase or the current interaction is complete.
+   - If an element is removed from the active visual tree, the `Controller` detects it on the next iteration via `contains_element(root_view_, element.get())` and safely nullifies the reference, at which point the memory is cleaned up.
+
+This architecture ensures complete runtime memory safety and eliminates the risk of use-after-free, pointer reuse (ABA), and pure virtual call exceptions.
+

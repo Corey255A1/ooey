@@ -12,7 +12,7 @@ namespace ooey {
 
 WindowChrome::WindowChrome() = default;
 
-void WindowChrome::draw(IRenderTarget& target, const Size& window_size) const {
+void WindowChrome::draw(IRenderTarget& target, const Size& window_size, bool is_maximized) const {
     int w = window_size.width;
     int h = window_size.height;
     int bw = border_width_;
@@ -33,13 +33,44 @@ void WindowChrome::draw(IRenderTarget& target, const Size& window_size) const {
     TextPrimitive(title_, font, Point{bw + 10, text_y}, title_text_color_).draw(target);
 
     // Minimize Button background
-    int min_x = w - bw - 60;
+    int min_x = w - bw - 90;
     Color min_bg = min_pressed_ ? Color{40, 40, 40, 255} : (min_hovered_ ? minimize_button_hover_color_ : minimize_button_color_);
     RectPrimitive(Rect{min_x, bw, 30, th}, min_bg).draw(target);
 
     // Minimize Symbol (horizontal line)
     int min_cy = bw + th / 2;
     LinePrimitive(Point{min_x + 10, min_cy}, Point{min_x + 20, min_cy}, minimize_button_text_color_, 2.0f).draw(target);
+
+    // Maximize/Restore Button background
+    int max_x = w - bw - 60;
+    Color max_bg = max_pressed_ ? Color{40, 40, 40, 255} : (max_hovered_ ? maximize_button_hover_color_ : maximize_button_color_);
+    RectPrimitive(Rect{max_x, bw, 30, th}, max_bg).draw(target);
+
+    // Maximize or Restore Symbol
+    bool max_state = is_maximized || maximized_;
+    int max_cy = bw + th / 2;
+    if (max_state) {
+        // Restore Symbol (two overlapping boxes)
+        int bx1 = max_x + 12;
+        int by1 = max_cy - 3;
+        LinePrimitive(Point{bx1, by1}, Point{bx1 + 8, by1}, maximize_button_text_color_, 1.0f).draw(target);
+        LinePrimitive(Point{bx1, by1 + 8}, Point{bx1 + 8, by1 + 8}, maximize_button_text_color_, 1.0f).draw(target);
+        LinePrimitive(Point{bx1, by1}, Point{bx1, by1 + 8}, maximize_button_text_color_, 1.0f).draw(target);
+        LinePrimitive(Point{bx1 + 8, by1}, Point{bx1 + 8, by1 + 8}, maximize_button_text_color_, 1.0f).draw(target);
+
+        int bx2 = max_x + 9;
+        int by2 = max_cy - 6;
+        LinePrimitive(Point{bx2, by2}, Point{bx2 + 8, by2}, maximize_button_text_color_, 1.5f).draw(target);
+        LinePrimitive(Point{bx2, by2 + 8}, Point{bx2 + 8, by2 + 8}, maximize_button_text_color_, 1.5f).draw(target);
+        LinePrimitive(Point{bx2, by2}, Point{bx2, by2 + 8}, maximize_button_text_color_, 1.5f).draw(target);
+        LinePrimitive(Point{bx2 + 8, by2}, Point{bx2 + 8, by2 + 8}, maximize_button_text_color_, 1.5f).draw(target);
+    } else {
+        // Maximize Symbol (single box)
+        LinePrimitive(Point{max_x + 10, max_cy - 5}, Point{max_x + 20, max_cy - 5}, maximize_button_text_color_, 1.5f).draw(target);
+        LinePrimitive(Point{max_x + 10, max_cy + 5}, Point{max_x + 20, max_cy + 5}, maximize_button_text_color_, 1.5f).draw(target);
+        LinePrimitive(Point{max_x + 10, max_cy - 5}, Point{max_x + 10, max_cy + 5}, maximize_button_text_color_, 1.5f).draw(target);
+        LinePrimitive(Point{max_x + 20, max_cy - 5}, Point{max_x + 20, max_cy + 5}, maximize_button_text_color_, 1.5f).draw(target);
+    }
 
     // Close Button background
     int close_x = w - bw - 30;
@@ -80,7 +111,11 @@ ChromeHitTest WindowChrome::hit_test(int x, int y, const Size& window_size) cons
         if (x >= close_x) {
             return ChromeHitTest::CloseButton;
         }
-        int min_x = w - bw - 60;
+        int max_x = w - bw - 60;
+        if (x >= max_x) {
+            return ChromeHitTest::MaximizeButton;
+        }
+        int min_x = w - bw - 90;
         if (x >= min_x) {
             return ChromeHitTest::MinimizeButton;
         }
@@ -102,6 +137,7 @@ bool WindowChrome::handle_pointer_event(const Pointer& pointer, const Size& wind
 
     if (pointer.state == PointerState::Moved) {
         close_hovered_ = (hit == ChromeHitTest::CloseButton);
+        max_hovered_ = (hit == ChromeHitTest::MaximizeButton);
         min_hovered_ = (hit == ChromeHitTest::MinimizeButton);
         return (hit != ChromeHitTest::Client);
     }
@@ -109,6 +145,10 @@ bool WindowChrome::handle_pointer_event(const Pointer& pointer, const Size& wind
     if (pointer.state == PointerState::Pressed) {
         if (hit == ChromeHitTest::CloseButton) {
             close_pressed_ = true;
+            return true;
+        }
+        if (hit == ChromeHitTest::MaximizeButton) {
+            max_pressed_ = true;
             return true;
         }
         if (hit == ChromeHitTest::MinimizeButton) {
@@ -149,6 +189,20 @@ bool WindowChrome::handle_pointer_event(const Pointer& pointer, const Size& wind
             }
             consumed = true;
         }
+        if (max_pressed_) {
+            max_pressed_ = false;
+            if (hit == ChromeHitTest::MaximizeButton) {
+                bool is_max = backend->is_maximized() || maximized_;
+                if (is_max) {
+                    backend->request_restore();
+                    maximized_ = false;
+                } else {
+                    backend->request_maximize();
+                    maximized_ = true;
+                }
+            }
+            consumed = true;
+        }
         if (min_pressed_) {
             min_pressed_ = false;
             consumed = true;
@@ -186,6 +240,15 @@ Color WindowChrome::get_close_button_hover_color() const { return close_button_h
 void WindowChrome::set_close_button_text_color(Color color) { close_button_text_color_ = color; }
 Color WindowChrome::get_close_button_text_color() const { return close_button_text_color_; }
 
+void WindowChrome::set_maximize_button_color(Color color) { maximize_button_color_ = color; }
+Color WindowChrome::get_maximize_button_color() const { return maximize_button_color_; }
+
+void WindowChrome::set_maximize_button_hover_color(Color color) { maximize_button_hover_color_ = color; }
+Color WindowChrome::get_maximize_button_hover_color() const { return maximize_button_hover_color_; }
+
+void WindowChrome::set_maximize_button_text_color(Color color) { maximize_button_text_color_ = color; }
+Color WindowChrome::get_maximize_button_text_color() const { return maximize_button_text_color_; }
+
 void WindowChrome::set_minimize_button_color(Color color) { minimize_button_color_ = color; }
 Color WindowChrome::get_minimize_button_color() const { return minimize_button_color_; }
 
@@ -194,6 +257,9 @@ Color WindowChrome::get_minimize_button_hover_color() const { return minimize_bu
 
 void WindowChrome::set_minimize_button_text_color(Color color) { minimize_button_text_color_ = color; }
 Color WindowChrome::get_minimize_button_text_color() const { return minimize_button_text_color_; }
+
+void WindowChrome::set_maximized(bool maximized) { maximized_ = maximized; }
+bool WindowChrome::is_maximized() const { return maximized_; }
 
 // --- ChromeRenderTarget ---
 

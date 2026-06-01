@@ -40,6 +40,11 @@ public:
     // Get the window size
     virtual Size get_size() const = 0;
 
+    // Window state controls
+    virtual bool is_maximized() const { return false; }
+    virtual void request_maximize() {}
+    virtual void request_restore() {}
+
     // Get the scale factor for High-DPI screens. Defaults to 1.0f.
     virtual float get_content_scale() const { return 1.0f; }
 };

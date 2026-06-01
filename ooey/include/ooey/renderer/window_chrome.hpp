@@ -14,6 +14,7 @@ enum class ChromeHitTest {
     Client,
     TitleBar,
     CloseButton,
+    MaximizeButton,
     MinimizeButton,
     BorderTop,
     BorderBottom,
@@ -30,7 +31,7 @@ public:
     WindowChrome();
     virtual ~WindowChrome() = default;
 
-    void draw(IRenderTarget& target, const Size& window_size) const;
+    void draw(IRenderTarget& target, const Size& window_size, bool is_maximized = false) const;
     bool handle_pointer_event(const Pointer& pointer, const Size& window_size, IWindowBackend* backend);
 
     ChromeHitTest hit_test(int x, int y, const Size& window_size) const;
@@ -63,6 +64,15 @@ public:
     void set_close_button_text_color(Color color);
     Color get_close_button_text_color() const;
 
+    void set_maximize_button_color(Color color);
+    Color get_maximize_button_color() const;
+
+    void set_maximize_button_hover_color(Color color);
+    Color get_maximize_button_hover_color() const;
+
+    void set_maximize_button_text_color(Color color);
+    Color get_maximize_button_text_color() const;
+
     void set_minimize_button_color(Color color);
     Color get_minimize_button_color() const;
 
@@ -71,6 +81,9 @@ public:
 
     void set_minimize_button_text_color(Color color);
     Color get_minimize_button_text_color() const;
+
+    void set_maximized(bool maximized);
+    bool is_maximized() const;
 
 private:
     std::string title_{"Window"};
@@ -83,14 +96,20 @@ private:
     Color close_button_color_{60, 60, 60, 255};
     Color close_button_hover_color_{200, 50, 50, 255};
     Color close_button_text_color_{220, 220, 220, 255};
+    Color maximize_button_color_{60, 60, 60, 255};
+    Color maximize_button_hover_color_{100, 100, 100, 255};
+    Color maximize_button_text_color_{220, 220, 220, 255};
     Color minimize_button_color_{60, 60, 60, 255};
     Color minimize_button_hover_color_{100, 100, 100, 255};
     Color minimize_button_text_color_{220, 220, 220, 255};
 
     bool close_hovered_{false};
     bool close_pressed_{false};
+    bool max_hovered_{false};
+    bool max_pressed_{false};
     bool min_hovered_{false};
     bool min_pressed_{false};
+    bool maximized_{false};
 };
 
 class ChromeRenderTarget : public IRenderTarget {

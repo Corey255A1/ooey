@@ -4,6 +4,7 @@
 #include "gooey/controls/text_box.hpp"
 #include "gooey/controls/list_control.hpp"
 #include "gooey/mvvmc/navigation_coordinator.hpp"
+#include "gooey/mvvmc/controller.hpp"
 #include "ooey/input.hpp"
 
 TEST(OoeyTypes, ColorInitialization) {
@@ -284,5 +285,102 @@ TEST(OoeyApplication, PropertyChangeInvalidation) {
 
     EXPECT_EQ(gooey::Application::get_instance(), nullptr);
 }
+
+class DeletingView : public gooey::View, public gooey::mvvmc::IInteractive {
+public:
+    bool clicked = false;
+
+    DeletingView() {
+        is_absolute = true;
+        absolute_bounds = ooey::Rect{0, 0, 100, 100};
+    }
+
+    ooey::Rect bounds() const override { return absolute_bounds; }
+
+    bool on_pointer_event(const ooey::Pointer& e) override {
+        if (e.state == ooey::PointerState::Pressed) {
+            clicked = true;
+            if (get_parent()) {
+                get_parent()->clear_children();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    bool on_key_event(const ooey::KeyEvent&) override { return false; }
+};
+
+TEST(OoeyMvvmc, SafeControllerElementDeletions) {
+    ooey::InputManager input_manager;
+    auto root_view = std::make_shared<gooey::View>();
+
+    auto deleting_view = std::make_shared<DeletingView>();
+    root_view->add_child(deleting_view);
+
+    gooey::Controller controller(input_manager, root_view);
+
+    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+    controller.process_events();
+
+    EXPECT_TRUE(deleting_view->clicked);
+    
+    // Send Released event; should not crash despite deleting_view being deleted
+    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Released});
+    controller.process_events();
+}
+
+TEST(OoeyMvvmc, RealRealElementDeletions) {
+    ooey::InputManager input_manager;
+    auto root_view = std::make_shared<gooey::View>();
+
+    auto page_container = std::make_shared<gooey::View>();
+    root_view->add_child(page_container);
+
+    auto page_view = std::make_shared<gooey::View>();
+    page_container->add_child(page_view);
+
+    class NestedDeletingView : public gooey::View, public gooey::mvvmc::IInteractive {
+    public:
+        std::shared_ptr<gooey::View> container_to_clear;
+        bool clicked = false;
+
+        NestedDeletingView(std::shared_ptr<gooey::View> container)
+            : container_to_clear(container) {
+            is_absolute = true;
+            absolute_bounds = ooey::Rect{0, 0, 100, 100};
+        }
+
+        ooey::Rect bounds() const override { return absolute_bounds; }
+
+        bool on_pointer_event(const ooey::Pointer& e) override {
+            if (e.state == ooey::PointerState::Pressed) {
+                clicked = true;
+                if (container_to_clear) {
+                    container_to_clear->clear_children();
+                }
+                return true;
+            }
+            return false;
+        }
+
+        bool on_key_event(const ooey::KeyEvent&) override { return false; }
+    };
+
+    auto deleting_view = std::make_shared<NestedDeletingView>(page_container);
+    page_view->add_child(std::move(deleting_view));
+
+    gooey::Controller controller(input_manager, root_view);
+
+    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+    controller.process_events();
+
+    // Send Released event
+    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Released});
+    controller.process_events();
+}
+
+
+
 
 

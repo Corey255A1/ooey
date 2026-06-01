@@ -5,6 +5,7 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/Xresource.h>
+#include <X11/Xatom.h>
 #include <GL/glx.h>
 #include <GL/gl.h>
 #include <iostream>
@@ -154,6 +155,9 @@ bool WindowBackend::poll_events() {
         } else if (event.type == ConfigureNotify) {
             width_ = event.xconfigure.width;
             height_ = event.xconfigure.height;
+            if (window_chrome_) {
+                window_chrome_->set_maximized(is_maximized());
+            }
             if (render_target_) {
                 render_target_->resize(width_, height_);
             }
@@ -294,6 +298,63 @@ float WindowBackend::get_content_scale() const {
     }
     
     return 1.0f;
+}
+
+bool WindowBackend::is_maximized() const {
+    if (!display_ || !window_) {
+        return false;
+    }
+    Atom actual_type;
+    int actual_format;
+    unsigned long num_items, bytes_after;
+    unsigned char* prop_to_free = nullptr;
+    Atom state_atom = XInternAtom(display_, "_NET_WM_STATE", True);
+    if (state_atom == None) {
+        return false;
+    }
+    bool is_max = false;
+    // XA_ATOM is predefined, let's query the window property
+    if (XGetWindowProperty(display_, window_, state_atom, 0, 1024, False, XA_ATOM,
+                           &actual_type, &actual_format, &num_items, &bytes_after, &prop_to_free) == Success) {
+        if (prop_to_free) {
+            Atom* atoms = reinterpret_cast<Atom*>(prop_to_free);
+            Atom max_vert = XInternAtom(display_, "_NET_WM_STATE_MAXIMIZED_VERT", True);
+            Atom max_horz = XInternAtom(display_, "_NET_WM_STATE_MAXIMIZED_HORZ", True);
+            bool vert = false;
+            bool horz = false;
+            for (unsigned long i = 0; i < num_items; ++i) {
+                if (atoms[i] == max_vert) vert = true;
+                if (atoms[i] == max_horz) horz = true;
+            }
+            is_max = (vert && horz);
+            XFree(prop_to_free);
+        }
+    }
+    return is_max;
+}
+
+void WindowBackend::request_maximize() {
+    change_maximized_state(true);
+}
+
+void WindowBackend::request_restore() {
+    change_maximized_state(false);
+}
+
+void WindowBackend::change_maximized_state(bool maximize) {
+    if (!display_ || !window_) return;
+    XClientMessageEvent xev{};
+    xev.type = ClientMessage;
+    xev.window = window_;
+    xev.message_type = XInternAtom(display_, "_NET_WM_STATE", False);
+    xev.format = 32;
+    xev.data.l[0] = maximize ? 1 : 0; // 1 = Add, 0 = Remove
+    xev.data.l[1] = XInternAtom(display_, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+    xev.data.l[2] = XInternAtom(display_, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+    xev.data.l[3] = 1; // source indication
+    xev.data.l[4] = 0;
+
+    XSendEvent(display_, DefaultRootWindow(display_), False, SubstructureRedirectMask | SubstructureNotifyMask, reinterpret_cast<XEvent*>(&xev));
 }
 
 } // namespace ooey::x11

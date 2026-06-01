@@ -35,6 +35,10 @@ public:
     Size get_size() const override { return Size{width_, height_}; }
     float get_content_scale() const override;
 
+    bool is_maximized() const override;
+    void request_maximize() override;
+    void request_restore() override;
+
 private:
     Display* display_{nullptr};
     unsigned long window_{0}; // Window
@@ -53,6 +57,7 @@ private:
     void handle_button_event(const void* event_ptr, PointerState state);
     void handle_key_press_event(const void* event_ptr);
     void handle_key_release_event(const void* event_ptr);
+    void change_maximized_state(bool maximize);
 };
 
 } // namespace ooey::x11

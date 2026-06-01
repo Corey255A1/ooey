@@ -21,12 +21,20 @@ sudo apt-get install -y libx11-dev libgl1-mesa-dev libglx-dev
    - Chosen backend: X11.
    - Implemented the `IWindowBackend` interface (`X11WindowBackend`).
    - Handles window creation, destruction, and the basic event polling loop.
+   - Supports native window maximization and restoration via EWMH (`_NET_WM_STATE`) client messages.
 
 2. **Initial Render Target (Completed)**
    - Implemented `IRenderTarget` for the window backend using OpenGL (`OpenGLRenderTarget`).
    - Mapped context creation tightly to the X11 Window via GLX.
    - Added `present()` functionality to properly swap the double buffers.
 
-3. **Expanded Rendering Targets (CPU & File) (Completed)**
+3. **Window Chrome Decorations & Sizing Controls (Completed)**
+   - Implemented `WindowChrome` representing client-side window borders and title bars.
+   - Handles window moving and resizing using native compositor interfaces.
+   - Features Minimize, Maximize, Restore, and Close title-bar buttons.
+   - Dynamically updates decoration layouts (single-box maximize vs. double-box restore icons) based on window states.
+
+4. **Expanded Rendering Targets (CPU & File) (Completed)**
    - Implemented software CPU rendering in the **Linux Framebuffer backend** (`docs/08-framebuffer-platform.md`).
    - Supports raw pixel formats, Bresenham line drawing, and scanline triangle rasterization with screen rotation.
+
