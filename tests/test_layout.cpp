@@ -8,6 +8,9 @@
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/adaptive_stack.hpp"
 #include "gooey/controls/scroll_container.hpp"
+#include "gooey/controls/canvas_layout.hpp"
+#include "gooey/controls/vector_shape_view.hpp"
+#include "gooey/controls/rich_text_box.hpp"
 #include "gooey/mvvmc/controller.hpp"
 
 using namespace gooey;
@@ -842,6 +845,174 @@ TEST(LayoutTest, ScrollBarLayoutZeroBounds) {
     scrollbar->draw(target);
     EXPECT_TRUE(target.geometry_draws.empty());
 }
+
+TEST(LayoutTest, CanvasAndVectorShapes) {
+    using namespace gooey::mvvmc;
+    using namespace gooey::controls;
+
+    auto canvas = std::make_shared<CanvasLayout>();
+    canvas->set_width(SizePolicy::Fixed, 400);
+    canvas->set_height(SizePolicy::Fixed, 400);
+
+    auto circle = std::make_shared<CircleShapeView>(Point{100, 100}, 20, Color{255, 0, 0});
+    auto polygon = std::make_shared<PolygonShapeView>(
+        std::vector<Point>{Point{200, 200}, Point{250, 200}, Point{225, 250}},
+        Color{0, 255, 0}
+    );
+
+    canvas->add_child(circle);
+    canvas->add_child(polygon);
+
+    canvas->measure(Size{400, 400});
+    canvas->layout(Rect{50, 50, 400, 400});
+
+    EXPECT_EQ(circle->layout_bounds.x, 50 + 80); // 50 + (100 - 20)
+    EXPECT_EQ(circle->layout_bounds.y, 50 + 80);
+    EXPECT_EQ(circle->layout_bounds.width, 40);
+    EXPECT_EQ(circle->layout_bounds.height, 40);
+
+    EXPECT_EQ(polygon->layout_bounds.x, 50 + 200);
+    EXPECT_EQ(polygon->layout_bounds.y, 50 + 200);
+    EXPECT_EQ(polygon->layout_bounds.width, 50);
+    EXPECT_EQ(polygon->layout_bounds.height, 50);
+
+    EXPECT_FALSE(circle->is_selected());
+    EXPECT_FALSE(polygon->is_selected());
+
+    InputManager input_manager;
+    Controller controller(input_manager, canvas);
+
+    // Click inside circle (center is screen coordinates: 50 + 100 = 150, 50 + 100 = 150)
+    input_manager.push_pointer_event(Pointer{0, 150, 150, PointerState::Pressed});
+    controller.process_events();
+    input_manager.update();
+
+    EXPECT_TRUE(circle->is_selected());
+    EXPECT_FALSE(polygon->is_selected());
+
+    // Drag circle right by 30 pixels (to screen x = 180)
+    input_manager.push_pointer_event(Pointer{0, 180, 150, PointerState::Moved});
+    controller.process_events();
+    input_manager.update();
+
+    EXPECT_EQ(circle->absolute_bounds.x, 80 + 30);
+    EXPECT_EQ(circle->absolute_bounds.y, 80);
+
+    input_manager.push_pointer_event(Pointer{0, 180, 150, PointerState::Released});
+    controller.process_events();
+    input_manager.update();
+
+    // In a unit test, we must manually trigger a layout pass to update layout_bounds
+    canvas->layout(Rect{50, 50, 400, 400});
+
+    // Click TL handle: TL handle is at top-left of circle layout_bounds
+    // layout_bounds for circle is now at: x = 50 + 110 = 160, y = 50 + 80 = 130
+    input_manager.push_pointer_event(Pointer{0, 160, 130, PointerState::Pressed});
+    controller.process_events();
+    input_manager.update();
+
+    // Drag TL handle top-left by 10px (x=150, y=120)
+    input_manager.push_pointer_event(Pointer{0, 150, 120, PointerState::Moved});
+    controller.process_events();
+    input_manager.update();
+
+    EXPECT_EQ(circle->absolute_bounds.x, 110 - 10);
+    EXPECT_EQ(circle->absolute_bounds.width, 40 + 10);
+}
+
+TEST(LayoutTest, RichTextBoxTextFormatting) {
+    using namespace gooey::controls;
+    
+    Font font{"monospace", 14};
+    RichTextBox box{Rect{0, 0, 400, 300}, font, Color{255, 255, 255}, Color{30, 30, 30}};
+    
+    box.set_text("Hello World");
+    
+    TextFormat red_bold{Color{255, 0, 0}, FontWeight::Bold, FontStyle::Normal, 0};
+    TextFormat green_italic{Color{0, 255, 0}, FontWeight::Normal, FontStyle::Italic, 18};
+    
+    box.apply_format(0, 0, 5, red_bold);
+    box.apply_format(0, 6, 11, green_italic);
+    
+    const auto& formats = box.get_line_formats(0);
+    ASSERT_EQ(formats.size(), 2);
+    EXPECT_EQ(formats[0].start_col, 0);
+    EXPECT_EQ(formats[0].end_col, 5);
+    EXPECT_EQ(formats[0].format.color, Color(255, 0, 0));
+    EXPECT_EQ(formats[0].format.weight, FontWeight::Bold);
+    
+    EXPECT_EQ(formats[1].start_col, 6);
+    EXPECT_EQ(formats[1].end_col, 11);
+    EXPECT_EQ(formats[1].format.color, Color(0, 255, 0));
+    EXPECT_EQ(formats[1].format.style, FontStyle::Italic);
+    EXPECT_EQ(formats[1].format.size, 18);
+}
+
+TEST(LayoutTest, RichTextBoxResizeLayout) {
+    using namespace gooey::controls;
+    
+    Font font{"monospace", 14};
+    RichTextBox box{Rect{0, 0, 400, 300}, font, Color{255, 255, 255}, Color{30, 30, 30}};
+    
+    EXPECT_EQ(box.bounds().width, 400);
+    EXPECT_EQ(box.bounds().height, 300);
+    
+    box.layout(Rect{10, 10, 800, 600});
+    
+    EXPECT_EQ(box.bounds().x, 10);
+    EXPECT_EQ(box.bounds().y, 10);
+    EXPECT_EQ(box.bounds().width, 800);
+    EXPECT_EQ(box.bounds().height, 600);
+}
+
+TEST(LayoutTest, RichTextBoxHorizontalScrolling) {
+    using namespace gooey::controls;
+    
+    Font font{"monospace", 14};
+    RichTextBox box{Rect{0, 0, 100, 100}, font, Color{255, 255, 255}, Color{30, 30, 30}};
+    
+    EXPECT_EQ(box.get_scroll_x(), 0);
+    
+    // Type a very long string so it goes past the 100px width limit
+    box.insert_text("This is an extremely long line of text that exceeds the bounds of the rich text box");
+    
+    // We expect make_cursor_visible to have updated scroll_x_ to be > 0
+    EXPECT_GT(box.get_scroll_x(), 0);
+}
+
+TEST(LayoutTest, RichTextBoxScrollbarVisibility) {
+    using namespace gooey::controls;
+    
+    Font font{"monospace", 10};
+    RichTextBox box{Rect{0, 0, 100, 100}, font, Color{255, 255, 255}, Color{30, 30, 30}};
+    
+    box.measure(Size{100, 100});
+    box.layout(Rect{0, 0, 100, 100});
+    
+    EXPECT_FALSE(box.needs_scroll_x());
+    EXPECT_FALSE(box.needs_scroll_y());
+    
+    // Add multiple lines to trigger vertical scrollbar
+    std::string multi_line = "";
+    for (int i = 0; i < 20; ++i) {
+        multi_line += "line " + std::to_string(i) + "\n";
+    }
+    box.set_text(multi_line);
+    
+    box.measure(Size{100, 100});
+    box.layout(Rect{0, 0, 100, 100});
+    
+    EXPECT_TRUE(box.needs_scroll_y());
+    
+    // Set a very long single line to trigger horizontal scrollbar
+    box.set_text("This is a very long line of text that should trigger the horizontal scrollbar because it overflows the viewport width bounds.");
+    
+    box.measure(Size{100, 100});
+    box.layout(Rect{0, 0, 100, 100});
+    
+    EXPECT_TRUE(box.needs_scroll_x());
+}
+
 
 
 

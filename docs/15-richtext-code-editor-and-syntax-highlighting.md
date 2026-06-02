@@ -1,12 +1,12 @@
-# RichText Code Editor & Syntax Highlighting Implementation
+# Decoupled RichText Formatting & CodeEditor Architecture
 
-This document details the architectural decisions, class hierarchies, state machine algorithms, and rendering mechanics used to implement the general-purpose `RichTextBox` control, the derived `CodeEditor` control, and the `hello_notepad` application.
+This document details the architectural decisions, class hierarchies, formatting APIs, style-aware coordinate scaling, and rendering mechanics used to implement the general-purpose `RichTextBox` control, the derived `CodeEditor` control, and the `hello_notepad` application.
 
 ---
 
-## 1. Class Hierarchy and Layout Flexibility
+## 1. Decoupled Class Decoupling & Formatting API
 
-To support a wide range of multiline text rendering and editing requirements, the text workspace is divided into a general-purpose base class and specialized configurations.
+To support a wide range of multiline text rendering and editing requirements, the text workspace is strictly split into a layout-and-formatting engine (`RichTextBox`) and a syntax-highlighting specialization (`CodeEditor`).
 
 ```mermaid
 graph TD
@@ -15,138 +15,159 @@ graph TD
     RichTextBox --> CodeEditor[CodeEditor Class]
 ```
 
-### RichTextBox Base Class
-`RichTextBox` is the core multiline text editor control that implements standard text layouts, caret tracking, text selection, vertical scrolling composition, and custom event handlers:
-* **Focus Check:** Queries the active focused element from the `Controller` dynamically during draws to toggle blinking carets.
-* **Line Number Toggling:** Includes a public `show_line_numbers` boolean. If set to `false`, the line-numbers column and divider lines collapse, shifting the text workspace dynamically.
-* **Syntax Highlighter Slot:** Exposes a `set_syntax_highlighter()` slot allowing the user to supply custom parsing engines.
+### RichTextBox base class
+`RichTextBox` is a syntax-agnostic, general-purpose text editor control. It has absolutely zero knowledge of lexers, tokens, programming keywords, or syntax types. It manages carets, scrollbars, text selection, and keyboard/mouse edits. It exposes a public formatting API:
+
+```cpp
+struct TextFormat {
+    Color color;
+    FontWeight weight{FontWeight::Normal};
+    FontStyle style{FontStyle::Normal};
+    int size{0}; // 0 means default font size
+};
+
+struct FormatRange {
+    int start_col{0};
+    int end_col{0};
+    TextFormat format;
+};
+```
+
+#### Formatting API Endpoints:
+* `clear_formats()`: Resets all text formatting to default.
+* `clear_line_formats(int line_idx)`: Clears formatting of a specific line (invoked automatically during line editing).
+* `apply_format(int line_idx, int start, int end, const TextFormat& format)`: Appends a styled run to a line.
+* `set_line_formats(int line_idx, const std::vector<FormatRange>& formats)`: Sets formatting ranges for a line.
 
 ### CodeEditor Derived Class
-`CodeEditor` is a specialized subclass configured for software development:
+`CodeEditor` is a specialized control that inherits from `RichTextBox`:
 * Enforces `show_line_numbers = true`.
-* Automatically attaches the `CppSyntaxHighlighter` on construction.
+* Houses all tokenizer types (`TokenType`, `HighlightedToken`, `ISyntaxHighlighter`, `CppSyntaxHighlighter`).
+* Automatically registers `CppSyntaxHighlighter` on construction.
+* Overrides the virtual `update_formatting()` method called by `RichTextBox` whenever the text changes. Inside this override, the C++ lexer parses the modified lines, maps token types to colors/weights, and applies them to the parent text box using the formatting APIs.
 
 ---
 
-## 2. Text Selection Engine
+## 2. Text Segment Splitting Algorithm
+
+To render formatted text or measure boundaries, lines of text are dynamically split into styled runs. The `split_line_into_segments()` algorithm iterates through the active `FormatRange`s of a line, filling gaps with default styles:
+
+```cpp
+struct StyledSegment {
+    std::string text;
+    TextFormat format;
+};
+
+static std::vector<StyledSegment> split_line_into_segments(
+    const std::string& line, 
+    const std::vector<FormatRange>& formats, 
+    const TextFormat& default_format) {
+    
+    std::vector<StyledSegment> segments;
+    int current_col = 0;
+    int line_len = static_cast<int>(line.size());
+
+    // Sort formats to ensure sequential processing
+    auto sorted_formats = formats;
+    std::sort(sorted_formats.begin(), sorted_formats.end(), [](const FormatRange& a, const FormatRange& b) {
+        return a.start_col < b.start_col;
+    });
+
+    for (const auto& run : sorted_formats) {
+        int start = std::max(current_col, std::min(run.start_col, line_len));
+        int end = std::max(start, std::min(run.end_col, line_len));
+
+        if (start > current_col) {
+            segments.push_back({line.substr(current_col, start - current_col), default_format});
+        }
+        if (end > start) {
+            segments.push_back({line.substr(start, end - start), run.format});
+        }
+        current_col = end;
+    }
+
+    if (current_col < line_len) {
+        segments.push_back({line.substr(current_col, line_len - current_col), default_format});
+    }
+
+    if (segments.empty()) {
+        segments.push_back({"", default_format});
+    }
+
+    return segments;
+}
+```
+
+---
+
+## 3. Style-Aware Coordinate Mapping
+
+A key problem with text formatting is that characters may have different styles, weights, or sizes, meaning character width varies. Measuring the width of a prefix string using a single default font leads to caret and selection positioning errors.
+
+`RichTextBox` solves this by computing a style-aware X offset:
+
+```cpp
+int RichTextBox::get_column_x_offset(int line_idx, int col) const {
+    if (line_idx < 0 || line_idx >= static_cast<int>(lines_.size())) return 0;
+    const std::string& line = lines_[line_idx];
+    const auto& formats = (line_idx < static_cast<int>(line_formats_.size())) ? line_formats_[line_idx] : std::vector<FormatRange>{};
+    
+    TextFormat default_fmt{default_text_color, FontWeight::Normal, FontStyle::Normal, font_.size};
+    auto segments = split_line_into_segments(line, formats, default_fmt);
+    
+    int x_offset = 0;
+    int current_col = 0;
+    
+    for (const auto& seg : segments) {
+        int seg_len = static_cast<int>(seg.text.size());
+        if (current_col + seg_len <= col) {
+            Font font = font_;
+            font.weight = seg.format.weight;
+            font.style = seg.format.style;
+            if (seg.format.size > 0) font.size = seg.format.size;
+            x_offset += FontEngine::measure_text(seg.text, font).width;
+            current_col += seg_len;
+        } else {
+            int prefix_len = col - current_col;
+            if (prefix_len > 0) {
+                Font font = font_;
+                font.weight = seg.format.weight;
+                font.style = seg.format.style;
+                if (seg.format.size > 0) font.size = seg.format.size;
+                x_offset += FontEngine::measure_text(seg.text.substr(0, prefix_len), font).width;
+            }
+            break;
+        }
+    }
+    return x_offset;
+}
+```
+
+This method is used during pointer event hit-testing, caret drawing, and selection highlights rendering, guaranteeing pixel-perfect mouse alignment.
+
+---
+
+## 4. Text Selection Engine
 
 A good coding environment requires robust text selection using both keyboard navigation and mouse gestures.
 
 ### Mouse Selection & Dragging
-The mouse selection follows a state machine tracking the `PointerState`:
-1. **Pressed:** If the user clicks inside the text area, the cursor updates. If Shift is not held down, the selection anchor is set to the current cursor position, clearing any prior selection:
-   $$\text{anchor\_line\_} = \text{cursor\_line\_}, \quad \text{anchor\_col\_} = \text{cursor\_col\_}, \quad \text{has\_selection\_} = \text{false}$$
-   Then, `dragging_selection_` is enabled.
+The mouse selection follows a state machine tracking the `Pointer& e`:
+1. **Pressed:** If the user clicks inside the text area, the style-aware offset maps the pixel coordinate to a text column. If Shift is not held down, the selection anchor is set to the current cursor position, clearing any prior selection.
 2. **Moved:** If `dragging_selection_` is active, the cursor updates to the current mouse coordinate. If the cursor position differs from the anchor, `has_selection_` is set to `true`.
 3. **Released:** Disables `dragging_selection_`.
 
-### Keyboard Selection
-The editor supports Shift key state tracking:
-* Since `KeyEvent` does not natively store a modifier mask in the framework, `on_key_event` intercepts the Left/Right Shift keys (`0xFFE1` and `0xFFE2` keysyms) and stores their state in a `shift_pressed_` boolean.
-* When executing navigation keys (Arrows, Home, End, PageUp/PageDown) while `shift_pressed_` is `true`, the selection anchor is initialized (if not already selecting) and the cursor moves to form the selection boundary.
-* If navigation keys are pressed without Shift, the selection is cleared.
-
-### Selection Coordinates Resolution
-To draw selection highlights or retrieve selected text, selection boundaries are sorted sequentially so that the starting point is guaranteed to precede the ending point:
-
-```cpp
-void RichTextBox::get_selection_ordered(int& start_line, int& start_col, int& end_line, int& end_col) const {
-    if (!has_selection_) {
-        start_line = end_line = cursor_line_;
-        start_col = end_col = cursor_col_;
-        return;
-    }
-    if (anchor_line_ < cursor_line_) {
-        start_line = anchor_line_; start_col = anchor_col_;
-        end_line = cursor_line_; end_col = cursor_col_;
-    } else if (anchor_line_ > cursor_line_) {
-        start_line = cursor_line_; start_col = cursor_col_;
-        end_line = anchor_line_; end_col = anchor_col_;
-    } else {
-        start_line = end_line = anchor_line_;
-        start_col = std::min(anchor_col_, cursor_col_);
-        end_col = std::max(anchor_col_, cursor_col_);
-    }
-}
-```
-
 ---
 
-## 3. High-Level Selection & Copy/Paste APIs
+## 5. High-Level Selection & Copy/Paste APIs
 
 To support clipboard synchronization, `RichTextBox` exposes a pair of programmatic APIs:
 
 ### `get_selected_text()`
-Returns the substring corresponding to the selected range. If the selection spans multiple lines, the method slices each line accordingly and joins them with newlines:
-```cpp
-std::string RichTextBox::get_selected_text() const {
-    if (!has_selection_) return "";
-    int start_line, start_col, end_line, end_col;
-    get_selection_ordered(start_line, start_col, end_line, end_col);
-    if (start_line == end_line) {
-        return lines_[start_line].substr(start_col, end_col - start_col);
-    }
-    std::string result = lines_[start_line].substr(start_col) + "\n";
-    for (int l = start_line + 1; l < end_line; ++l) {
-        result += lines_[l] + "\n";
-    }
-    result += lines_[end_line].substr(0, end_col);
-    return result;
-}
-```
+Returns the substring corresponding to the selected range. If the selection spans multiple lines, the method slices each line accordingly and joins them with newlines.
 
 ### `insert_text()`
 Inserts new text at the cursor position, automatically overwriting/deleting any active selection first:
 1. **Delete Selection:** If `has_selection_` is true, the selected ranges are erased from `lines_`. Spliced line fragments are merged, and the cursor is relocated to the selection start.
 2. **Splice Input:** Split incoming text into individual lines and splice them into the document structure.
-3. **Housekeeping:** Triggers `update_line_states()`, syncs the scrollbar, and invalidates layout.
-
----
-
-## 4. Notepad Application Layout & Copy/Paste Routing
-
-In the `hello_notepad` example, these new APIs are linked directly to "Copy" and "Paste" commands:
-
-```
-+-----------------------------------------------------------------+
-|  [ filepath input box ]  [Load]  [Save]  [Copy]  [Paste]         |
-+-----------------------------------------------------------------+
-|  1 | #include <iostream>                                       |
-|  2 | int main() {                                               |
-|  3 |     std::cout << "Hello!" << std::endl;                     |
-|  4 | }                                                          |
-+-----------------------------------------------------------------+
-```
-
-When **Copy** is clicked:
-```cpp
-copy_btn->on_click = [this]() {
-    clipboard_ = code_editor_->get_selected_text();
-};
-```
-
-When **Paste** is clicked:
-```cpp
-paste_btn->on_click = [this]() {
-    if (!clipboard_.empty()) {
-        code_editor_->insert_text(clipboard_);
-    }
-};
-```
-
----
-
-## 5. Rendering Selection Highlights
-
-Selection ranges are highlighted dynamically during the text rendering pass. For each visible line `l`, if the line intersects the sorted selection bounds:
-1. We determine the selected segment start and end columns for line `l`.
-2. We measure the X coordinate of the prefix string (`prefix = line.substr(0, sel_col_start)`).
-3. We measure the width of the selected string (`selected = line.substr(sel_col_start, sel_col_end - sel_col_start)`).
-4. We draw a translucent blue highlight rectangle under the text token:
-
-```cpp
-int sel_x = text_area_x + target.measure_text(prefix, font_).width;
-int sel_w = target.measure_text(selected, font_).width;
-Rect highlight_rect{sel_x, current_y, sel_w, char_h};
-draw_rect(highlight_rect, selection_color);
-```
+3. **Housekeeping:** Triggers `update_formatting()`, syncs the scrollbar, and invalidates layout.

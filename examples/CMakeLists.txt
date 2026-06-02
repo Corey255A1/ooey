@@ -34,11 +34,18 @@ if(OOEY_BUILD_CONTROLS)
     add_ooey_executable(hello_wizard hello_wizard.cpp)
     target_link_libraries(hello_wizard PRIVATE ooey ooey_controls)
 
-    add_ooey_executable(hello_notepad hello_notepad.cpp)
-    target_link_libraries(hello_notepad PRIVATE ooey ooey_controls)
+    add_ooey_executable(OoeyCode
+        codeeditor/OoeyCode.cpp
+        codeeditor/code_editor.cpp
+    )
+    target_link_libraries(OoeyCode PRIVATE ooey ooey_controls)
+    target_include_directories(OoeyCode PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/codeeditor)
 
     add_ooey_executable(hello_image hello_image.cpp)
     target_link_libraries(hello_image PRIVATE ooey ooey_controls)
+
+    add_ooey_executable(hello_paint hello_paint.cpp)
+    target_link_libraries(hello_paint PRIVATE ooey ooey_controls)
 
     add_ooey_executable(performance_benchmark performance_benchmark.cpp)
     target_link_libraries(performance_benchmark PRIVATE ooey ooey_controls)

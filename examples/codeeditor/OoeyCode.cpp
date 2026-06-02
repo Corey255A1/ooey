@@ -9,7 +9,7 @@
 #include "gooey/mvvmc/view.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/text_box.hpp"
-#include "gooey/controls/code_editor.hpp"
+#include "code_editor.hpp"
 
 static std::string load_file_content(const std::string& filepath) {
     std::ifstream file(filepath);
@@ -42,35 +42,35 @@ public:
         file_input_->set_text("main.cpp");
         
         // 2. Load button
-        auto load_btn = std::make_shared<gooey::Button>(
+        load_btn_ = std::make_shared<gooey::Button>(
             ooey::Rect{450, 20, 70, 30},
             ooey::Color{50, 50, 55}
         );
-        load_btn->set_label_text("Load");
+        load_btn_->set_label_text("Load");
         
         // 3. Save button
-        auto save_btn = std::make_shared<gooey::Button>(
+        save_btn_ = std::make_shared<gooey::Button>(
             ooey::Rect{530, 20, 70, 30},
             ooey::Color{50, 50, 55}
         );
-        save_btn->set_label_text("Save");
+        save_btn_->set_label_text("Save");
 
         // 4. Copy button
-        auto copy_btn = std::make_shared<gooey::Button>(
+        copy_btn_ = std::make_shared<gooey::Button>(
             ooey::Rect{610, 20, 70, 30},
             ooey::Color{50, 50, 55}
         );
-        copy_btn->set_label_text("Copy");
+        copy_btn_->set_label_text("Copy");
 
         // 5. Paste button
-        auto paste_btn = std::make_shared<gooey::Button>(
+        paste_btn_ = std::make_shared<gooey::Button>(
             ooey::Rect{690, 20, 70, 30},
             ooey::Color{50, 50, 55}
         );
-        paste_btn->set_label_text("Paste");
+        paste_btn_->set_label_text("Paste");
         
         // 6. Code editor
-        code_editor_ = std::make_shared<gooey::CodeEditor>(
+        code_editor_ = std::make_shared<gooey::controls::CodeEditor>(
             ooey::Rect{50, 70, 700, 480},
             code_font,
             ooey::Color{220, 220, 220}, // default text color
@@ -83,31 +83,31 @@ public:
         
         // Add children
         add_child(file_input_);
-        add_child(load_btn);
-        add_child(save_btn);
-        add_child(copy_btn);
-        add_child(paste_btn);
+        add_child(load_btn_);
+        add_child(save_btn_);
+        add_child(copy_btn_);
+        add_child(paste_btn_);
         add_child(code_editor_);
         
         // Action Handlers
-        load_btn->on_click = [this]() {
+        load_btn_->on_click = [this]() {
             std::string path = file_input_->get_text();
             std::string content = load_file_content(path);
             code_editor_->set_text(content);
         };
         
-        save_btn->on_click = [this]() {
+        save_btn_->on_click = [this]() {
             std::string path = file_input_->get_text();
             std::string content = code_editor_->get_text();
             save_file_content(path, content);
         };
 
-        copy_btn->on_click = [this]() {
+        copy_btn_->on_click = [this]() {
             clipboard_ = code_editor_->get_selected_text();
             std::cout << "[Notepad] Copied selected text: \"" << clipboard_ << "\"\n";
         };
 
-        paste_btn->on_click = [this]() {
+        paste_btn_->on_click = [this]() {
             if (!clipboard_.empty()) {
                 code_editor_->insert_text(clipboard_);
             }
@@ -123,20 +123,90 @@ public:
             "}\n"
         );
     }
+
+protected:
+    ooey::Size do_measure(ooey::Size constraints) override {
+        // Parent constraints are the window client dimensions
+        int left = 50;
+        int right = constraints.width - 50;
+        int btn_w = 70;
+        int btn_h = 30;
+        int gap = 10;
+        int load_x = right - btn_w - gap - btn_w - gap - btn_w - gap - btn_w;
+        int input_w = std::max(0, load_x - gap - left);
+        
+        if (load_btn_) load_btn_->measure(ooey::Size{btn_w, btn_h});
+        if (save_btn_) save_btn_->measure(ooey::Size{btn_w, btn_h});
+        if (copy_btn_) copy_btn_->measure(ooey::Size{btn_w, btn_h});
+        if (paste_btn_) paste_btn_->measure(ooey::Size{btn_w, btn_h});
+        if (file_input_) file_input_->measure(ooey::Size{input_w, btn_h});
+
+        int editor_y = 70;
+        int editor_w = std::max(0, right - left);
+        int editor_h = std::max(0, constraints.height - 50 - editor_y);
+        if (code_editor_) code_editor_->measure(ooey::Size{editor_w, editor_h});
+
+        return constraints;
+    }
+
+    void do_layout(ooey::Rect bounds) override {
+        int left = bounds.x + 50;
+        int right = bounds.x + bounds.width - 50;
+
+        int btn_w = 70;
+        int btn_h = 30;
+        int gap = 10;
+
+        int paste_x = right - btn_w;
+        int copy_x = paste_x - gap - btn_w;
+        int save_x = copy_x - gap - btn_w;
+        int load_x = save_x - gap - btn_w;
+
+        int toolbar_y = bounds.y + 20;
+
+        if (load_btn_) {
+            load_btn_->layout(ooey::Rect{load_x, toolbar_y, btn_w, btn_h});
+        }
+        if (save_btn_) {
+            save_btn_->layout(ooey::Rect{save_x, toolbar_y, btn_w, btn_h});
+        }
+        if (copy_btn_) {
+            copy_btn_->layout(ooey::Rect{copy_x, toolbar_y, btn_w, btn_h});
+        }
+        if (paste_btn_) {
+            paste_btn_->layout(ooey::Rect{paste_x, toolbar_y, btn_w, btn_h});
+        }
+
+        int input_w = std::max(0, load_x - gap - left);
+        if (file_input_) {
+            file_input_->layout(ooey::Rect{left, toolbar_y, input_w, btn_h});
+        }
+
+        int editor_y = bounds.y + 70;
+        int editor_w = std::max(0, right - left);
+        int editor_h = std::max(0, bounds.y + bounds.height - 50 - editor_y);
+        if (code_editor_) {
+            code_editor_->layout(ooey::Rect{left, editor_y, editor_w, editor_h});
+        }
+    }
     
 private:
     std::shared_ptr<gooey::TextBox> file_input_;
-    std::shared_ptr<gooey::CodeEditor> code_editor_;
+    std::shared_ptr<gooey::controls::CodeEditor> code_editor_;
+    std::shared_ptr<gooey::Button> load_btn_;
+    std::shared_ptr<gooey::Button> save_btn_;
+    std::shared_ptr<gooey::Button> copy_btn_;
+    std::shared_ptr<gooey::Button> paste_btn_;
     std::string clipboard_;
 };
 
 int main() {
-    std::cout << "Starting OOEY Notepad Demo...\n";
+    std::cout << "Starting OOEY OoeyCode Demo...\n";
 
     gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
-    if (!backend || !backend->create({800, 600}, "OOEY RichText Notepad Example")) {
+    if (!backend || !backend->create({800, 600}, "OOEY OoeyCode Editor Example")) {
         std::cerr << "Failed to create window\n";
         return 1;
     }

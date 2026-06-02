@@ -16,9 +16,17 @@ public:
     void set_child(std::shared_ptr<View> child);
     std::shared_ptr<View> get_child() const { return child_; }
 
+    int get_scroll_offset_x() const { return scroll_offset_x_; }
+    void set_scroll_offset_x(int offset);
+
     int get_scroll_offset_y() const { return scroll_offset_y_; }
     void set_scroll_offset_y(int offset);
-    bool needs_scroll() const { return needs_scroll_; }
+
+    bool needs_scroll() const { return needs_scroll_y_; }
+    bool needs_scroll_x() const { return needs_scroll_x_; }
+    bool needs_scroll_y() const { return needs_scroll_y_; }
+
+    void scroll_to_visible(Rect rect);
 
     bool on_pointer_event(const Pointer& e) override;
     bool on_key_event(const KeyEvent& e) override { return false; }
@@ -30,15 +38,23 @@ protected:
 private:
     std::shared_ptr<View> child_;
     std::shared_ptr<ScrollBar> v_scroll_;
+    std::shared_ptr<ScrollBar> h_scroll_;
+    
+    int scroll_offset_x_{0};
     int scroll_offset_y_{0};
+    int max_scroll_x_{0};
     int max_scroll_y_{0};
+    
     Size child_measured_size_{0, 0};
-    bool needs_scroll_{false};
+    bool needs_scroll_x_{false};
+    bool needs_scroll_y_{false};
 
     // Drag-scroll tracking
     bool dragging_content_{false};
+    int drag_start_x_{0};
     int drag_start_y_{0};
-    int drag_start_offset_{0};
+    int drag_start_offset_x_{0};
+    int drag_start_offset_y_{0};
 };
 
 } // namespace gooey::controls

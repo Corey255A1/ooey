@@ -14,6 +14,7 @@ TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
     is_absolute = true;
     absolute_bounds = bounds;
+    clip_children = true;
 
     current_style_.fill_color = bg_color;
     current_style_.stroke_color = Color{200, 200, 200};
@@ -143,7 +144,13 @@ void TextBox::do_layout(Rect bounds) {
 
     if (text_primitive_) {
         Size font_size = FontEngine::measure_text("A", text_primitive_->get_font());
-        int tx = bounds_.x + padding_left + 10;
+        Size text_size = FontEngine::measure_text(text_, text_primitive_->get_font());
+        int avail_w = std::max(0, bounds_.width - padding_left - padding_right - 20);
+        int scroll_x = 0;
+        if (text_size.width > avail_w) {
+            scroll_x = text_size.width - avail_w;
+        }
+        int tx = bounds_.x + padding_left + 10 - scroll_x;
         int ty = bounds_.y + padding_top + (bounds_.height - font_size.height) / 2;
         text_primitive_->set_position(Point{tx, ty});
     }

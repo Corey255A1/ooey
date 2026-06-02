@@ -148,5 +148,41 @@ To support scrolling on vertical/portrait displays, we implemented viewport scro
 - **Touch-Slop Interception:** Implemented scroll gesture interception. If a user swipes vertically by $\ge 8$ logical pixels starting on a child component (like a button or table), the controller cancels the child press and routes all drag control directly to the parent `ScrollContainer` for seamless scroll transitions.
 - **Unconstrained Sizing Fallback:** Fixed layout conflicts inside unconstrained viewports by forcing `MatchParent` sizing policies to fall back to natural content wrap heights when constraint sizes are very large ($\ge 50000$px), resolving vertical infinite stretch loops in controls like `DataGrid`.
 
+## 22. Window Maximize and Restore Chrome Controls
+To support standard desktop windows, we added a Maximize/Restore toggle button directly into the custom client-side window chrome decoration layout:
+- **Geometry & Icon Rendering:** The title-bar button is positioned left of the close button. Depending on the maximization state, it draws a single 10x10 square (Maximize) or two overlapping 8x8 squares (Restore).
+- **X11 Backend (EWMH):** Queries and toggles the maximized state by sending client messages with `_NET_WM_STATE_MAXIMIZED_VERT` and `_NET_WM_STATE_MAXIMIZED_HORZ` atoms to the root window.
+- **Wayland Backend (xdg_toplevel):** Hooks into the `xdg_toplevel_configure` event to monitor maximized state flags and triggers state transitions using `xdg_toplevel_set_maximized` and `xdg_toplevel_unset_maximized`.
+- **Unit Testing:** Implemented automated test suites simulating pointer hit-testing and event dispatching on the maximize button.
+
+## 23. CPU Profiling and Idle Throttling Engine
+To minimize background CPU usage, we transitioned the framework to a fully event-driven layout and rendering loop:
+- **Rendering Invalidation:** Render passes are skipped unless a layout dirtiness (`layout_dirty`), window resize event, or explicit render request (`needs_render_`) is active.
+- **Adaptive Event Polling:** Resolves VSync beating issues by shifting between an active state (non-blocking event loop with a 1ms yield sleep when no renders are pending) and an idle state (blocking the OS event socket inside `poll` or equivalent kernel wait for up to 100ms).
+- **Background Worker Marshalling:** Offloads heavy telemetry operations (such as `/proc` files crawling in `hello_sysinfo`) to background threads. Dispatched tasks are marshaled to the main thread via a mutex-protected queue inside the `Application` main loop.
+- **Wayland Starvation Fix:** Utilizes poll-driven file descriptor reads to prevent Wayland socket starvation during idle states.
+
+## 24. General-Purpose RichText and Syntax Highlighting Notepad Example
+To support advanced text editing capabilities, we implemented a decoupled multiline rich text architecture:
+- **Decoupled Architecture:** Created the general-purpose, syntax-agnostic `RichTextBox` control. The specialized `CodeEditor` inherits from it, running C++ tokenizer/lexer analysis and mapping color schemes using `RichTextBox` formatting APIs.
+- **Formatting Ranges:** Created `split_line_into_segments()` to decompose lines into individual styled runs (color, font weight, style, and size) using a sorted format range collection.
+- **Style-Aware Coordinate Mapping:** Implemented `get_column_x_offset()` to calculate character offsets using segment-specific font configurations, ensuring perfect caret placement and selection highlighting.
+- **Clipboard APIs:** Provided high-level `get_selected_text()` and `insert_text()` methods supporting multiline operations and cursor adjustments.
+
+## 25. Vector Paint Application and CanvasLayout Coordinates Mapping
+To enable absolute graphics layout modeling, we introduced canvas layouts and vector drawing controls:
+- **`CanvasLayout` View:** An interactive container that maps absolute child boundary coordinates to relative screen-space coordinate positions.
+- **`VectorShapeView` Hierarchy:** Shapes (`CircleShapeView`, `PolygonShapeView`) render a selection border with four resize corner handles (TL, TR, BL, BR) when selected. A pointer state machine manages shape dragging and resize transformations.
+- **Normalized Vertices Scaling:** Polygons store vertex coordinates as normalized positions $(rx_i, ry_i) \in [0.0, 1.0]$ relative to the shape's original bounding box. This resolves scaling coordinates dynamically in `do_layout` when a shape is resized.
+- **Ray-Casting Hit-Testing:** Implemented the even-odd ray-casting algorithm to support pointer hover and click hit-testing for arbitrary closed polygons.
+
+## 26. ScrollContainer Composition Refactoring & Combined Horizontal-Vertical Scrolling
+To unify scrolling behavior across the framework, we refactored scrolling mechanics around container composition:
+- **Bidirectional ScrollContainer:** Upgraded `ScrollContainer` to support simultaneous vertical and horizontal scrollbars. It resolves measurement conflicts by only clamping child constraints to the viewport dimensions if the child's corresponding policy is `MatchParent`, allowing `WrapContent`/`Fixed` children (like text viewports) to correctly report their overflow sizes and show scrollbars.
+- **RichTextBox Scroll Composition:** Removed manual scrolling calculations from `RichTextBox`. The text workspace is nested inside `ScrollContainer` as a `RichTextContentView` child component.
+- **Viewport Visibility Mapping:** Added `scroll_to_visible(Rect)` to dynamically scroll viewports to keep cursor rects within visible boundaries.
+- **Touch-Slop Gesture Capture:** Configured pointer capturing to intercept drag actions. Exceeding an 8px touch-slop threshold transfers pointer focus from child views (like buttons or cells) to the parent `ScrollContainer` for smooth scroll dragging.
+- **TextBox Offset Handling:** Single-line text boxes clip children automatically and offset rendering coordinates horizontally when text overflows the box's boundaries.
+
 ## Summary
-The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, layering a decoupled MVVM-C reactive system, and equipping it with DPI-aware auto-scaling and responsive layout controls, OOEY provides a robust, explicit, and highly usable foundation for cross-platform UI development (including Linux desktop, WebAssembly/HTML5, and pure Android native hardware-accelerated platforms).
+The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, layering a decoupled MVVM-C reactive system, and equipping it with DPI-aware auto-scaling, responsive layout controls, and decoupled scrollable rich text and canvas layouts, OOEY provides a robust, explicit, and highly usable foundation for cross-platform UI development (including Linux desktop, WebAssembly/HTML5, and pure Android native hardware-accelerated platforms).

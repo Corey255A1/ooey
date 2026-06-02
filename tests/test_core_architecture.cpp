@@ -2,7 +2,7 @@
 #include "ooey/types.hpp"
 #include "gooey/application.hpp"
 #include "gooey/controls/text_box.hpp"
-#include "gooey/controls/code_editor.hpp"
+#include "code_editor.hpp"
 #include "gooey/controls/list_control.hpp"
 #include "gooey/mvvmc/navigation_coordinator.hpp"
 #include "gooey/mvvmc/controller.hpp"

@@ -1,171 +1,60 @@
-namespace ooey {}
-
 #include "gooey/controls/rich_text_box.hpp"
 #include "gooey/application.hpp"
 #include "gooey/mvvmc/controller.hpp"
-#include <cctype>
+#include "gooey/controls/scroll_container.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace gooey::controls {
     using namespace ooey;
 
-// ---------------------------------------------------------
-// CppSyntaxHighlighter Implementation
-// ---------------------------------------------------------
-
-const std::unordered_set<std::string> CppSyntaxHighlighter::keywords_ = {
-    "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit",
-    "atomic_noexcept", "auto", "bitand", "bitor", "break", "case", "catch", "class",
-    "co_await", "co_return", "co_yield", "compl", "concept", "const", "const_cast",
-    "consteval", "constexpr", "constinit", "continue", "decltype", "default", "delete",
-    "do", "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false",
-    "for", "friend", "goto", "if", "inline", "mutable", "namespace", "new", "noexcept",
-    "not", "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected",
-    "public", "reflexpr", "register", "reinterpret_cast", "requires", "return",
-    "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
-    "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid",
-    "typename", "union", "using", "virtual", "volatile", "xor", "xor_eq", "while"
+struct StyledSegment {
+    std::string text;
+    TextFormat format;
 };
 
-const std::unordered_set<std::string> CppSyntaxHighlighter::types_ = {
-    "bool", "char", "char8_t", "char16_t", "char32_t", "double", "float",
-    "int", "long", "short", "signed", "unsigned", "void", "wchar_t",
-    "size_t", "ssize_t", "int8_t", "int16_t", "int32_t", "int64_t",
-    "uint8_t", "uint16_t", "uint32_t", "uint64_t", "std::string",
-    "std::vector", "std::shared_ptr", "std::unique_ptr", "std::map", "std::set",
-    "std::unordered_map", "std::unordered_set"
-};
+static std::vector<StyledSegment> split_line_into_segments(
+    const std::string& line, 
+    const std::vector<FormatRange>& formats, 
+    const TextFormat& default_format) {
+    
+    std::vector<StyledSegment> segments;
+    int current_col = 0;
+    int line_len = static_cast<int>(line.size());
 
-std::vector<HighlightedToken> CppSyntaxHighlighter::highlight(const std::string& line, int start_state, int& out_end_state) {
-    std::vector<HighlightedToken> tokens;
-    size_t i = 0;
-    int state = start_state;
-    std::string current_token = "";
+    auto sorted_formats = formats;
+    std::sort(sorted_formats.begin(), sorted_formats.end(), 
+              [](const FormatRange& a, const FormatRange& b) {
+                  return a.start_col < b.start_col;
+              });
 
-    auto emit = [&](TokenType type) {
-        if (!current_token.empty()) {
-            tokens.push_back({current_token, type});
-            current_token.clear();
+    for (const auto& fmt : sorted_formats) {
+        int start = std::clamp(fmt.start_col, current_col, line_len);
+        int end = std::clamp(fmt.end_col, start, line_len);
+
+        if (start > current_col) {
+            segments.push_back({line.substr(current_col, start - current_col), default_format});
         }
-    };
-
-    while (i < line.size()) {
-        if (state == 1) {
-            current_token += line[i];
-            if (i + 1 < line.size() && line[i] == '*' && line[i+1] == '/') {
-                current_token += '/';
-                i += 2;
-                state = 0;
-                emit(TokenType::Comment);
-            } else {
-                i++;
-            }
-            continue;
+        if (end > start) {
+            segments.push_back({line.substr(start, end - start), fmt.format});
         }
-
-        if (line[i] == '/' && i + 1 < line.size() && line[i+1] == '/') {
-            emit(TokenType::Normal);
-            current_token = line.substr(i);
-            emit(TokenType::Comment);
-            break;
-        }
-
-        if (line[i] == '/' && i + 1 < line.size() && line[i+1] == '*') {
-            emit(TokenType::Normal);
-            current_token = "/*";
-            i += 2;
-            state = 1;
-            continue;
-        }
-
-        if (line[i] == '"') {
-            emit(TokenType::Normal);
-            current_token += line[i++];
-            while (i < line.size() && line[i] != '"') {
-                if (line[i] == '\\' && i + 1 < line.size()) {
-                    current_token += line[i++];
-                }
-                current_token += line[i++];
-            }
-            if (i < line.size()) {
-                current_token += line[i++];
-            }
-            emit(TokenType::String);
-            continue;
-        }
-
-        if (line[i] == '\'') {
-            emit(TokenType::Normal);
-            current_token += line[i++];
-            while (i < line.size() && line[i] != '\'') {
-                if (line[i] == '\\' && i + 1 < line.size()) {
-                    current_token += line[i++];
-                }
-                current_token += line[i++];
-            }
-            if (i < line.size()) {
-                current_token += line[i++];
-            }
-            emit(TokenType::String);
-            continue;
-        }
-
-        if (line[i] == '#' && current_token.empty()) {
-            current_token += line[i++];
-            while (i < line.size() && std::isalnum(static_cast<unsigned char>(line[i]))) {
-                current_token += line[i++];
-            }
-            emit(TokenType::Preprocessor);
-            continue;
-        }
-
-        if (std::isalpha(static_cast<unsigned char>(line[i])) || line[i] == '_') {
-            emit(TokenType::Normal);
-            while (i < line.size() && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_')) {
-                current_token += line[i++];
-            }
-            if (keywords_.count(current_token)) {
-                emit(TokenType::Keyword);
-            } else if (types_.count(current_token)) {
-                emit(TokenType::Type);
-            } else {
-                emit(TokenType::Normal);
-            }
-            continue;
-        }
-
-        if (std::isdigit(static_cast<unsigned char>(line[i]))) {
-            emit(TokenType::Normal);
-            while (i < line.size() && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '.')) {
-                current_token += line[i++];
-            }
-            emit(TokenType::Number);
-            continue;
-        }
-
-        if (std::string("+-*/%=&|^!<>?:~.").find(line[i]) != std::string::npos) {
-            emit(TokenType::Normal);
-            current_token += line[i++];
-            emit(TokenType::Operator);
-            continue;
-        }
-
-        current_token += line[i++];
+        current_col = end;
     }
 
-    emit(TokenType::Normal);
-    out_end_state = state;
-    return tokens;
-}
+    if (current_col < line_len) {
+        segments.push_back({line.substr(current_col), default_format});
+    }
 
-// ---------------------------------------------------------
-// RichTextBox Implementation
-// ---------------------------------------------------------
+    if (segments.empty()) {
+        segments.push_back({"", default_format});
+    }
+
+    return segments;
+}
 
 static Geometry make_rect_geometry(const Rect& rect, Color color) {
     Geometry geom;
-    geom.type = PrimitiveType::Triangles;
     float x1 = static_cast<float>(rect.x);
     float y1 = static_cast<float>(rect.y);
     float x2 = static_cast<float>(rect.x + rect.width);
@@ -181,21 +70,60 @@ static Geometry make_rect_geometry(const Rect& rect, Color color) {
     return geom;
 }
 
+class RichTextContentView : public View, public IInteractive {
+public:
+    RichTextContentView(RichTextBox& parent) : parent_(parent) {
+        is_absolute = true;
+    }
+
+    Rect bounds() const override {
+        return layout_bounds;
+    }
+
+    bool on_pointer_event(const Pointer& e) override {
+        return parent_.on_content_pointer_event(e);
+    }
+
+    bool on_key_event(const KeyEvent& e) override {
+        return parent_.on_content_key_event(e);
+    }
+
+    bool on_text_event(const TextEvent& e) override {
+        return parent_.on_content_text_event(e);
+    }
+
+    void draw(ooey::IRenderTarget& target) const override {
+        parent_.draw_content(target);
+    }
+
+protected:
+    Size do_measure(Size constraints) override {
+        return parent_.measure_content(constraints);
+    }
+
+    void do_layout(Rect bounds) override {
+        layout_bounds = bounds;
+        View::do_layout(bounds);
+    }
+
+private:
+    RichTextBox& parent_;
+};
+
 RichTextBox::RichTextBox(Rect bounds, Font font, Color text_color, Color bg_color)
-    : bounds_(bounds), font_(font), lines_{""}, line_start_states_{0} {
+    : bounds_(bounds), font_(font), lines_{""}, line_formats_{std::vector<FormatRange>{}} {
     width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};
     height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
     is_absolute = true;
     absolute_bounds = bounds;
 
-    token_colors[TokenType::Normal] = text_color;
+    this->default_text_color = text_color;
     this->bg_color = bg_color;
 
-    scrollbar_ = std::make_shared<ScrollBar>(Rect{bounds.x + bounds.width - 12, bounds.y, 12, bounds.height}, ScrollBarOrientation::Vertical);
-    scrollbar_->on_value_changed = [this](int val) {
-        scroll_line_ = val;
-    };
-    add_child(scrollbar_);
+    scroll_container_ = std::make_shared<ScrollContainer>();
+    content_view_ = std::make_shared<RichTextContentView>(*this);
+    scroll_container_->set_child(content_view_);
+    add_child(scroll_container_);
 }
 
 Rect RichTextBox::bounds() const {
@@ -225,11 +153,20 @@ void RichTextBox::set_text(const std::string& text) {
     lines_.push_back(current_line);
     cursor_line_ = 0;
     cursor_col_ = 0;
-    scroll_line_ = 0;
     has_selection_ = false;
-    update_line_states();
-    sync_scrollbar();
-    invalidate_layout();
+
+    line_formats_.clear();
+    line_formats_.resize(lines_.size());
+
+    update_formatting();
+    
+    if (scroll_container_) {
+        scroll_container_->set_scroll_offset_x(0);
+        scroll_container_->set_scroll_offset_y(0);
+    }
+    
+    scroll_cursor_into_view();
+    invalidate_content_layout();
     if (on_text_changed) {
         on_text_changed(get_text());
     }
@@ -248,49 +185,77 @@ std::string RichTextBox::get_text() const {
 
 void RichTextBox::set_font(const Font& font) {
     font_ = font;
-    invalidate_layout();
+    invalidate_content_layout();
 }
 
 const Font& RichTextBox::get_font() const {
     return font_;
 }
 
-void RichTextBox::set_syntax_highlighter(std::shared_ptr<ISyntaxHighlighter> highlighter) {
-    highlighter_ = highlighter;
-    update_line_states();
+void RichTextBox::clear_formats() {
+    for (auto& formats : line_formats_) {
+        formats.clear();
+    }
+    invalidate_content_layout();
 }
 
-void RichTextBox::update_line_states() {
-    if (line_start_states_.size() != lines_.size()) {
-        line_start_states_.resize(lines_.size(), 0);
-    }
-    int state = 0;
-    for (size_t i = 0; i < lines_.size(); ++i) {
-        line_start_states_[i] = state;
-        int next_state = state;
-        if (highlighter_) {
-            highlighter_->highlight(lines_[i], state, next_state);
-        }
-        state = next_state;
+void RichTextBox::clear_line_formats(int line_idx) {
+    if (line_idx >= 0 && line_idx < static_cast<int>(line_formats_.size())) {
+        line_formats_[line_idx].clear();
+        invalidate_content_layout();
     }
 }
 
-void RichTextBox::sync_scrollbar() {
-    if (scrollbar_) {
-        Size char_size = FontEngine::measure_text("A", font_);
-        int visible_lines = std::max(1, bounds_.height / (char_size.height + 4));
-        scrollbar_->set_range(0, lines_.size(), visible_lines);
-        scrollbar_->set_value(scroll_line_);
+void RichTextBox::apply_format(int line_idx, int start_col, int end_col, const TextFormat& format) {
+    if (line_idx >= 0 && line_idx < static_cast<int>(line_formats_.size())) {
+        line_formats_[line_idx].push_back({start_col, end_col, format});
+        invalidate_content_layout();
     }
 }
 
-void RichTextBox::make_cursor_visible(int visible_lines) {
-    if (cursor_line_ < scroll_line_) {
-        scroll_line_ = cursor_line_;
-    } else if (cursor_line_ >= scroll_line_ + visible_lines) {
-        scroll_line_ = cursor_line_ - visible_lines + 1;
+void RichTextBox::set_line_formats(int line_idx, const std::vector<FormatRange>& formats) {
+    if (line_idx >= 0 && line_idx < static_cast<int>(line_formats_.size())) {
+        line_formats_[line_idx] = formats;
+        invalidate_content_layout();
     }
-    sync_scrollbar();
+}
+
+const std::vector<FormatRange>& RichTextBox::get_line_formats(int line_idx) const {
+    static const std::vector<FormatRange> empty_formats;
+    if (line_idx >= 0 && line_idx < static_cast<int>(line_formats_.size())) {
+        return line_formats_[line_idx];
+    }
+    return empty_formats;
+}
+
+int RichTextBox::get_lines_count() const {
+    return static_cast<int>(lines_.size());
+}
+
+std::string RichTextBox::get_line_text(int line_idx) const {
+    if (line_idx >= 0 && line_idx < static_cast<int>(lines_.size())) {
+        return lines_[line_idx];
+    }
+    return "";
+}
+
+int RichTextBox::get_scroll_x() const {
+    if (scroll_container_) {
+        return scroll_container_->get_scroll_offset_x();
+    }
+    return 0;
+}
+
+bool RichTextBox::needs_scroll_x() const {
+    return scroll_container_ && scroll_container_->needs_scroll_x();
+}
+
+bool RichTextBox::needs_scroll_y() const {
+    return scroll_container_ && scroll_container_->needs_scroll_y();
+}
+
+void RichTextBox::update_formatting() {
+    // Default implementation does nothing
 }
 
 void RichTextBox::get_selection_ordered(int& start_line, int& start_col, int& end_line, int& end_col) const {
@@ -323,6 +288,41 @@ void RichTextBox::get_selection_ordered(int& start_line, int& start_col, int& en
     }
 }
 
+int RichTextBox::get_column_x_offset(int line_idx, int col) const {
+    if (line_idx < 0 || line_idx >= static_cast<int>(lines_.size())) return 0;
+    const std::string& line = lines_[line_idx];
+    const auto& formats = (line_idx < static_cast<int>(line_formats_.size())) ? line_formats_[line_idx] : std::vector<FormatRange>{};
+    
+    TextFormat default_fmt{default_text_color, FontWeight::Normal, FontStyle::Normal, font_.size};
+    auto segments = split_line_into_segments(line, formats, default_fmt);
+    
+    int x_offset = 0;
+    int current_col = 0;
+    
+    for (const auto& seg : segments) {
+        int seg_len = static_cast<int>(seg.text.size());
+        if (current_col + seg_len <= col) {
+            Font font = font_;
+            font.weight = seg.format.weight;
+            font.style = seg.format.style;
+            if (seg.format.size > 0) font.size = seg.format.size;
+            x_offset += FontEngine::measure_text(seg.text, font).width;
+            current_col += seg_len;
+        } else {
+            int prefix_len = col - current_col;
+            if (prefix_len > 0) {
+                Font font = font_;
+                font.weight = seg.format.weight;
+                font.style = seg.format.style;
+                if (seg.format.size > 0) font.size = seg.format.size;
+                x_offset += FontEngine::measure_text(seg.text.substr(0, prefix_len), font).width;
+            }
+            break;
+        }
+    }
+    return x_offset;
+}
+
 std::string RichTextBox::get_selected_text() const {
     if (!has_selection_) return "";
     
@@ -349,11 +349,15 @@ void RichTextBox::insert_text(const std::string& text) {
         
         if (start_line == end_line) {
             lines_[start_line].erase(start_col, end_col - start_col);
+            line_formats_[start_line].clear();
         } else {
             std::string prefix = lines_[start_line].substr(0, start_col);
             std::string suffix = lines_[end_line].substr(end_col);
             lines_[start_line] = prefix + suffix;
             lines_.erase(lines_.begin() + start_line + 1, lines_.begin() + end_line + 1);
+            
+            line_formats_[start_line].clear();
+            line_formats_.erase(line_formats_.begin() + start_line + 1, line_formats_.begin() + end_line + 1);
         }
         cursor_line_ = start_line;
         cursor_col_ = start_col;
@@ -377,62 +381,136 @@ void RichTextBox::insert_text(const std::string& text) {
     
     if (insert_lines.size() == 1) {
         lines_[cursor_line_] += insert_lines[0] + line_suffix;
+        line_formats_[cursor_line_].clear();
         cursor_col_ += insert_lines[0].size();
     } else {
         lines_[cursor_line_] += insert_lines[0];
+        line_formats_[cursor_line_].clear();
         for (size_t i = 1; i + 1 < insert_lines.size(); ++i) {
             lines_.insert(lines_.begin() + cursor_line_ + i, insert_lines[i]);
+            line_formats_.insert(line_formats_.begin() + cursor_line_ + i, std::vector<FormatRange>{});
         }
         lines_.insert(lines_.begin() + cursor_line_ + insert_lines.size() - 1, insert_lines.back() + line_suffix);
+        line_formats_.insert(line_formats_.begin() + cursor_line_ + insert_lines.size() - 1, std::vector<FormatRange>{});
         cursor_line_ += insert_lines.size() - 1;
         cursor_col_ = insert_lines.back().size();
     }
 
-    update_line_states();
-    sync_scrollbar();
-    invalidate_layout();
+    update_formatting();
+    scroll_cursor_into_view();
+    invalidate_content_layout();
     if (on_text_changed) {
         on_text_changed(get_text());
     }
 }
 
-bool RichTextBox::on_pointer_event(const Pointer& e) {
-    auto children = get_children();
-    for (auto it = children.rbegin(); it != children.rend(); ++it) {
-        auto* child_interactive = dynamic_cast<IInteractive*>(it->get());
-        if (child_interactive) {
-            Rect cb = child_interactive->bounds();
-            if (e.x >= cb.x && e.x <= cb.x + cb.width &&
-                e.y >= cb.y && e.y <= cb.y + cb.height) {
-                if (child_interactive->on_pointer_event(e)) {
-                    return true;
-                }
-            }
-        }
+void RichTextBox::invalidate_content_layout() {
+    if (content_view_) {
+        content_view_->invalidate_layout();
+    } else {
+        invalidate_layout();
     }
+}
 
+void RichTextBox::scroll_cursor_into_view() {
+    if (scroll_container_) {
+        // Perform initial layout of scroll container if not laid out yet (for tests/direct calls)
+        if (scroll_container_->bounds().width == 0 || scroll_container_->bounds().height == 0) {
+            Size char_size = FontEngine::measure_text("A", font_);
+            int max_line_digits = std::to_string(get_lines_count()).size();
+            int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
+            
+            scroll_container_->measure(Size{bounds_.width - line_num_width, bounds_.height});
+            scroll_container_->layout(Rect{bounds_.x + line_num_width, bounds_.y, bounds_.width - line_num_width, bounds_.height});
+        }
+
+        Size char_size = FontEngine::measure_text("A", font_);
+        int line_h = char_size.height + 4;
+        
+        int cx = get_column_x_offset(cursor_line_, cursor_col_);
+        int cy = cursor_line_ * line_h;
+        
+        scroll_container_->scroll_to_visible(Rect{cx, cy, 2, char_size.height});
+    }
+}
+
+bool RichTextBox::on_pointer_event(const Pointer& e) {
     bool hit = (e.x >= bounds_.x && e.x <= bounds_.x + bounds_.width &&
                 e.y >= bounds_.y && e.y <= bounds_.y + bounds_.height);
+    if (!hit) return false;
+    
+    Size char_size = FontEngine::measure_text("A", font_);
+    int max_line_digits = std::to_string(get_lines_count()).size();
+    int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
+    
+    if (show_line_numbers && e.x < bounds_.x + line_num_width) {
+        if (e.state == PointerState::Pressed) {
+            int line_h = char_size.height + 4;
+            int scroll_offset_y = scroll_container_ ? scroll_container_->get_scroll_offset_y() : 0;
+            int clicked_line = (e.y - (bounds_.y + 4) + scroll_offset_y) / line_h;
+            clicked_line = std::max(0, std::min(clicked_line, static_cast<int>(lines_.size()) - 1));
+            
+            cursor_line_ = clicked_line;
+            cursor_col_ = 0;
+            if (!shift_pressed_) {
+                anchor_line_ = cursor_line_;
+                anchor_col_ = cursor_col_;
+                has_selection_ = false;
+            } else {
+                has_selection_ = true;
+            }
+            if (Application::get_instance() && Application::get_instance()->get_controller()) {
+                dynamic_cast<gooey::mvvmc::Controller*>(Application::get_instance()->get_controller())->set_focused_element(content_view_);
+            }
+            scroll_cursor_into_view();
+            invalidate_content_layout();
+            return true;
+        }
+        return false;
+    }
+    
+    if (content_view_) {
+        // Forward click to content view if inside active viewport area
+        int viewport_x = bounds_.x + line_num_width;
+        int viewport_w = bounds_.width - line_num_width - (scroll_container_->needs_scroll_y() ? 12 : 0);
+        int viewport_y = bounds_.y;
+        int viewport_h = bounds_.height - (scroll_container_->needs_scroll_x() ? 12 : 0);
+        
+        if (e.x >= viewport_x && e.x <= viewport_x + viewport_w &&
+            e.y >= viewport_y && e.y <= viewport_y + viewport_h) {
+            return on_content_pointer_event(e);
+        }
+    }
+    return false;
+}
+
+bool RichTextBox::on_key_event(const KeyEvent& e) {
+    return on_content_key_event(e);
+}
+
+bool RichTextBox::on_text_event(const TextEvent& e) {
+    return on_content_text_event(e);
+}
+
+bool RichTextBox::on_content_pointer_event(const Pointer& e) {
+    bool hit = (e.x >= content_view_->bounds().x && e.x <= content_view_->bounds().x + content_view_->bounds().width &&
+                e.y >= content_view_->bounds().y && e.y <= content_view_->bounds().y + content_view_->bounds().height);
     
     if (hit && e.state == PointerState::Pressed) {
         Size char_size = FontEngine::measure_text("A", font_);
         int line_h = char_size.height + 4;
         
-        int max_line_digits = std::to_string(lines_.size()).size();
-        int line_num_width = show_line_numbers ? std::max(40, max_line_digits * char_size.width + 16) : 0;
+        int text_area_x = content_view_->bounds().x + 8;
+        int text_area_y = content_view_->bounds().y + 4;
         
-        int text_area_x = bounds_.x + line_num_width + 8;
-        int text_area_y = bounds_.y + 4;
-        
-        int clicked_line = scroll_line_ + (e.y - text_area_y) / line_h;
+        int clicked_line = (e.y - text_area_y) / line_h;
         clicked_line = std::max(0, std::min(clicked_line, static_cast<int>(lines_.size()) - 1));
         
         std::string line = lines_[clicked_line];
         int clicked_col = 0;
         int min_dist = 999999;
         for (size_t col = 0; col <= line.size(); ++col) {
-            std::string prefix = line.substr(0, col);
-            int char_x = text_area_x + FontEngine::measure_text(prefix, font_).width;
+            int char_x = text_area_x + get_column_x_offset(clicked_line, col);
             int dist = std::abs(e.x - char_x);
             if (dist < min_dist) {
                 min_dist = dist;
@@ -452,27 +530,24 @@ bool RichTextBox::on_pointer_event(const Pointer& e) {
         }
 
         dragging_selection_ = true;
-        invalidate_layout();
+        scroll_cursor_into_view();
+        invalidate_content_layout();
         return true;
     } else if (e.state == PointerState::Moved && dragging_selection_) {
         Size char_size = FontEngine::measure_text("A", font_);
         int line_h = char_size.height + 4;
         
-        int max_line_digits = std::to_string(lines_.size()).size();
-        int line_num_width = show_line_numbers ? std::max(40, max_line_digits * char_size.width + 16) : 0;
+        int text_area_x = content_view_->bounds().x + 8;
+        int text_area_y = content_view_->bounds().y + 4;
         
-        int text_area_x = bounds_.x + line_num_width + 8;
-        int text_area_y = bounds_.y + 4;
-        
-        int clicked_line = scroll_line_ + (e.y - text_area_y) / line_h;
+        int clicked_line = (e.y - text_area_y) / line_h;
         clicked_line = std::max(0, std::min(clicked_line, static_cast<int>(lines_.size()) - 1));
         
         std::string line = lines_[clicked_line];
         int clicked_col = 0;
         int min_dist = 999999;
         for (size_t col = 0; col <= line.size(); ++col) {
-            std::string prefix = line.substr(0, col);
-            int char_x = text_area_x + FontEngine::measure_text(prefix, font_).width;
+            int char_x = text_area_x + get_column_x_offset(clicked_line, col);
             int dist = std::abs(e.x - char_x);
             if (dist < min_dist) {
                 min_dist = dist;
@@ -488,7 +563,8 @@ bool RichTextBox::on_pointer_event(const Pointer& e) {
         } else {
             has_selection_ = false;
         }
-        invalidate_layout();
+        scroll_cursor_into_view();
+        invalidate_content_layout();
         return true;
     } else if (e.state == PointerState::Released) {
         dragging_selection_ = false;
@@ -497,7 +573,7 @@ bool RichTextBox::on_pointer_event(const Pointer& e) {
     return false;
 }
 
-bool RichTextBox::on_key_event(const KeyEvent& e) {
+bool RichTextBox::on_content_key_event(const KeyEvent& e) {
     if (e.key_code == 0xFFE1 /* Left Shift */ || e.key_code == 0xFFE2 /* Right Shift */) {
         shift_pressed_ = (e.state == KeyState::Pressed);
         return true;
@@ -593,17 +669,19 @@ bool RichTextBox::on_key_event(const KeyEvent& e) {
         } else {
             if (cursor_col_ > 0) {
                 lines_[cursor_line_].erase(cursor_col_ - 1, 1);
+                line_formats_[cursor_line_].clear();
                 cursor_col_--;
-                update_line_states();
+                update_formatting();
                 if (on_text_changed) on_text_changed(get_text());
             } else if (cursor_line_ > 0) {
                 int old_len = lines_[cursor_line_ - 1].size();
                 lines_[cursor_line_ - 1] += lines_[cursor_line_];
                 lines_.erase(lines_.begin() + cursor_line_);
+                line_formats_.erase(line_formats_.begin() + cursor_line_);
                 cursor_line_--;
                 cursor_col_ = old_len;
-                update_line_states();
-                sync_scrollbar();
+                line_formats_[cursor_line_].clear();
+                update_formatting();
                 if (on_text_changed) on_text_changed(get_text());
             }
         }
@@ -615,13 +693,15 @@ bool RichTextBox::on_key_event(const KeyEvent& e) {
         } else {
             if (cursor_col_ < static_cast<int>(lines_[cursor_line_].size())) {
                 lines_[cursor_line_].erase(cursor_col_, 1);
-                update_line_states();
+                line_formats_[cursor_line_].clear();
+                update_formatting();
                 if (on_text_changed) on_text_changed(get_text());
             } else if (cursor_line_ + 1 < static_cast<int>(lines_.size())) {
                 lines_[cursor_line_] += lines_[cursor_line_ + 1];
                 lines_.erase(lines_.begin() + cursor_line_ + 1);
-                update_line_states();
-                sync_scrollbar();
+                line_formats_.erase(line_formats_.begin() + cursor_line_ + 1);
+                line_formats_[cursor_line_].clear();
+                update_formatting();
                 if (on_text_changed) on_text_changed(get_text());
             }
         }
@@ -641,11 +721,12 @@ bool RichTextBox::on_key_event(const KeyEvent& e) {
         }
         
         lines_.insert(lines_.begin() + cursor_line_ + 1, indent + suffix);
+        line_formats_.insert(line_formats_.begin() + cursor_line_ + 1, std::vector<FormatRange>{});
+        line_formats_[cursor_line_].clear();
         cursor_line_++;
         cursor_col_ = indent.size();
         
-        update_line_states();
-        sync_scrollbar();
+        update_formatting();
         if (on_text_changed) on_text_changed(get_text());
         handled = true;
     }
@@ -655,17 +736,15 @@ bool RichTextBox::on_key_event(const KeyEvent& e) {
     }
 
     if (handled) {
-        Size char_size = FontEngine::measure_text("A", font_);
-        int visible_lines = std::max(1, bounds_.height / (char_size.height + 4));
-        make_cursor_visible(visible_lines);
-        invalidate_layout();
+        scroll_cursor_into_view();
+        invalidate_content_layout();
         return true;
     }
 
     return false;
 }
 
-bool RichTextBox::on_text_event(const TextEvent& e) {
+bool RichTextBox::on_content_text_event(const TextEvent& e) {
     if (e.codepoint == 8 || e.codepoint == 127 || e.codepoint == '\n' || e.codepoint == '\r' || e.codepoint == '\t') {
         return true;
     }
@@ -691,110 +770,131 @@ bool RichTextBox::on_text_event(const TextEvent& e) {
 
     if (!text_to_insert.empty()) {
         insert_text(text_to_insert);
-        Size char_size = FontEngine::measure_text("A", font_);
-        int visible_lines = std::max(1, bounds_.height / (char_size.height + 4));
-        make_cursor_visible(visible_lines);
-        invalidate_layout();
     }
     return true;
 }
 
-void RichTextBox::draw(ooey::IRenderTarget& target) const {
-    auto draw_rect = [&](const Rect& r, Color color) {
-        target.draw_geometry(make_rect_geometry(r, color));
-    };
+Size RichTextBox::measure_content(Size /*constraints*/) {
+    // Measure all lines to find the maximum line width and height
+    Size char_size = FontEngine::measure_text("A", font_);
+    int line_h = char_size.height + 4;
+    
+    int max_w = 0;
+    for (int i = 0; i < static_cast<int>(lines_.size()); ++i) {
+        int lw = get_column_x_offset(i, lines_[i].size());
+        if (lw > max_w) {
+            max_w = lw;
+        }
+    }
+    
+    int total_width = max_w + 30; // 30px padding for safety
+    int total_height = std::max(1, static_cast<int>(lines_.size())) * line_h + 8;
+    return Size{total_width, total_height};
+}
 
-    draw_rect(bounds_, bg_color);
-
+void RichTextBox::draw_content(ooey::IRenderTarget& target) const {
     Size char_size = target.measure_text("A", font_);
     int char_h = char_size.height;
     int line_h = char_h + 4;
 
-    int max_line_digits = std::to_string(lines_.size()).size();
-    int line_num_width = show_line_numbers ? std::max(40, max_line_digits * char_size.width + 16) : 0;
+    int scroll_offset_y = scroll_container_->get_scroll_offset_y();
+    int viewport_h = scroll_container_->layout_bounds.height - (scroll_container_->needs_scroll_x() ? 12 : 0);
 
-    Rect line_num_rect{bounds_.x, bounds_.y, line_num_width, bounds_.height};
-    if (show_line_numbers) {
-        draw_rect(line_num_rect, line_num_bg);
-        Rect divider_rect{bounds_.x + line_num_width, bounds_.y, 1, bounds_.height};
-        draw_rect(divider_rect, divider_color);
-    }
+    int scroll_line = scroll_offset_y / line_h;
+    int end_line = std::min(static_cast<int>(lines_.size()), scroll_line + viewport_h / line_h + 2);
 
-    int text_area_x = bounds_.x + line_num_width + 8;
-    int text_area_width = bounds_.width - line_num_width - 20; // 12 scrollbar, 8 padding
-    int text_area_y = bounds_.y + 4;
-    int text_area_height = bounds_.height - 8;
-    
-    Rect text_area_bounds{text_area_x, text_area_y, text_area_width, text_area_height};
-    
-    int visible_lines = bounds_.height / line_h;
-    int end_line = std::min(static_cast<int>(lines_.size()), scroll_line_ + visible_lines + 1);
-    int y_pos = text_area_y;
+    int y_pos = content_view_->bounds().y + 4;
 
-    target.push_clip(text_area_bounds);
-    for (int l = scroll_line_; l < end_line; ++l) {
-        int current_y = y_pos + (l - scroll_line_) * line_h;
+    for (int l = scroll_line; l < end_line; ++l) {
+        int current_y = y_pos + l * line_h;
 
         // Draw selection highlight for this line
         int sel_start_line, sel_start_col, sel_end_line, sel_end_col;
         get_selection_ordered(sel_start_line, sel_start_col, sel_end_line, sel_end_col);
-        
+
         if (has_selection_ && l >= sel_start_line && l <= sel_end_line) {
             int sel_col_start = 0;
             int sel_col_end = lines_[l].size();
-            
+
             if (l == sel_start_line) {
                 sel_col_start = sel_start_col;
             }
             if (l == sel_end_line) {
                 sel_col_end = sel_end_col;
             }
-            
+
             if (sel_col_start < sel_col_end) {
-                std::string prefix = lines_[l].substr(0, sel_col_start);
-                std::string selected = lines_[l].substr(sel_col_start, sel_col_end - sel_col_start);
-                
-                int sel_x = text_area_x + target.measure_text(prefix, font_).width;
-                int sel_w = target.measure_text(selected, font_).width;
-                
-                Rect highlight_rect{sel_x, current_y, sel_w, char_h};
-                draw_rect(highlight_rect, selection_color);
+                int sel_x1 = content_view_->bounds().x + 8 + get_column_x_offset(l, sel_col_start);
+                int sel_x2 = content_view_->bounds().x + 8 + get_column_x_offset(l, sel_col_end);
+
+                Rect highlight_rect{sel_x1, current_y, sel_x2 - sel_x1, char_h};
+                target.draw_geometry(make_rect_geometry(highlight_rect, selection_color));
             }
         }
-        
-        std::vector<HighlightedToken> tokens;
-        int start_state = line_start_states_[l];
-        int next_state = start_state;
-        if (highlighter_) {
-            tokens = highlighter_->highlight(lines_[l], start_state, next_state);
-        } else {
-            tokens = {{lines_[l], TokenType::Normal}};
-        }
-        
-        int token_x = text_area_x;
-        for (const auto& token : tokens) {
-            if (token.text.empty()) continue;
-            Color color = token_colors.count(token.type) ? token_colors.at(token.type) : token_colors.at(TokenType::Normal);
-            target.draw_text(token.text, font_, Point{token_x, current_y}, color);
-            token_x += target.measure_text(token.text, font_).width;
+
+        const auto& formats = (l < static_cast<int>(line_formats_.size())) ? line_formats_[l] : std::vector<FormatRange>{};
+        TextFormat default_fmt{default_text_color, FontWeight::Normal, FontStyle::Normal, font_.size};
+        auto segments = split_line_into_segments(lines_[l], formats, default_fmt);
+
+        int token_x = content_view_->bounds().x + 8;
+        for (const auto& seg : segments) {
+            if (seg.text.empty() && segments.size() > 1) continue;
+
+            Font font = font_;
+            font.weight = seg.format.weight;
+            font.style = seg.format.style;
+            if (seg.format.size > 0) {
+                font.size = seg.format.size;
+            }
+
+            target.draw_text(seg.text, font, Point{token_x, current_y}, seg.format.color);
+            token_x += target.measure_text(seg.text, font).width;
         }
 
-        bool is_focused = (Application::get_instance() && Application::get_instance()->get_controller() &&
-                           dynamic_cast<gooey::mvvmc::Controller*>(Application::get_instance()->get_controller())->get_focused_element().get() == this);
-        
+        bool is_focused = false;
+        if (Application::get_instance() && Application::get_instance()->get_controller()) {
+            auto* ctrl = dynamic_cast<gooey::mvvmc::Controller*>(Application::get_instance()->get_controller());
+            if (ctrl) {
+                auto focused = ctrl->get_focused_element();
+                is_focused = (focused.get() == content_view_.get() || focused.get() == this);
+            }
+        }
+
         if (l == cursor_line_ && is_focused) {
-            std::string prefix = lines_[l].substr(0, cursor_col_);
-            int cursor_x = text_area_x + target.measure_text(prefix, font_).width;
+            int cursor_x = content_view_->bounds().x + 8 + get_column_x_offset(l, cursor_col_);
             Rect cursor_rect{cursor_x, current_y, 2, char_h};
             target.draw_geometry(make_rect_geometry(cursor_rect, cursor_color));
         }
     }
-    target.pop_clip();
+}
+
+void RichTextBox::draw(ooey::IRenderTarget& target) const {
+    // Draw background
+    target.draw_geometry(make_rect_geometry(bounds_, bg_color));
+
+    Size char_size = target.measure_text("A", font_);
+    int line_h = char_size.height + 4;
+    
+    int max_line_digits = std::to_string(get_lines_count()).size();
+    int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
+
+    Rect line_num_rect{bounds_.x, bounds_.y, line_num_width, bounds_.height};
+    if (show_line_numbers) {
+        target.draw_geometry(make_rect_geometry(line_num_rect, line_num_bg));
+        Rect divider_rect{bounds_.x + line_num_width, bounds_.y, 1, bounds_.height};
+        target.draw_geometry(make_rect_geometry(divider_rect, divider_color));
+    }
 
     if (show_line_numbers) {
+        int scroll_offset_y = scroll_container_ ? scroll_container_->get_scroll_offset_y() : 0;
+        int viewport_h = bounds_.height - (scroll_container_->needs_scroll_x() ? 12 : 0);
+        int scroll_line = scroll_offset_y / line_h;
+        int end_line = std::min(get_lines_count(), scroll_line + viewport_h / line_h + 2);
+        int y_pos = bounds_.y + 4;
+
         target.push_clip(line_num_rect);
-        for (int l = scroll_line_; l < end_line; ++l) {
-            int current_y = y_pos + (l - scroll_line_) * line_h;
+        for (int l = scroll_line; l < end_line; ++l) {
+            int current_y = y_pos + l * line_h - scroll_offset_y;
             std::string line_num_str = std::to_string(l + 1);
             int line_num_x = bounds_.x + line_num_width - 8 - target.measure_text(line_num_str, font_).width;
             target.draw_text(line_num_str, font_, Point{line_num_x, current_y}, line_num_color);
@@ -808,17 +908,34 @@ void RichTextBox::draw(ooey::IRenderTarget& target) const {
 Size RichTextBox::do_measure(Size constraints) {
     int w = resolve_width(constraints.width, absolute_bounds.width);
     int h = resolve_height(constraints.height, absolute_bounds.height);
+
+    if (scroll_container_) {
+        Size char_size = FontEngine::measure_text("A", font_);
+        int max_line_digits = std::to_string(get_lines_count()).size();
+        int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
+
+        int avail_w = std::max(0, w - line_num_width);
+        int avail_h = h;
+        scroll_container_->measure(Size{avail_w, avail_h});
+    }
     return Size{w, h};
 }
 
 void RichTextBox::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::do_layout(bounds);
-    
-    if (scrollbar_) {
-        scrollbar_->layout(Rect{bounds.x + bounds.width - 12, bounds.y, 12, bounds.height});
+
+    Size char_size = FontEngine::measure_text("A", font_);
+    int max_line_digits = std::to_string(get_lines_count()).size();
+    int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
+
+    if (scroll_container_) {
+        scroll_container_->layout(Rect{
+            bounds.x + line_num_width,
+            bounds.y,
+            bounds.width - line_num_width,
+            bounds.height
+        });
     }
-    sync_scrollbar();
 }
 
 } // namespace gooey::controls

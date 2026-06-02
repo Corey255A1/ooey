@@ -25,6 +25,7 @@ public:
     void add_child(std::shared_ptr<IDrawable>&& child);
 
     const std::vector<std::shared_ptr<IDrawable>>& get_children() const;
+    void remove_child(const std::shared_ptr<IDrawable>& child);
 
     // Helper to easily bind to a property and manage its lifecycle
     template <typename T>

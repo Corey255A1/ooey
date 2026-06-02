@@ -278,7 +278,6 @@ target_sources(gooey PRIVATE
     gooey/src/controls/label.cpp
     gooey/src/controls/text_box.cpp
     gooey/src/controls/rich_text_box.cpp
-    gooey/src/controls/code_editor.cpp
     gooey/src/controls/image_control.cpp
     gooey/src/controls/list_control.cpp
     gooey/src/controls/column.cpp
@@ -289,6 +288,8 @@ target_sources(gooey PRIVATE
     gooey/src/controls/datagrid.cpp
     gooey/src/controls/adaptive_stack.cpp
     gooey/src/controls/scroll_container.cpp
+    gooey/src/controls/canvas_layout.cpp
+    gooey/src/controls/vector_shape_view.cpp
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
     gooey/src/mvvmc/view.cpp

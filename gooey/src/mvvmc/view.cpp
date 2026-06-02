@@ -23,6 +23,18 @@ const std::vector<std::shared_ptr<IDrawable>>& View::get_children() const {
     return children_;
 }
 
+void View::remove_child(const std::shared_ptr<IDrawable>& child) {
+    auto it = std::find(children_.begin(), children_.end(), child);
+    if (it != children_.end()) {
+        auto* child_view = dynamic_cast<View*>(it->get());
+        if (child_view) {
+            child_view->parent_ = nullptr;
+        }
+        children_.erase(it);
+        invalidate_layout();
+    }
+}
+
 void View::draw(ooey::IRenderTarget& target) const {
     if (clip_children) {
         target.push_clip(layout_bounds);
