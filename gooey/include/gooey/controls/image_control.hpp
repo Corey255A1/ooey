@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_element.hpp"
 #include <memory>
 #include <string>
 
@@ -15,7 +15,7 @@ using renderer::Image;
 namespace gooey::controls {
     using namespace ooey;
 
-class ImageControl : public View {
+class ImageControl : public mvvmc::GooeyElement {
 public:
     // Create an image control and decode the file path automatically using the matching decoder
     ImageControl(Rect bounds, const std::string& image_path);

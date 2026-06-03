@@ -1,20 +1,20 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "gooey/controls/scrollbar.hpp"
 #include <memory>
 
 namespace gooey::controls {
 
-class ScrollContainer : public View, public IInteractive {
+class ScrollContainer : public GooeyNode, public IInteractive {
 public:
     ScrollContainer();
 
     Rect bounds() const override { return layout_bounds; }
 
-    void set_child(std::shared_ptr<View> child);
-    std::shared_ptr<View> get_child() const { return child_; }
+    void set_child(std::shared_ptr<GooeyNode> child);
+    std::shared_ptr<GooeyNode> get_child() const { return child_; }
 
     int get_scroll_offset_x() const { return scroll_offset_x_; }
     void set_scroll_offset_x(int offset);
@@ -36,7 +36,7 @@ protected:
     void do_layout(Rect bounds) override;
 
 private:
-    std::shared_ptr<View> child_;
+    std::shared_ptr<GooeyNode> child_;
     std::shared_ptr<ScrollBar> v_scroll_;
     std::shared_ptr<ScrollBar> h_scroll_;
     

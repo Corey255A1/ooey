@@ -70,7 +70,7 @@ static Geometry make_rect_geometry(const Rect& rect, Color color) {
     return geom;
 }
 
-class RichTextContentView : public View, public IInteractive {
+class RichTextContentView : public GooeyNode, public IInteractive {
 public:
     RichTextContentView(RichTextBox& parent) : parent_(parent) {
         is_absolute = true;
@@ -103,7 +103,7 @@ protected:
 
     void do_layout(Rect bounds) override {
         layout_bounds = bounds;
-        View::do_layout(bounds);
+        GooeyNode::do_layout(bounds);
     }
 
 private:
@@ -902,7 +902,7 @@ void RichTextBox::draw(ooey::IRenderTarget& target) const {
         target.pop_clip();
     }
 
-    View::draw(target);
+    GooeyNode::draw(target);
 }
 
 Size RichTextBox::do_measure(Size constraints) {

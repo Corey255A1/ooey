@@ -12,7 +12,7 @@ Size Column::do_measure(Size constraints) {
     Size child_constraints{avail_w, avail_h};
 
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             Size child_size = child_view->measure(child_constraints);
             int child_total_w = child_size.width + child_view->margin_left + child_view->margin_right;
@@ -39,7 +39,7 @@ void Column::do_layout(Rect bounds) {
     Size child_constraints{content_w, std::max(0, bounds.height - padding_top - padding_bottom)};
 
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             child_constraints.height = std::max(0, bounds.y + bounds.height - padding_bottom - current_y);
             Size child_size = child_view->measure(child_constraints);

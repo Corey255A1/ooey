@@ -5,7 +5,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "gooey/controls/grid.hpp"

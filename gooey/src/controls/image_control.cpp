@@ -39,14 +39,13 @@ Size ImageControl::do_measure(Size constraints) {
 
 void ImageControl::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::do_layout(bounds);
+    GooeyElement::do_layout(bounds);
 }
 
 void ImageControl::draw(IRenderTarget& target) const {
     if (image_) {
         target.draw_image(*image_, bounds_);
     }
-    View::draw(target);
 }
 
 } // namespace gooey::controls

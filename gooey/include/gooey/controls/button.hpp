@@ -3,7 +3,7 @@
 namespace ooey {}
 
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_element.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
@@ -15,11 +15,12 @@ namespace ooey {}
 namespace gooey::controls {
     using namespace ooey;
 
-class Button : public View, public IInteractive {
+class Button : public mvvmc::GooeyElement, public IInteractive {
 public:
     Button(Rect bounds, Color color);
     Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_thickness, int corner_radius, const std::string& label_text = "", Color label_color = Color{255, 255, 255});
 
+    void draw(ooey::IRenderTarget& target) const override;
     Rect bounds() const override;
 
     void set_color(Color color);
@@ -33,6 +34,7 @@ public:
     bool on_key_event(const KeyEvent& e) override;
 
     std::function<void()> on_click;
+    void set_theme_manager(std::shared_ptr<ThemeManager> manager) override;
 
 protected:
     // Layout support

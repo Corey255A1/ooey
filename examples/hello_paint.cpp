@@ -6,7 +6,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "gooey/controls/button.hpp"
@@ -57,7 +57,7 @@ private:
 };
 
 // Canvas container view that wraps CanvasLayout in a styled background frame
-class CanvasContainer : public View {
+class CanvasContainer : public GooeyNode {
 public:
     CanvasContainer() {
         width = {SizePolicy::MatchParent};
@@ -79,7 +79,7 @@ protected:
             canvas_->is_absolute = true;
             canvas_->set_absolute_bounds(Rect{pad, pad, bounds.width - pad*2, bounds.height - pad*2});
         }
-        View::do_layout(bounds);
+        GooeyNode::do_layout(bounds);
     }
 private:
     std::shared_ptr<RoundedRectPrimitive> bg_;

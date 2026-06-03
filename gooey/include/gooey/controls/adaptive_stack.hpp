@@ -1,10 +1,10 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 
 namespace gooey::controls {
 
-class AdaptiveStack : public View {
+class AdaptiveStack : public GooeyNode {
 public:
     AdaptiveStack() = default;
 

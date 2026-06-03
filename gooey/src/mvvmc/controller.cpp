@@ -11,7 +11,7 @@ bool contains_element(const std::shared_ptr<gooey::IDrawable>& node, gooey::mvvm
     if (dynamic_cast<gooey::mvvmc::IInteractive*>(node.get()) == target) {
         return true;
     }
-    auto* view = dynamic_cast<gooey::View*>(node.get());
+    auto* view = dynamic_cast<gooey::GooeyNode*>(node.get());
     if (view) {
         for (const auto& child : view->get_children()) {
             if (contains_element(child, target)) {
@@ -27,7 +27,7 @@ std::shared_ptr<gooey::IDrawable> find_shared_ptr(const std::shared_ptr<gooey::I
     if (node.get() == target) {
         return node;
     }
-    auto* view = dynamic_cast<gooey::View*>(node.get());
+    auto* view = dynamic_cast<gooey::GooeyNode*>(node.get());
     if (view) {
         for (const auto& child : view->get_children()) {
             auto found = find_shared_ptr(child, target);
@@ -44,7 +44,7 @@ std::shared_ptr<gooey::IDrawable> find_shared_ptr(const std::shared_ptr<gooey::I
 namespace gooey::mvvmc {
     using namespace ooey;
 
-Controller::Controller(InputManager& input_manager, std::shared_ptr<View> root_view)
+Controller::Controller(InputManager& input_manager, std::shared_ptr<GooeyNode> root_view)
     : input_manager_(input_manager), root_view_(std::move(root_view)) {}
 
 void Controller::process_events() {
@@ -67,7 +67,7 @@ void Controller::process_events() {
             if (pointer_event.state == PointerState::Moved && !captured_element_stolen_) {
                 int dy = pointer_event.y - pointer_pressed_y_;
                 if (std::abs(dy) >= 8) {
-                    View* curr = dynamic_cast<View*>(captured_element_.get());
+                    GooeyElement* curr = dynamic_cast<GooeyElement*>(captured_element_.get());
                     gooey::controls::ScrollContainer* scroll_container = nullptr;
                     while (curr) {
                         auto* scroll = dynamic_cast<gooey::controls::ScrollContainer*>(curr);
@@ -150,7 +150,7 @@ bool Controller::route_pointer_event(const Pointer& pointer, std::shared_ptr<IDr
     if (!node) return false;
 
     // Traverse children first (top-most elements usually drawn last, so reverse order)
-    auto* view = dynamic_cast<View*>(node.get());
+    auto* view = dynamic_cast<GooeyNode*>(node.get());
     if (view) {
         auto children = view->get_children();
         for (auto it = children.rbegin(); it != children.rend(); ++it) {

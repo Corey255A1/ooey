@@ -2,7 +2,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/button.hpp"
 #include "ooey/renderer/primitives/line_primitive.hpp"
 
@@ -20,7 +20,7 @@ int main() {
     app.set_window_backend(std::move(backend));
 
     // Construct a scene graph
-    auto root_view = std::make_shared<gooey::View>();
+    auto root_view = std::make_shared<gooey::GooeyNode>();
 
     // Add an interactive red button background
     auto button = std::make_shared<gooey::Button>(ooey::Rect{300, 200, 200, 200}, ooey::Color{255, 0, 0});

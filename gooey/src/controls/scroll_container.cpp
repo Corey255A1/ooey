@@ -19,7 +19,7 @@ ScrollContainer::ScrollContainer() {
     add_child(h_scroll_);
 }
 
-void ScrollContainer::set_child(std::shared_ptr<View> child) {
+void ScrollContainer::set_child(std::shared_ptr<GooeyNode> child) {
     child_ = child;
     clear_children();
     if (child_) {
@@ -124,7 +124,9 @@ Size ScrollContainer::do_measure(Size constraints) {
         h_scroll_->measure(Size{h_w, 12});
     }
 
-    return constraints;
+    int w = resolve_width(constraints.width, child_measured_size_.width + padding_left + padding_right + (needs_scroll_y_ ? 12 : 0));
+    int h = resolve_height(constraints.height, child_measured_size_.height + padding_top + padding_bottom + (needs_scroll_x_ ? 12 : 0));
+    return Size{w, h};
 }
 
 void ScrollContainer::do_layout(Rect bounds) {

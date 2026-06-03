@@ -3,7 +3,7 @@
 namespace ooey {}
 
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_element.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/primitives/text_primitive.hpp"
 #include <memory>
@@ -12,7 +12,7 @@ namespace ooey {}
 namespace gooey::controls {
     using namespace ooey;
 
-class Label : public View {
+class Label : public mvvmc::GooeyElement {
 public:
     Label(std::string text, Font font, Point position, Color color);
 

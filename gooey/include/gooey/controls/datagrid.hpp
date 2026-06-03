@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "gooey/controls/scrollbar.hpp"
 #include "ooey/renderer/primitives/rect_primitive.hpp"
@@ -20,7 +20,7 @@ struct DataGridColumn {
     int width;
 };
 
-class DataGrid : public View, public IInteractive {
+class DataGrid : public GooeyNode, public IInteractive {
 public:
     DataGrid(Rect bounds, int row_height, Font font);
 

@@ -12,10 +12,7 @@ ScrollBar::ScrollBar(Rect bounds, ScrollBarOrientation orientation)
     set_style_name("scrollbar");
 
     track_prim_ = std::make_shared<RectPrimitive>(bounds_, track_color_);
-    add_child(track_prim_);
-
     thumb_prim_ = std::make_shared<RoundedRectPrimitive>(Rect{0, 0, 0, 0}, 4, thumb_color_);
-    add_child(thumb_prim_);
 
     update_thumb_bounds();
 }
@@ -192,7 +189,12 @@ void ScrollBar::draw(ooey::IRenderTarget& target) const {
     if (bounds_.width <= 0 || bounds_.height <= 0) {
         return;
     }
-    View::draw(target);
+    if (track_prim_) {
+        track_prim_->draw(target);
+    }
+    if (thumb_prim_) {
+        thumb_prim_->draw(target);
+    }
 }
 
 void ScrollBar::apply_style(const mvvmc::Style& style) {

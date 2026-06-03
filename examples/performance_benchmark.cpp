@@ -10,7 +10,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "gooey/controls/grid.hpp"
@@ -90,13 +90,13 @@ static void create_benchmark_bmp_pattern(const std::string& path) {
 }
 
 // A view that draws a large number of moving geometric primitives
-class BenchmarkGeometryView : public View {
+class BenchmarkGeometryView : public GooeyNode {
 public:
     BenchmarkGeometryView(int count) : count_(count) {}
 
     void draw(IRenderTarget& target) const override {
         // Draw the base view children first
-        View::draw(target);
+        GooeyNode::draw(target);
 
         // Render dynamic geometry based on our frame count (which advances slightly)
         float t = frame_count_ * 0.05f;
@@ -150,7 +150,7 @@ private:
 };
 
 // Create a scenario view
-std::shared_ptr<View> create_scenario_view(const std::string& scenario, const std::string& bmp_path) {
+std::shared_ptr<GooeyNode> create_scenario_view(const std::string& scenario, const std::string& bmp_path) {
     if (scenario == "grid") {
         // Massive button grid scenario
         int rows = 20;
@@ -214,7 +214,7 @@ std::shared_ptr<View> create_scenario_view(const std::string& scenario, const st
         list->set_items(items);
 
         // Set up list scrolling animation simulation
-        struct ScrollSimulation : public View {
+        struct ScrollSimulation : public GooeyNode {
             std::shared_ptr<ListControl> list_ref;
             mutable int frames{0};
 
@@ -223,7 +223,7 @@ std::shared_ptr<View> create_scenario_view(const std::string& scenario, const st
                 frames++;
                 // Scroll down 1 item every 2 frames
                 list_ref->set_selected_index((frames / 2) % 5000);
-                View::draw(target);
+                GooeyNode::draw(target);
             }
         };
 

@@ -121,6 +121,10 @@ struct LinuxFontBackend::Impl {
     FcPattern* (*FcFontMatch)(FcConfig* config, FcPattern* p, FcResult* result){nullptr};
     FcResult (*FcPatternGetString)(const FcPattern* p, const char* object, int id, char** s){nullptr};
     void (*FcPatternDestroy)(FcPattern* p){nullptr};
+    void (*FcFini)(){nullptr};
+    void (*FcConfigDestroy)(FcConfig* config){nullptr};
+
+    FcConfig* fc_config{nullptr};
 
     // FreeType dynamic symbols
     FT_Error (*FT_Init_FreeType)(FT_Library* alibrary){nullptr};
@@ -156,11 +160,19 @@ struct LinuxFontBackend::Impl {
         }
 
         if (freetype_lib) {
-            dlclose(freetype_lib);
+            // Keep library loaded at exit to avoid LeakSanitizer false positives
+            // dlclose(freetype_lib);
             freetype_lib = nullptr;
         }
+        if (fc_config && FcConfigDestroy) {
+            FcConfigDestroy(fc_config);
+            fc_config = nullptr;
+        }
         if (fontconfig_lib) {
-            dlclose(fontconfig_lib);
+            if (FcFini) {
+                FcFini();
+            }
+            // dlclose(fontconfig_lib);
             fontconfig_lib = nullptr;
         }
         loaded = false;
@@ -195,12 +207,16 @@ struct LinuxFontBackend::Impl {
             *(void**)(&FcFontMatch) = dlsym(fontconfig_lib, "FcFontMatch");
             *(void**)(&FcPatternGetString) = dlsym(fontconfig_lib, "FcPatternGetString");
             *(void**)(&FcPatternDestroy) = dlsym(fontconfig_lib, "FcPatternDestroy");
+            *(void**)(&FcFini) = dlsym(fontconfig_lib, "FcFini");
+            *(void**)(&FcConfigDestroy) = dlsym(fontconfig_lib, "FcConfigDestroy");
 
             if (!FcInitLoadConfigAndFonts || !FcPatternCreate || !FcPatternAddString || 
                 !FcPatternAddInteger || !FcConfigSubstitute || !FcDefaultSubstitute || 
-                !FcFontMatch || !FcPatternGetString || !FcPatternDestroy) {
+                !FcFontMatch || !FcPatternGetString || !FcPatternDestroy || !FcConfigDestroy) {
                 dlclose(fontconfig_lib);
                 fontconfig_lib = nullptr;
+            } else {
+                fc_config = FcInitLoadConfigAndFonts();
             }
         }
 
@@ -230,7 +246,7 @@ struct LinuxFontBackend::Impl {
     std::string match_font(const std::string& family, FontWeight weight, FontStyle style) {
         if (!loaded) return "";
 
-        if (!fontconfig_lib) {
+        if (!fontconfig_lib || !fc_config) {
             // Android system fonts path fallback mapping
             bool is_bold = (weight == FontWeight::Bold);
             bool is_italic = (style == FontStyle::Italic);
@@ -245,7 +261,6 @@ struct LinuxFontBackend::Impl {
             }
         }
 
-        FcConfig* config = FcInitLoadConfigAndFonts();
         FcPattern* pat = FcPatternCreate();
         if (!pat) return "";
 
@@ -263,11 +278,11 @@ struct LinuxFontBackend::Impl {
         }
         FcPatternAddInteger(pat, "slant", fc_slant);
 
-        FcConfigSubstitute(config, pat, 0); // FcMatchPattern
+        FcConfigSubstitute(fc_config, pat, 0); // FcMatchPattern
         FcDefaultSubstitute(pat);
 
         FcResult result;
-        FcPattern* match = FcFontMatch(config, pat, &result);
+        FcPattern* match = FcFontMatch(fc_config, pat, &result);
         std::string font_path = "";
         if (match) {
             char* file_path = nullptr;

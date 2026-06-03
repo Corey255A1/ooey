@@ -3,7 +3,7 @@
 namespace ooey {}
 
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_element.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
@@ -15,10 +15,11 @@ namespace ooey {}
 namespace gooey::controls {
     using namespace ooey;
 
-class TextBox : public View, public IInteractive {
+class TextBox : public mvvmc::GooeyElement, public IInteractive {
 public:
     TextBox(Rect bounds, Font font, Color text_color, Color bg_color);
 
+    void draw(ooey::IRenderTarget& target) const override;
     Rect bounds() const override;
 
     void set_text(const std::string& text);

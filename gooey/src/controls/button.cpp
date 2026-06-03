@@ -1,5 +1,3 @@
-namespace ooey {}
-
 #include "gooey/controls/button.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/font_engine.hpp"
@@ -15,7 +13,6 @@ Button::Button(Rect bounds, Color color) : bounds_(bounds), color_(color) {
 
     // Default modern button has 8px corner radius
     bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, 8, color_);
-    add_child(bg_);
 }
 
 Button::Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_thickness, int corner_radius, const std::string& label_text, Color label_color)
@@ -26,7 +23,6 @@ Button::Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_t
     absolute_bounds = bounds;
 
     bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, corner_radius, fill_color, stroke_color, stroke_thickness);
-    add_child(bg_);
 
     if (!label_text.empty()) {
         Font font{"sans-serif", 14};
@@ -34,7 +30,15 @@ Button::Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_t
         int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
         int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
         label_ = std::make_shared<Label>(label_text, font, Point{lx, ly}, label_color);
-        add_child(label_);
+    }
+}
+
+void Button::draw(ooey::IRenderTarget& target) const {
+    if (bg_) {
+        bg_->draw(target);
+    }
+    if (label_) {
+        label_->draw(target);
     }
 }
 
@@ -87,7 +91,6 @@ void Button::set_label_text(const std::string& text) {
         int lx = bounds_.x + (bounds_.width - text_size.width) / 2;
         int ly = bounds_.y + (bounds_.height - text_size.height) / 2;
         label_ = std::make_shared<Label>(text, font, Point{lx, ly}, Color{255, 255, 255});
-        add_child(label_);
     }
     invalidate_layout();
 }
@@ -109,6 +112,13 @@ bool Button::on_key_event(const KeyEvent& /*e*/) {
     return false;
 }
 
+void Button::set_theme_manager(std::shared_ptr<ThemeManager> manager) {
+    GooeyElement::set_theme_manager(manager);
+    if (label_) {
+        label_->set_theme_manager(manager);
+    }
+}
+
 Size Button::do_measure(Size constraints) {
     int content_w = absolute_bounds.width;
     int content_h = absolute_bounds.height;
@@ -124,7 +134,7 @@ Size Button::do_measure(Size constraints) {
 
 void Button::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::do_layout(bounds);
+    GooeyElement::do_layout(bounds);
     
     if (bg_) {
         bg_->set_rect(bounds_);
@@ -149,7 +159,7 @@ void Button::apply_style(const mvvmc::Style& style) {
     if (label_) {
         label_->set_color(style.text_color);
     }
-    View::apply_style(style);
+    GooeyElement::apply_style(style);
 }
 
 } // namespace gooey::controls

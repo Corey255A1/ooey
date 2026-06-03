@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "gooey/controls/scrollbar.hpp"
 #include "ooey/renderer/font_engine.hpp"
@@ -32,7 +32,7 @@ struct FormatRange {
 class ScrollContainer;
 class RichTextContentView;
 
-class RichTextBox : public View, public IInteractive {
+class RichTextBox : public GooeyNode, public IInteractive {
 public:
     RichTextBox(Rect bounds, Font font, Color text_color, Color bg_color);
     virtual ~RichTextBox() override = default;

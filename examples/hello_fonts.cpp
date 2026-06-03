@@ -6,7 +6,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/list_control.hpp"
@@ -34,7 +34,7 @@ int main() {
     app.set_window_backend(std::move(backend));
     app.set_clear_color(ooey::Color{18, 18, 22}); // Sleek dark aesthetic
 
-    auto root_view = std::make_shared<gooey::View>();
+    auto root_view = std::make_shared<gooey::GooeyNode>();
 
     // Background modern card container
     auto card_frame = std::make_shared<ooey::RoundedRectPrimitive>(

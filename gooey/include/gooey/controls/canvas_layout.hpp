@@ -1,13 +1,13 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include <functional>
 
 namespace gooey::controls {
     using namespace ooey;
 
-class CanvasLayout : public View, public IInteractive {
+class CanvasLayout : public GooeyNode, public IInteractive {
 public:
     CanvasLayout();
     virtual ~CanvasLayout() override = default;

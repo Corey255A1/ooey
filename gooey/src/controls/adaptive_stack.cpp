@@ -16,7 +16,7 @@ Size AdaptiveStack::do_measure(Size constraints) {
         int non_flex_h = 0;
         int flex_count = 0;
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 if (child_view->height.policy != SizePolicy::MatchParent) {
                     Size child_size = child_view->measure(Size{avail_w, avail_h});
@@ -34,7 +34,7 @@ Size AdaptiveStack::do_measure(Size constraints) {
         }
 
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 Size child_constraints{avail_w, avail_h};
                 if (child_view->height.policy == SizePolicy::MatchParent) {
@@ -72,7 +72,7 @@ Size AdaptiveStack::do_measure(Size constraints) {
         int non_flex_w = 0;
         int flex_count = 0;
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 if (child_view->width.policy != SizePolicy::MatchParent) {
                     Size child_size = child_view->measure(Size{avail_w, avail_h});
@@ -87,7 +87,7 @@ Size AdaptiveStack::do_measure(Size constraints) {
         int per_flex_w = flex_count > 0 ? (remaining_w / flex_count) : 0;
 
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 Size child_constraints{avail_w, avail_h};
                 if (child_view->width.policy == SizePolicy::MatchParent) {
@@ -126,7 +126,7 @@ void AdaptiveStack::do_layout(Rect bounds) {
         int non_flex_h = 0;
         int flex_count = 0;
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 if (child_view->height.policy != SizePolicy::MatchParent) {
                     Size child_size = child_view->measure(Size{content_w, avail_h});
@@ -144,7 +144,7 @@ void AdaptiveStack::do_layout(Rect bounds) {
         }
 
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 Size child_constraints{content_w, avail_h};
                 if (child_view->height.policy == SizePolicy::MatchParent) {
@@ -181,7 +181,7 @@ void AdaptiveStack::do_layout(Rect bounds) {
         int non_flex_w = 0;
         int flex_count = 0;
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 if (child_view->width.policy != SizePolicy::MatchParent) {
                     Size child_size = child_view->measure(Size{avail_w, content_h});
@@ -196,7 +196,7 @@ void AdaptiveStack::do_layout(Rect bounds) {
         int per_flex_w = flex_count > 0 ? (remaining_w / flex_count) : 0;
 
         for (const auto& child : get_children()) {
-            auto* child_view = dynamic_cast<View*>(child.get());
+            auto* child_view = dynamic_cast<GooeyElement*>(child.get());
             if (child_view) {
                 Size child_constraints{avail_w, content_h};
                 if (child_view->width.policy == SizePolicy::MatchParent) {

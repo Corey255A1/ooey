@@ -292,7 +292,8 @@ target_sources(gooey PRIVATE
     gooey/src/controls/vector_shape_view.cpp
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
-    gooey/src/mvvmc/view.cpp
+    gooey/src/mvvmc/gooey_element.cpp
+    gooey/src/mvvmc/gooey_node.cpp
 )
 target_include_directories(gooey PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gooey/include>

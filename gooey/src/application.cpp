@@ -6,6 +6,8 @@ namespace ooey {}
 #include "ooey/logging.hpp"
 #include "ooey/renderer/window_chrome.hpp"
 #include "ooey/renderer/scaled_render_target.hpp"
+#include "ooey/renderer/font_engine.hpp"
+#include "ooey/renderer/glyph_atlas.hpp"
 #include <cstdlib>
 #include <string>
 #include <thread>
@@ -34,6 +36,9 @@ Application::~Application() {
         window_backend_->destroy();
         OOEY_LOG_INFO("Application", "Window backend destroyed");
     }
+    // Clean up global caches to prevent leaks on exit
+    ooey::GlyphAtlasManager::clear();
+    ooey::FontEngine::set_backend(nullptr);
 }
 
 void Application::set_window_backend(std::unique_ptr<IWindowBackend>&& backend) {
@@ -48,7 +53,7 @@ void Application::set_window_backend(std::unique_ptr<IWindowBackend>&& backend) 
     }
 }
 
-void Application::set_root_view(std::shared_ptr<mvvmc::View>&& root_view) {
+void Application::set_root_view(std::shared_ptr<mvvmc::GooeyNode>&& root_view) {
     root_view_ = std::move(root_view);
     controller_ = std::make_unique<mvvmc::Controller>(input_manager_, root_view_);
     if (root_view_ && theme_manager_) {

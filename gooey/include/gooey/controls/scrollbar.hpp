@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_element.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
@@ -16,7 +16,7 @@ enum class ScrollBarOrientation {
     Horizontal
 };
 
-class ScrollBar : public View, public IInteractive {
+class ScrollBar : public mvvmc::GooeyElement, public IInteractive {
 public:
     ScrollBar(Rect bounds, ScrollBarOrientation orientation);
 

@@ -47,7 +47,7 @@ void VectorShapeView::set_selected(bool selected) {
 }
 
 void VectorShapeView::draw(IRenderTarget& target) const {
-    View::draw(target);
+    GooeyNode::draw(target);
 
     if (is_selected_) {
         selection_box_->set_rect(layout_bounds);
@@ -226,7 +226,7 @@ bool CircleShapeView::hit_test(int px, int py) const {
 
 void CircleShapeView::do_layout(Rect bounds) {
     layout_bounds = bounds;
-    View::do_layout(bounds);
+    GooeyNode::do_layout(bounds);
 
     if (circle_) {
         Point center{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
@@ -306,7 +306,7 @@ bool PolygonShapeView::hit_test(int px, int py) const {
 
 void PolygonShapeView::do_layout(Rect bounds) {
     layout_bounds = bounds;
-    View::do_layout(bounds);
+    GooeyNode::do_layout(bounds);
 
     if (polygon_) {
         std::vector<Point> screen_points;

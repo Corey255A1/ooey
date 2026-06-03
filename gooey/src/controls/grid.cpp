@@ -22,7 +22,7 @@ void Grid::do_layout(Rect bounds) {
 
     int index = 0;
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             int row = index / columns_;
             int col = index % columns_;

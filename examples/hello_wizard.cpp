@@ -7,7 +7,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/list_control.hpp"
@@ -191,7 +191,7 @@ void Page3ViewModel::on_continue_clicked() {
 // Page Views
 // ---------------------------------------------------------
 
-class Page1View : public gooey::View {
+class Page1View : public gooey::GooeyNode {
 public:
     explicit Page1View(std::shared_ptr<Page1ViewModel> vm) : vm_(vm) {
         auto msg = std::make_shared<gooey::Label>(
@@ -220,7 +220,7 @@ private:
     std::shared_ptr<Page1ViewModel> vm_;
 };
 
-class Page2View : public gooey::View {
+class Page2View : public gooey::GooeyNode {
 public:
     explicit Page2View(std::shared_ptr<Page2ViewModel> vm) : vm_(vm) {
         auto msg = std::make_shared<gooey::Label>(
@@ -262,7 +262,7 @@ private:
     std::shared_ptr<Page2ViewModel> vm_;
 };
 
-class Page3View : public gooey::View {
+class Page3View : public gooey::GooeyNode {
 public:
     explicit Page3View(std::shared_ptr<Page3ViewModel> vm) : vm_(vm) {
         float cx = 300.0f;
@@ -383,7 +383,7 @@ private:
     std::shared_ptr<Page3ViewModel> vm_;
 };
 
-class Page4View : public gooey::View {
+class Page4View : public gooey::GooeyNode {
 public:
     explicit Page4View(std::shared_ptr<Page4ViewModel> vm) : vm_(vm) {
         auto label = std::make_shared<gooey::Label>(
@@ -426,7 +426,7 @@ private:
     std::shared_ptr<Page4ViewModel> vm_;
 };
 
-class Page5View : public gooey::View {
+class Page5View : public gooey::GooeyNode {
 public:
     explicit Page5View(std::shared_ptr<Page5ViewModel> vm) : vm_(vm) {
         auto end_label = std::make_shared<gooey::Label>(
@@ -462,7 +462,7 @@ private:
 // Navigation Shell (Root View)
 // ---------------------------------------------------------
 
-class NavigationShellView : public gooey::View {
+class NavigationShellView : public gooey::GooeyNode {
 public:
     explicit NavigationShellView(std::shared_ptr<gooey::NavigationCoordinator> coordinator)
         : coordinator_(coordinator) {
@@ -510,7 +510,7 @@ public:
         add_child(title_label_);
 
         // Page Content container
-        page_container_ = std::make_shared<gooey::View>();
+        page_container_ = std::make_shared<gooey::GooeyNode>();
         add_child(page_container_);
 
         // Set commands
@@ -591,7 +591,7 @@ private:
 
         title_label_->set_text(vm->get_title());
 
-        std::shared_ptr<gooey::View> page_view = nullptr;
+        std::shared_ptr<gooey::GooeyNode> page_view = nullptr;
         if (auto p1 = std::dynamic_pointer_cast<Page1ViewModel>(vm)) {
             page_view = std::make_shared<Page1View>(p1);
         } else if (auto p2 = std::dynamic_pointer_cast<Page2ViewModel>(vm)) {
@@ -614,7 +614,7 @@ private:
     std::shared_ptr<gooey::Button> back_btn_;
     std::shared_ptr<gooey::Button> forward_btn_;
     std::shared_ptr<gooey::Label> title_label_;
-    std::shared_ptr<gooey::View> page_container_;
+    std::shared_ptr<gooey::GooeyNode> page_container_;
 };
 
 // ---------------------------------------------------------

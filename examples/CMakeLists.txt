@@ -63,6 +63,9 @@ if(OOEY_BUILD_CONTROLS)
     )
     target_link_libraries(hello_sysinfo PRIVATE ooey ooey_controls)
 
+    add_ooey_executable(hello_reflection hello_reflection.cpp)
+    target_link_libraries(hello_reflection PRIVATE ooey ooey_controls)
+
 
     if(NOT EMSCRIPTEN AND NOT ANDROID)
         find_package(Boost)

@@ -175,7 +175,7 @@ Size ListControl::do_measure(Size constraints) {
 
 void ListControl::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::do_layout(bounds);
+    GooeyNode::do_layout(bounds);
 
     if (bg_) {
         bg_->set_rect(bounds_);
@@ -232,7 +232,7 @@ void ListControl::apply_style(const mvvmc::Style& style) {
     highlight_text_color_ = style.fill_color;
     
     update_children();
-    View::apply_style(style);
+    GooeyNode::apply_style(style);
 }
 
 } // namespace gooey::controls

@@ -3,7 +3,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/mvvmc/property.hpp"
 
@@ -43,7 +43,7 @@ public:
 // ---------------------------------------------------------
 // This class composes the visual elements and binds them
 // to the ViewModel properties and commands.
-class MainView : public gooey::View {
+class MainView : public gooey::GooeyNode {
 public:
     MainView(std::shared_ptr<MainViewModel> view_model) : view_model_(std::move(view_model)) {
         // Construct visual elements

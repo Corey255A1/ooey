@@ -1,10 +1,10 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 
 namespace gooey::controls {
 
-class Grid : public View {
+class Grid : public GooeyNode {
 public:
     Grid(int rows, int columns);
 

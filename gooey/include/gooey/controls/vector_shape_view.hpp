@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rect_primitive.hpp"
 #include "ooey/renderer/primitives/circle_primitive.hpp"
@@ -18,7 +18,7 @@ enum class ShapeInteractionMode {
     Resizing
 };
 
-class VectorShapeView : public View, public IInteractive {
+class VectorShapeView : public GooeyNode, public IInteractive {
 public:
     VectorShapeView();
     virtual ~VectorShapeView() override = default;

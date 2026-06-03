@@ -288,7 +288,7 @@ TEST(OoeyApplication, PropertyChangeInvalidation) {
     EXPECT_EQ(gooey::Application::get_instance(), nullptr);
 }
 
-class DeletingView : public gooey::View, public gooey::mvvmc::IInteractive {
+class DeletingView : public gooey::GooeyNode, public gooey::mvvmc::IInteractive {
 public:
     bool clicked = false;
 
@@ -315,7 +315,7 @@ public:
 
 TEST(OoeyMvvmc, SafeControllerElementDeletions) {
     ooey::InputManager input_manager;
-    auto root_view = std::make_shared<gooey::View>();
+    auto root_view = std::make_shared<gooey::GooeyNode>();
 
     auto deleting_view = std::make_shared<DeletingView>();
     root_view->add_child(deleting_view);
@@ -334,20 +334,20 @@ TEST(OoeyMvvmc, SafeControllerElementDeletions) {
 
 TEST(OoeyMvvmc, RealRealElementDeletions) {
     ooey::InputManager input_manager;
-    auto root_view = std::make_shared<gooey::View>();
+    auto root_view = std::make_shared<gooey::GooeyNode>();
 
-    auto page_container = std::make_shared<gooey::View>();
+    auto page_container = std::make_shared<gooey::GooeyNode>();
     root_view->add_child(page_container);
 
-    auto page_view = std::make_shared<gooey::View>();
+    auto page_view = std::make_shared<gooey::GooeyNode>();
     page_container->add_child(page_view);
 
-    class NestedDeletingView : public gooey::View, public gooey::mvvmc::IInteractive {
+    class NestedDeletingView : public gooey::GooeyNode, public gooey::mvvmc::IInteractive {
     public:
-        std::shared_ptr<gooey::View> container_to_clear;
+        std::shared_ptr<gooey::GooeyNode> container_to_clear;
         bool clicked = false;
 
-        NestedDeletingView(std::shared_ptr<gooey::View> container)
+        NestedDeletingView(std::shared_ptr<gooey::GooeyNode> container)
             : container_to_clear(container) {
             is_absolute = true;
             absolute_bounds = ooey::Rect{0, 0, 100, 100};
@@ -466,6 +466,89 @@ TEST(OoeyControls, RichTextBoxSelectionAndCopyPaste) {
 
     EXPECT_EQ(box.get_text(), "Hello World - Hello");
 }
+
+namespace {
+
+class ChildViewModel : public gooey::ViewModel {
+public:
+    gooey::Property<int> value{42};
+    gooey::Property<std::string> title{"Child"};
+
+    ChildViewModel() {
+        register_property("value", &value);
+        register_property("title", &title);
+    }
+};
+
+class RootViewModel : public gooey::ViewModel {
+public:
+    gooey::Property<ooey::Color> bg_color{ooey::Color{255, 0, 0}};
+    ChildViewModel child;
+
+    RootViewModel() {
+        register_property("bg_color", &bg_color);
+        register_sub_registry("child", &child);
+    }
+};
+
+} // namespace
+
+TEST(OoeyMvvmc, PropertyReflectionAndNestedViewModels) {
+    RootViewModel vm;
+
+    // Check path resolution
+    auto* bg_prop = vm.resolve_path("bg_color");
+    auto* val_prop = vm.resolve_path("child.value");
+    auto* title_prop = vm.resolve_path("child.title");
+    auto* missing_prop = vm.resolve_path("child.missing");
+
+    ASSERT_NE(bg_prop, nullptr);
+    ASSERT_NE(val_prop, nullptr);
+    ASSERT_NE(title_prop, nullptr);
+    EXPECT_EQ(missing_prop, nullptr);
+
+    // Verify types
+    EXPECT_EQ(bg_prop->get_type_name(), "Color");
+    EXPECT_EQ(val_prop->get_type_name(), "int");
+    EXPECT_EQ(title_prop->get_type_name(), "string");
+
+    // Verify dynamic getter
+    auto bg_val = bg_prop->get_value();
+    EXPECT_TRUE(std::holds_alternative<ooey::Color>(bg_val));
+    EXPECT_EQ(std::get<ooey::Color>(bg_val).r, 255);
+
+    auto val_val = val_prop->get_value();
+    EXPECT_TRUE(std::holds_alternative<int>(val_val));
+    EXPECT_EQ(std::get<int>(val_val), 42);
+
+    // Verify dynamic setter
+    val_prop->set_value(100);
+    EXPECT_EQ(vm.child.value.get(), 100);
+
+    // Verify type coercion (double to int)
+    val_prop->set_value(55.6);
+    EXPECT_EQ(vm.child.value.get(), 55);
+
+    // Verify dynamic subscription
+    int notified_val = 0;
+    auto sub = val_prop->subscribe_dynamic([&notified_val](const gooey::PropertyValue& val) {
+        if (std::holds_alternative<int>(val)) {
+            notified_val = std::get<int>(val);
+        }
+    });
+
+    EXPECT_EQ(notified_val, 55); // Initial sync
+    vm.child.value.set(77);
+    EXPECT_EQ(notified_val, 77); // Update notification
+
+    // Verify dynamic path listing
+    auto paths = vm.get_property_paths();
+    ASSERT_EQ(paths.size(), 3);
+    EXPECT_NE(std::find(paths.begin(), paths.end(), "bg_color"), paths.end());
+    EXPECT_NE(std::find(paths.begin(), paths.end(), "child.value"), paths.end());
+    EXPECT_NE(std::find(paths.begin(), paths.end(), "child.title"), paths.end());
+}
+
 
 
 

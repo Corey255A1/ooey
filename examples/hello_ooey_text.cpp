@@ -4,7 +4,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/text_box.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/mvvmc/property.hpp"
@@ -26,7 +26,7 @@ public:
 // ---------------------------------------------------------
 // 2. The View (UI Construction & Binding)
 // ---------------------------------------------------------
-class TextView : public gooey::View {
+class TextView : public gooey::GooeyNode {
 public:
     TextView(std::shared_ptr<TextViewModel> view_model) : view_model_(std::move(view_model)) {
         

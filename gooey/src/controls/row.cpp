@@ -12,7 +12,7 @@ Size Row::do_measure(Size constraints) {
     Size child_constraints{avail_w, avail_h};
 
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             Size child_size = child_view->measure(child_constraints);
             int child_total_w = child_size.width + child_view->margin_left + child_view->margin_right;
@@ -39,7 +39,7 @@ void Row::do_layout(Rect bounds) {
     Size child_constraints{std::max(0, bounds.width - padding_left - padding_right), content_h};
 
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             child_constraints.width = std::max(0, bounds.x + bounds.width - padding_right - current_x);
             Size child_size = child_view->measure(child_constraints);

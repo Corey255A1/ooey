@@ -3,7 +3,7 @@
 namespace ooey {}
 
 
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "ooey/renderer/primitives/rect_primitive.hpp"
@@ -16,7 +16,7 @@ namespace ooey {}
 namespace gooey::controls {
     using namespace ooey;
 
-class ListControl : public View, public IInteractive {
+class ListControl : public GooeyNode, public IInteractive {
 public:
     ListControl(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color);
 

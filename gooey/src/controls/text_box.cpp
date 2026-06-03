@@ -1,8 +1,7 @@
-namespace ooey {}
-
 #include "gooey/controls/text_box.hpp"
 #include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/font_engine.hpp"
+#include "ooey/renderer/i_render_target.hpp"
 #include <iostream>
 
 namespace gooey::controls {
@@ -14,7 +13,6 @@ TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};
     is_absolute = true;
     absolute_bounds = bounds;
-    clip_children = true;
 
     current_style_.fill_color = bg_color;
     current_style_.stroke_color = Color{200, 200, 200};
@@ -25,9 +23,18 @@ TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     // Modern inputs have rounded corners (6px), subtle gray border (1.5px)
     bg_ = std::make_shared<RoundedRectPrimitive>(bounds_, current_style_.corner_radius, current_style_.fill_color, current_style_.stroke_color, current_style_.stroke_thickness);
     text_primitive_ = std::make_shared<TextPrimitive>("", font, Point{bounds_.x + 5, bounds_.y + 5}, current_style_.text_color);
-    
-    add_child(bg_);
-    add_child(text_primitive_);
+}
+
+void TextBox::draw(ooey::IRenderTarget& target) const {
+    if (bg_) {
+        bg_->draw(target);
+    }
+
+    target.push_clip(bounds_);
+    if (text_primitive_) {
+        text_primitive_->draw(target);
+    }
+    target.pop_clip();
 }
 
 Rect TextBox::bounds() const {
@@ -136,7 +143,7 @@ Size TextBox::do_measure(Size constraints) {
 
 void TextBox::do_layout(Rect bounds) {
     bounds_ = bounds;
-    View::do_layout(bounds);
+    GooeyElement::do_layout(bounds);
 
     if (bg_) {
         bg_->set_rect(bounds_);
@@ -169,7 +176,7 @@ void TextBox::apply_style(const mvvmc::Style& style) {
     if (text_primitive_) {
         text_primitive_->set_color(style.text_color);
     }
-    View::apply_style(style);
+    GooeyElement::apply_style(style);
 }
 
 void TextBox::set_font(const Font& font) {

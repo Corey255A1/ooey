@@ -8,7 +8,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/label.hpp"
 #include "ooey/renderer/primitives/line_primitive.hpp"
 #include "ooey/renderer/primitives/circle_primitive.hpp"
@@ -58,7 +58,7 @@ public:
 // ---------------------------------------------------------
 // 2. The View (UI Construction & MVVM Bindings)
 // ---------------------------------------------------------
-class ClockSinusoidView : public gooey::View {
+class ClockSinusoidView : public gooey::GooeyNode {
 public:
     ClockSinusoidView(std::shared_ptr<ClockSinusoidViewModel> view_model)
         : view_model_(std::move(view_model)) {

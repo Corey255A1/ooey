@@ -4,7 +4,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform/x11/window_backend.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/text_box.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/mvvmc/property.hpp"
@@ -18,7 +18,7 @@ public:
     }
 };
 
-class TextView : public gooey::View {
+class TextView : public gooey::GooeyNode {
 public:
     TextView(std::shared_ptr<TextViewModel> view_model) : view_model_(std::move(view_model)) {
         ooey::Font default_font{"sans-serif", 16};

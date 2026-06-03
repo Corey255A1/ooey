@@ -121,7 +121,7 @@ To improve maintainability and clean structure, we modularized the monolithic `h
 - **Dedicated Subdirectory**: Created `examples/sysinfo/` to house distinct, clean architectural segments of the system metrics application.
 - **Isolating Core Metrics**: Moved the system queries into `metrics.hpp` and `metrics.cpp`. The code maps Win32 system times on Windows, alongside `/proc/stat` and `/proc/meminfo` parsing on Linux and Android, allowing real-time device stats to load natively and transparently.
 - **Custom Control Extraction**: Isolated the custom panel decorator `StyledPanel` (implementing background graphics rendering using `RoundedRectPrimitive` layout bounds) inside `styled_panel.hpp` and `styled_panel.cpp`.
-- **View & ViewModel Separation**: Segmented state bindings into `view_model.hpp`/`view_model.cpp` (exposing reactive properties like `cpu_text`, `ram_text`, `disk_text`, and virtualized `process_rows`) and layout declarations into `view.hpp`/`view.cpp` (establishing rows/columns/grids and connecting visual highlights).
+- **View & ViewModel Separation**: Segmented state bindings into `view_model.hpp`/`view_model.cpp` (exposing reactive properties like `cpu_text`, `ram_text`, `disk_text`, and virtualized `process_rows`) and layout declarations into `gooey_node.hpp`/`view.cpp` (establishing rows/columns/grids and connecting visual highlights).
 - **Style Registry**: Modularized visual themes inside `themes.hpp` and `themes.cpp` to register the custom visual aesthetics (Dark, Light Clean, Hacker Green, Soft Lofi) with the active `ThemeManager`.
 - **Android Integration**: Swapped compile targets in `build_apk.sh` to build `hello_sysinfo` and copy the resulting `libhello_sysinfo.so` shared library. Modified `AndroidManifest.xml` to load `hello_sysinfo` on boot, enabling high-fidelity hardware-accelerated Vulkan dashboards to run natively on mobile devices.
 
@@ -184,5 +184,26 @@ To unify scrolling behavior across the framework, we refactored scrolling mechan
 - **Touch-Slop Gesture Capture:** Configured pointer capturing to intercept drag actions. Exceeding an 8px touch-slop threshold transfers pointer focus from child views (like buttons or cells) to the parent `ScrollContainer` for smooth scroll dragging.
 - **TextBox Offset Handling:** Single-line text boxes clip children automatically and offset rendering coordinates horizontally when text overflows the box's boundaries.
 
+## 27. ViewModel Dynamic Property Reflection
+To enable dynamic view binding and JIT hot reloading capabilities, we enhanced the property and MVVM metadata architecture:
+- **Property Metaprogramming:** Introduced the `PropertyBase` base interface and registered all viewmodel properties under a string-based registry. Exposed registry lookup paths through `get_property_paths()` and resolving dynamic bindings via `resolve_path(path)`.
+- **Hierarchical Registration:** Designed sub-registry structures (`register_sub_registry`) supporting nested ViewModels of arbitrary depth, ensuring type-safe retrieval of complex data trees.
+- **Dynamic Property Subscriptions:** Added `subscribe_dynamic()` to `PropertyBase` using a unified `PropertyValue` variant (holding strings, floats, ints, bools, Colors, and Fonts) to broadcast updates dynamically without compile-time template parameter knowledge.
+- **Hierarchical Reflection Inspector:** Built a custom `PropertyTreeInspector` component that maps ViewModel registries to an expandable/collapsing tree structure, illustrating live ViewModel properties dynamically.
+
+## 28. Sidebar Layout Flow and Overlap Rectification
+To resolve rendering overlaps where all sidebar elements piled up on top of each other, we overhauled layout positioning rules:
+- **Main Layout Flow:** Converted the application's root `MainView` from a `GooeyNode` (which performs top-left overlay layout) to a `Row` to correctly position the sidebar and the main workspace panels side-by-side.
+- **Flow Layout Opt-In:** Standardized the layout flow by explicitly setting `is_absolute = false` (via `set_absolute(false)`) on all container children and standard controls inside the sidebar and workspace. This forces elements to correctly yield sizing and position coordinates to their parent `Row` and `Column` arrangement passes rather than hardcoding coordinates.
+- **Sidebar Stretching:** Set `align_self = Align::Stretch` on the sidebar `ScrollContainer` to ensure it automatically spans the full window height.
+
+## 29. Memory Diagnostics, Cyclic Reference Break, & Fontconfig Leak Resolution
+To ensure a clean exit pipeline and prevent process-level memory leaks under AddressSanitizer (ASan) and LeakSanitizer (LSan):
+- **Cyclic ViewModel Reference Break**: Traced a heap-use-after-free exit crash (`free(): chunks in smallbin corrupted`) to binding callback lambdas capturing `MainViewModel` strongly via `shared_ptr`. Resolved this by capturing `MainViewModel` as a `std::weak_ptr` inside all control callback lambdas.
+- **Fontconfig Configuration Caching**: Addressed a severe memory leak of 159,536 bytes where `match_font()` created a fresh `FcConfig` object via `FcInitLoadConfigAndFonts()` on every text layout pass without releasing it. Configured `LinuxFontBackend` to initialize a single persistent `FcConfig` per backend lifetime and clean it up via `FcConfigDestroy()` and `FcFini()` on exit.
+- **Symbol Resolution Retention**: Retained dynamic library mappings at termination by commenting out `dlclose()`, allowing LSan to properly symbolicate allocations.
+- **Test Performance Multiplier**: By caching the configuration instead of parsing XML font files repeatedly, the total unit test runtime dropped from **26 seconds** to **2.0 seconds** (a **13x speedup**).
+- **Checkbox Subscription Lifetime**: Fixed an issue in `hello_reflection.cpp` where custom checkbox widgets did not propagate toggles to properties because their raw `.subscribe()` subscriptions were immediately destructed upon creation. Replaced them with `bind()`, which registers the subscriptions into the parent view's persistent `SubscriptionSink`.
+
 ## Summary
-The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, layering a decoupled MVVM-C reactive system, and equipping it with DPI-aware auto-scaling, responsive layout controls, and decoupled scrollable rich text and canvas layouts, OOEY provides a robust, explicit, and highly usable foundation for cross-platform UI development (including Linux desktop, WebAssembly/HTML5, and pure Android native hardware-accelerated platforms).
+The current architecture of OOEY represents a modern, C++20 reactive UI framework. By starting with a solid abstraction layer, adopting a retained mode scene graph, structuring the codebase for modularity, layering a decoupled MVVM-C reactive system with dynamic property reflection, and equipping it with DPI-aware auto-scaling, responsive layout controls, bidirectional scrolling, and coordinate-mapped layout containers, OOEY provides a robust, explicit, and highly usable foundation for cross-platform UI development (including Linux desktop, WebAssembly/HTML5, and pure Android native hardware-accelerated platforms).

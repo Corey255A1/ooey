@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/column.hpp"
 #include "gooey/controls/row.hpp"
 #include "gooey/controls/grid.hpp"
@@ -17,7 +17,7 @@ using namespace gooey;
 using namespace ooey;
 
 TEST(LayoutTest, BaseViewMeasureFixedAndMatchParent) {
-    auto view = std::make_shared<View>();
+    auto view = std::make_shared<GooeyNode>();
     view->set_width(SizePolicy::Fixed, 150.0f);
     view->set_height(SizePolicy::MatchParent);
 
@@ -29,12 +29,12 @@ TEST(LayoutTest, BaseViewMeasureFixedAndMatchParent) {
 }
 
 TEST(LayoutTest, BaseViewWrapContent) {
-    auto parent = std::make_shared<View>();
+    auto parent = std::make_shared<GooeyNode>();
     parent->set_width(SizePolicy::WrapContent);
     parent->set_height(SizePolicy::WrapContent);
     parent->set_padding(10);
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_width(SizePolicy::Fixed, 50.0f);
     child1->set_height(SizePolicy::Fixed, 30.0f);
     child1->set_margin(5);
@@ -56,12 +56,12 @@ TEST(LayoutTest, ColumnVerticalLayout) {
     col->set_height(SizePolicy::WrapContent);
     col->set_padding(10);
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_width(SizePolicy::Fixed, 100.0f);
     child1->set_height(SizePolicy::Fixed, 40.0f);
     child1->set_margin(5);
 
-    auto child2 = std::make_shared<View>();
+    auto child2 = std::make_shared<GooeyNode>();
     child2->set_width(SizePolicy::Fixed, 80.0f);
     child2->set_height(SizePolicy::Fixed, 30.0f);
     child2->set_margin(10);
@@ -109,12 +109,12 @@ TEST(LayoutTest, RowHorizontalLayout) {
     row->set_height(SizePolicy::WrapContent);
     row->set_padding(5);
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_width(SizePolicy::Fixed, 60.0f);
     child1->set_height(SizePolicy::Fixed, 50.0f);
     child1->set_margin(5);
 
-    auto child2 = std::make_shared<View>();
+    auto child2 = std::make_shared<GooeyNode>();
     child2->set_width(SizePolicy::Fixed, 70.0f);
     child2->set_height(SizePolicy::Fixed, 40.0f);
     child2->set_margin(10);
@@ -162,19 +162,19 @@ TEST(LayoutTest, GridLayout2x2) {
     grid->set_height(SizePolicy::Fixed, 100.0f);
     grid->set_padding(10); // 180x80 content area, cells are 90x40
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_margin(5);
     child1->set_align_self(Align::Stretch);
 
-    auto child2 = std::make_shared<View>();
+    auto child2 = std::make_shared<GooeyNode>();
     child2->set_margin(5);
     child2->set_align_self(Align::Stretch);
 
-    auto child3 = std::make_shared<View>();
+    auto child3 = std::make_shared<GooeyNode>();
     child3->set_margin(5);
     child3->set_align_self(Align::Stretch);
 
-    auto child4 = std::make_shared<View>();
+    auto child4 = std::make_shared<GooeyNode>();
     child4->set_margin(5);
     child4->set_align_self(Align::Stretch);
 
@@ -217,12 +217,12 @@ TEST(LayoutTest, GridLayout2x2) {
 }
 
 TEST(LayoutTest, AbsolutePositioningWithinView) {
-    auto parent = std::make_shared<View>();
+    auto parent = std::make_shared<GooeyNode>();
     parent->set_width(SizePolicy::WrapContent);
     parent->set_height(SizePolicy::WrapContent);
     parent->set_padding(10);
 
-    auto child = std::make_shared<View>();
+    auto child = std::make_shared<GooeyNode>();
     child->set_absolute(true);
     child->set_absolute_bounds(Rect{100, 50, 120, 80});
 
@@ -264,7 +264,7 @@ TEST(LayoutTest, LabelLayoutDynamicAndAbsolute) {
     EXPECT_EQ(label1->layout_bounds.y, 5);
 
     // 2. Absolute positioning
-    auto parent = std::make_shared<View>();
+    auto parent = std::make_shared<GooeyNode>();
     auto label2 = std::make_shared<Label>("Hello World", Font{"sans-serif", 14}, Point{50, 60}, Color{255, 255, 255});
     parent->add_child(label2);
 
@@ -281,17 +281,17 @@ TEST(LayoutTest, FlowLayoutWrapping) {
     flow->set_height(SizePolicy::WrapContent);
     flow->set_padding(10);
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_width(SizePolicy::Fixed, 100.0f);
     child1->set_height(SizePolicy::Fixed, 40.0f);
     child1->set_margin(5);
 
-    auto child2 = std::make_shared<View>();
+    auto child2 = std::make_shared<GooeyNode>();
     child2->set_width(SizePolicy::Fixed, 80.0f);
     child2->set_height(SizePolicy::Fixed, 30.0f);
     child2->set_margin(5);
 
-    auto child3 = std::make_shared<View>();
+    auto child3 = std::make_shared<GooeyNode>();
     child3->set_width(SizePolicy::Fixed, 70.0f);
     child3->set_height(SizePolicy::Fixed, 50.0f);
     child3->set_margin(5);
@@ -357,7 +357,7 @@ TEST(LayoutTest, MVVMCLayoutDebugging) {
     grid->set_height(SizePolicy::Fixed, 200.0f);
     grid->set_margin(0, 0, 0, 20);
     for (int i = 0; i < 4; ++i) {
-        auto card = std::make_shared<View>();
+        auto card = std::make_shared<GooeyNode>();
         card->set_width(SizePolicy::MatchParent);
         card->set_height(SizePolicy::MatchParent);
         grid->add_child(card);
@@ -399,7 +399,7 @@ TEST(LayoutTest, MVVMCLayoutDebugging) {
     std::cout << "[DEBUG] greeting_lbl layout bounds: " << greeting_lbl->layout_bounds.x << ", " << greeting_lbl->layout_bounds.y << ", " << greeting_lbl->layout_bounds.width << ", " << greeting_lbl->layout_bounds.height << "\n";
 }
 
-class CountingView : public View {
+class CountingView : public GooeyNode {
 public:
     int measure_count{0};
     int layout_count{0};
@@ -407,11 +407,11 @@ public:
 protected:
     Size do_measure(Size constraints) override {
         measure_count++;
-        return View::do_measure(constraints);
+        return GooeyNode::do_measure(constraints);
     }
     void do_layout(Rect bounds) override {
         layout_count++;
-        View::do_layout(bounds);
+        GooeyNode::do_layout(bounds);
     }
 };
 
@@ -524,12 +524,12 @@ TEST(LayoutTest, AdaptiveStackHorizontal) {
     stack->set_height(SizePolicy::MatchParent);
     stack->set_padding(10);
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_width(SizePolicy::Fixed, 100.0f);
     child1->set_height(SizePolicy::Fixed, 50.0f);
     child1->set_margin(5);
 
-    auto child2 = std::make_shared<View>();
+    auto child2 = std::make_shared<GooeyNode>();
     child2->set_width(SizePolicy::Fixed, 150.0f);
     child2->set_height(SizePolicy::Fixed, 60.0f);
     child2->set_margin(5);
@@ -562,12 +562,12 @@ TEST(LayoutTest, AdaptiveStackVertical) {
     stack->set_padding(10);
     stack->set_stretch_when_vertical(true);
 
-    auto child1 = std::make_shared<View>();
+    auto child1 = std::make_shared<GooeyNode>();
     child1->set_width(SizePolicy::Fixed, 100.0f);
     child1->set_height(SizePolicy::Fixed, 50.0f);
     child1->set_margin(5);
 
-    auto child2 = std::make_shared<View>();
+    auto child2 = std::make_shared<GooeyNode>();
     child2->set_width(SizePolicy::Fixed, 150.0f);
     child2->set_height(SizePolicy::MatchParent); // vertical flex height child
     child2->set_margin(5);
@@ -608,7 +608,7 @@ TEST(LayoutTest, ScrollContainerNoScroll) {
     scroll->set_height(SizePolicy::MatchParent);
     scroll->set_padding(10);
 
-    auto child = std::make_shared<View>();
+    auto child = std::make_shared<GooeyNode>();
     child->set_width(SizePolicy::MatchParent);
     child->set_height(SizePolicy::Fixed, 100.0f);
     scroll->set_child(child);
@@ -632,7 +632,7 @@ TEST(LayoutTest, ScrollContainerWithScrollAndDrag) {
     scroll->set_height(SizePolicy::MatchParent);
     scroll->set_padding(10);
 
-    auto child = std::make_shared<View>();
+    auto child = std::make_shared<GooeyNode>();
     child->set_width(SizePolicy::MatchParent);
     child->set_height(SizePolicy::Fixed, 600.0f);
     scroll->set_child(child);
@@ -679,7 +679,7 @@ TEST(LayoutTest, ScrollContainerControllerInterception) {
     button->set_width(SizePolicy::Fixed, 100);
     button->set_height(SizePolicy::Fixed, 40);
 
-    auto content = std::make_shared<View>();
+    auto content = std::make_shared<GooeyNode>();
     content->set_width(SizePolicy::MatchParent);
     content->set_height(SizePolicy::Fixed, 600.0f);
     content->add_child(button);
@@ -766,7 +766,7 @@ TEST(LayoutTest, ViewClippingStack) {
     using namespace gooey::mvvmc;
 
     ClipSpyRenderTarget target;
-    auto parent = std::make_shared<View>();
+    auto parent = std::make_shared<GooeyNode>();
     parent->set_clip_children(true);
     parent->layout(Rect{10, 20, 100, 100});
 

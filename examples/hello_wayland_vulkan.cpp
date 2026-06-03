@@ -4,7 +4,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform/wayland/vulkan_window_backend.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/mvvmc/property.hpp"
@@ -25,7 +25,7 @@ public:
     }
 };
 
-class VulkanView : public gooey::View {
+class VulkanView : public gooey::GooeyNode {
 public:
     VulkanView(std::shared_ptr<VulkanViewModel> view_model) : view_model_(std::move(view_model)) {
         ooey::Font default_font{"sans-serif", 16};

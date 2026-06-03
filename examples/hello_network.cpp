@@ -7,7 +7,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/text_box.hpp"
 #include "gooey/controls/list_control.hpp"
@@ -128,7 +128,7 @@ private:
 // ---------------------------------------------------------
 // 3. Network View
 // ---------------------------------------------------------
-class NetworkView : public gooey::View {
+class NetworkView : public gooey::GooeyNode {
 public:
     explicit NetworkView(std::shared_ptr<NetworkViewModel> vm) : vm_(vm) {
         // Outer card frame

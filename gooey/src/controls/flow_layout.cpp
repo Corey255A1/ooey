@@ -12,7 +12,7 @@ Size FlowLayout::do_measure(Size constraints) {
     int avail_w = std::max(0, constraints.width - padding_left - padding_right);
 
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             Size child_size = child_view->measure(Size{avail_w, std::max(0, constraints.height - padding_top - padding_bottom)});
             int child_total_w = child_size.width + child_view->margin_left + child_view->margin_right;
@@ -44,7 +44,7 @@ void FlowLayout::do_layout(Rect bounds) {
     int avail_h = std::max(0, bounds.height - padding_top - padding_bottom);
 
     struct RowInfo {
-        std::vector<View*> views;
+        std::vector<GooeyElement*> views;
         int height{0};
         int width{0};
     };
@@ -54,7 +54,7 @@ void FlowLayout::do_layout(Rect bounds) {
     int current_row_w = 0;
 
     for (const auto& child : get_children()) {
-        auto* child_view = dynamic_cast<View*>(child.get());
+        auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
             Size child_size = child_view->measure(Size{avail_w, avail_h});
             int child_total_w = child_size.width + child_view->margin_left + child_view->margin_right;

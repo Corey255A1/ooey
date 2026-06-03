@@ -8,7 +8,6 @@ namespace gooey::controls {
 
 Label::Label(std::string text, Font font, Point position, Color color) {
     text_primitive_ = std::make_shared<TextPrimitive>(std::move(text), font, position, color);
-    add_child(text_primitive_);
 
     // Default to absolute positioning using constructor coordinates and text size
     is_absolute = true;
@@ -100,7 +99,7 @@ Size Label::do_measure(Size constraints) {
 }
 
 void Label::do_layout(Rect bounds) {
-    View::do_layout(bounds);
+    GooeyElement::do_layout(bounds);
     if (text_primitive_) {
         text_primitive_->set_position(Point{bounds.x + padding_left, bounds.y + padding_top});
     }
@@ -213,7 +212,7 @@ void Label::wrap_single_line(const std::string& line, const Font& font, int max_
 
 void Label::apply_style(const mvvmc::Style& style) {
     set_color(style.text_color);
-    View::apply_style(style);
+    GooeyElement::apply_style(style);
 }
 
 } // namespace gooey::controls

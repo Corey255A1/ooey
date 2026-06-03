@@ -12,7 +12,7 @@ namespace ooey {}
 #include "ooey/i_window_backend.hpp"
 #include "ooey/renderer/i_render_target.hpp"
 #include "ooey/input.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/mvvmc/i_controller.hpp"
 #include "gooey/mvvmc/i_drawable.hpp"
 #include "gooey/mvvmc/scoped_subscription.hpp"
@@ -32,7 +32,7 @@ public:
     InputManager& get_input_manager() { return input_manager_; }
 
     // Set the root view for the scene graph
-    void set_root_view(std::shared_ptr<mvvmc::View>&& root_view);
+    void set_root_view(std::shared_ptr<mvvmc::GooeyNode>&& root_view);
 
     // Set a custom controller
     void set_controller(std::unique_ptr<mvvmc::IController>&& controller);
@@ -82,7 +82,7 @@ public:
 
 private:
     std::unique_ptr<IWindowBackend> window_backend_;
-    std::shared_ptr<mvvmc::View> root_view_;
+    std::shared_ptr<mvvmc::GooeyNode> root_view_;
     std::unique_ptr<mvvmc::IController> controller_;
     Color clear_color_{0, 0, 0, 255};
     std::function<void(ooey::IRenderTarget*)> before_render_callback_;

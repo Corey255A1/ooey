@@ -12,12 +12,12 @@ Rect CanvasLayout::bounds() const {
 }
 
 Size CanvasLayout::do_measure(Size constraints) {
-    return View::do_measure(constraints);
+    return GooeyNode::do_measure(constraints);
 }
 
 void CanvasLayout::do_layout(Rect bounds) {
     layout_bounds = bounds;
-    View::do_layout(bounds);
+    GooeyNode::do_layout(bounds);
 }
 
 bool CanvasLayout::on_pointer_event(const Pointer& e) {

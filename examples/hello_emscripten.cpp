@@ -5,7 +5,7 @@
 #include "ooey/ooey.hpp"
 #include "gooey/application.hpp"
 #include "ooey/platform.hpp"
-#include "gooey/mvvmc/view.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
 #include "gooey/controls/button.hpp"
 #include "gooey/controls/label.hpp"
 #include "gooey/controls/text_box.hpp"
@@ -27,7 +27,7 @@ int main() {
 
     app.set_window_backend(std::move(backend));
 
-    auto root_view = std::make_shared<gooey::View>();
+    auto root_view = std::make_shared<gooey::GooeyNode>();
 
     // 1. Decorative background frame
     auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
