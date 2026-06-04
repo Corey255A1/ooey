@@ -21,6 +21,8 @@ public:
     GooeyElement();
     virtual ~GooeyElement() override = default;
 
+    std::string id;
+
     template <typename T>
     void bind(Property<T>& property, typename Property<T>::Listener listener) {
         sink_.add(property.subscribe(std::move(listener)));
