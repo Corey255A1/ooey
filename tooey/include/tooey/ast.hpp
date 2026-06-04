@@ -13,7 +13,8 @@ enum class PropertyType {
     Boolean,
     Binding,
     Signal,
-    Theme
+    Theme,
+    Localization
 };
 
 inline std::string to_string(PropertyType type) {
@@ -24,6 +25,7 @@ inline std::string to_string(PropertyType type) {
         case PropertyType::Binding: return "Binding";
         case PropertyType::Signal: return "Signal";
         case PropertyType::Theme: return "Theme";
+        case PropertyType::Localization: return "Localization";
     }
     return "Unknown";
 }

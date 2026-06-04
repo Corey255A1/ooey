@@ -18,6 +18,13 @@ namespace gooey::controls {
 
 class ListControl : public GooeyNode, public IInteractive {
 public:
+    static std::shared_ptr<ListControl> create() {
+        return std::make_shared<ListControl>();
+    }
+    static std::shared_ptr<ListControl> create(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color) {
+        return std::make_shared<ListControl>(bounds, item_height, font, text_color, bg_color, highlight_bg_color, highlight_text_color);
+    }
+
     ListControl();
     ListControl(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color);
 
@@ -45,6 +52,44 @@ public:
     bool on_key_event(const KeyEvent& e) override;
 
     std::function<void(int)> on_selected_changed;
+
+    template <typename Target>
+    void set_on_selected_changed(const std::shared_ptr<Target>& target, void (Target::*member_func)(int)) {
+        std::weak_ptr<Target> weak_target = target;
+        on_selected_changed = [weak_target, member_func](int val) {
+            if (auto locked = weak_target.lock()) {
+                (locked.get()->*member_func)(val);
+            }
+        };
+    }
+
+    template <typename Target>
+    void set_on_selected_changed(std::weak_ptr<Target> target, void (Target::*member_func)(int)) {
+        on_selected_changed = [target = std::move(target), member_func](int val) {
+            if (auto locked = target.lock()) {
+                (locked.get()->*member_func)(val);
+            }
+        };
+    }
+
+    template <typename Target, typename Func>
+    void set_on_selected_changed_weak(const std::shared_ptr<Target>& target, Func&& callback) {
+        std::weak_ptr<Target> weak_target = target;
+        on_selected_changed = [weak_target, callback = std::forward<Func>(callback)](int val) {
+            if (auto locked = weak_target.lock()) {
+                callback(locked.get(), val);
+            }
+        };
+    }
+
+    template <typename Target, typename Func>
+    void set_on_selected_changed_weak(std::weak_ptr<Target> target, Func&& callback) {
+        on_selected_changed = [target = std::move(target), callback = std::forward<Func>(callback)](int val) {
+            if (auto locked = target.lock()) {
+                callback(locked.get(), val);
+            }
+        };
+    }
 
 protected:
     // Layout support

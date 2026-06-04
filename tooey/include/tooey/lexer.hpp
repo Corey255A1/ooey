@@ -15,6 +15,7 @@ enum class TokenType {
     BINDING,
     SIGNAL,
     THEME,
+    LOCALIZATION,
     STRING,
     NUMBER,
     BOOLEAN,

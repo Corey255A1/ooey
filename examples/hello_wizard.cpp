@@ -40,7 +40,7 @@ public:
     void on_start_clicked();
 
 private:
-    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
+    std::weak_ptr<gooey::NavigationCoordinator> coordinator_;
 };
 
 // ---------------------------------------------------------
@@ -60,7 +60,7 @@ public:
     gooey::Property<int> selected_animal_index{-1};
 
 private:
-    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
+    std::weak_ptr<gooey::NavigationCoordinator> coordinator_;
     std::vector<std::string> animals_;
 };
 
@@ -111,7 +111,7 @@ public:
     void on_continue_clicked();
 
 private:
-    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
+    std::weak_ptr<gooey::NavigationCoordinator> coordinator_;
 };
 
 // ---------------------------------------------------------
@@ -132,11 +132,13 @@ public:
     }
 
     void on_back_clicked() {
-        coordinator_->go_back();
+        if (auto coord = coordinator_.lock()) {
+            coord->go_back();
+        }
     }
 
 private:
-    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
+    std::weak_ptr<gooey::NavigationCoordinator> coordinator_;
 };
 
 // ---------------------------------------------------------
@@ -173,21 +175,27 @@ public:
     }
 
 private:
-    std::shared_ptr<gooey::NavigationCoordinator> coordinator_;
+    std::weak_ptr<gooey::NavigationCoordinator> coordinator_;
     float time_elapsed_{0.0f};
 };
 
 // Out-of-line implementations to resolve circular dependency
 void Page1ViewModel::on_start_clicked() {
-    coordinator_->navigate_to(std::make_shared<Page2ViewModel>(coordinator_));
+    if (auto coord = coordinator_.lock()) {
+        coord->navigate_to(std::make_shared<Page2ViewModel>(coord));
+    }
 }
 
 void Page3ViewModel::on_check_this_out_clicked() {
-    coordinator_->navigate_to(std::make_shared<Page4ViewModel>(coordinator_));
+    if (auto coord = coordinator_.lock()) {
+        coord->navigate_to(std::make_shared<Page4ViewModel>(coord));
+    }
 }
 
 void Page3ViewModel::on_continue_clicked() {
-    coordinator_->navigate_to(std::make_shared<Page5ViewModel>(coordinator_));
+    if (auto coord = coordinator_.lock()) {
+        coord->navigate_to(std::make_shared<Page5ViewModel>(coord));
+    }
 }
 
 // ---------------------------------------------------------
@@ -214,9 +222,7 @@ public:
             "Start Wizard",
             ooey::Color{255, 255, 255}
         );
-        start_btn->on_click = [vm]() {
-            vm->on_start_clicked();
-        };
+        start_btn->set_on_click(vm, &Page1ViewModel::on_start_clicked);
         add_child(std::move(start_btn));
     }
 private:
@@ -252,11 +258,10 @@ public:
             ooey::Color{0, 200, 100}
         );
 
-        auto active_vm = vm_;
-        list->on_selected_changed = [active_vm, selection_info, vm](int index) {
-            active_vm->selected_animal_index.set(index);
-            selection_info->set_text("Selected: " + vm->get_animals()[index]);
-        };
+        list->set_on_selected_changed_weak(vm, [selection_info](Page2ViewModel* vm_locked, int index) {
+            vm_locked->selected_animal_index.set(index);
+            selection_info->set_text("Selected: " + vm_locked->get_animals()[index]);
+        });
 
         add_child(list);
         add_child(selection_info);
@@ -317,22 +322,22 @@ public:
             1.2f
         );
 
-        bind(vm->hour_angle, [hour_hand, cx, cy, len_h](float angle) {
+        bind_weak(vm->hour_angle, hour_hand, [cx, cy, len_h](ooey::LinePrimitive* hand, float angle) {
             int ex = static_cast<int>(cx + len_h * std::sin(angle));
             int ey = static_cast<int>(cy - len_h * std::cos(angle));
-            hour_hand->set_end({ex, ey});
+            hand->set_end({ex, ey});
         });
 
-        bind(vm->minute_angle, [minute_hand, cx, cy, len_m](float angle) {
+        bind_weak(vm->minute_angle, minute_hand, [cx, cy, len_m](ooey::LinePrimitive* hand, float angle) {
             int ex = static_cast<int>(cx + len_m * std::sin(angle));
             int ey = static_cast<int>(cy - len_m * std::cos(angle));
-            minute_hand->set_end({ex, ey});
+            hand->set_end({ex, ey});
         });
 
-        bind(vm->second_angle, [second_hand, cx, cy, len_s](float angle) {
+        bind_weak(vm->second_angle, second_hand, [cx, cy, len_s](ooey::LinePrimitive* hand, float angle) {
             int ex = static_cast<int>(cx + len_s * std::sin(angle));
             int ey = static_cast<int>(cy - len_s * std::cos(angle));
-            second_hand->set_end({ex, ey});
+            hand->set_end({ex, ey});
         });
 
         add_child(hour_hand);
@@ -346,10 +351,10 @@ public:
             ooey::Point{250, 350},
             ooey::Color{255, 255, 255}
         );
-        bind(vm->digital_time, [digital_label, cx](const std::string& time_str) {
-            digital_label->set_text(time_str);
+        bind_weak(vm->digital_time, digital_label, [cx](gooey::Label* label, const std::string& time_str) {
+            label->set_text(time_str);
             int text_width = 16 * 5;
-            digital_label->set_position({static_cast<int>(cx) - text_width / 2, 350});
+            label->set_position({static_cast<int>(cx) - text_width / 2, 350});
         });
         add_child(digital_label);
 
@@ -363,9 +368,7 @@ public:
             "Check this out",
             ooey::Color{240, 240, 240}
         );
-        check_out_btn->on_click = [vm]() {
-            vm->on_check_this_out_clicked();
-        };
+        check_out_btn->set_on_click(vm, &Page3ViewModel::on_check_this_out_clicked);
         add_child(std::move(check_out_btn));
 
         auto continue_btn = std::make_shared<gooey::Button>(
@@ -377,9 +380,7 @@ public:
             "Continue",
             ooey::Color{255, 255, 255}
         );
-        continue_btn->on_click = [vm]() {
-            vm->on_continue_clicked();
-        };
+        continue_btn->set_on_click(vm, &Page3ViewModel::on_continue_clicked);
         add_child(std::move(continue_btn));
     }
 private:
@@ -406,8 +407,8 @@ public:
             ooey::Color{0, 120, 215},
             3.0f
         );
-        bind(vm->sinusoid_phase, [sinusoid](float phase) {
-            sinusoid->set_phase(phase);
+        bind_weak(vm->sinusoid_phase, sinusoid, [](ooey::SinusoidPrimitive* s, float phase) {
+            s->set_phase(phase);
         });
         add_child(sinusoid);
 
@@ -420,9 +421,7 @@ public:
             "Go Back",
             ooey::Color{240, 240, 240}
         );
-        back_btn->on_click = [vm]() {
-            vm->on_back_clicked();
-        };
+        back_btn->set_on_click(vm, &Page4ViewModel::on_back_clicked);
         add_child(std::move(back_btn));
     }
 private:
@@ -438,8 +437,8 @@ public:
             ooey::Point{280, 220},
             ooey::Color{255, 255, 255}
         );
-        bind(vm->fading_color, [end_label](ooey::Color c) {
-            end_label->set_color(c);
+        bind_weak(vm->fading_color, end_label, [](gooey::Label* label, ooey::Color c) {
+            label->set_color(c);
         });
         add_child(end_label);
 
@@ -452,9 +451,7 @@ public:
             "Exit",
             ooey::Color{255, 255, 255}
         );
-        exit_btn->on_click = [vm]() {
-            vm->on_exit_clicked();
-        };
+        exit_btn->set_on_click(vm, &Page5ViewModel::on_exit_clicked);
         add_child(std::move(exit_btn));
     }
 private:
@@ -517,28 +514,28 @@ public:
         add_child(page_container_);
 
         // Set commands
-        back_btn_->on_click = [coordinator]() {
-            if (coordinator->can_go_back.get()) {
-                coordinator->go_back();
+        back_btn_->set_on_click_weak(coordinator, [](gooey::NavigationCoordinator* coord) {
+            if (coord->can_go_back.get()) {
+                coord->go_back();
             }
-        };
+        });
 
         // Forward button command triggers custom wizard logic or forward history navigation
-        forward_btn_->on_click = [coordinator, this]() {
-            if (coordinator->can_go_forward.get()) {
-                coordinator->go_forward();
+        forward_btn_->set_on_click_weak(coordinator, [this](gooey::NavigationCoordinator* coord) {
+            if (coord->can_go_forward.get()) {
+                coord->go_forward();
             } else {
                 // Predefined sequential page wizard flow
-                auto cur = coordinator->current_viewmodel.get();
+                auto cur = coord->current_viewmodel.get();
                 if (std::dynamic_pointer_cast<Page1ViewModel>(cur)) {
-                    coordinator->navigate_to(std::make_shared<Page2ViewModel>(coordinator));
+                    coord->navigate_to(std::make_shared<Page2ViewModel>(coordinator_));
                 } else if (std::dynamic_pointer_cast<Page2ViewModel>(cur)) {
-                    coordinator->navigate_to(std::make_shared<Page3ViewModel>(coordinator));
+                    coord->navigate_to(std::make_shared<Page3ViewModel>(coordinator_));
                 } else if (std::dynamic_pointer_cast<Page3ViewModel>(cur)) {
-                    coordinator->navigate_to(std::make_shared<Page5ViewModel>(coordinator));
+                    coord->navigate_to(std::make_shared<Page5ViewModel>(coordinator_));
                 }
             }
-        };
+        });
 
         // Data bindings for enabled/disabled button styling
         bind(coordinator_->can_go_back, [this](bool can) {

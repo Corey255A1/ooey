@@ -1,0 +1,15 @@
+VBox id=mainLayout spacing=20 width="MatchParent" height="MatchParent":
+    Label id=titleLabel text=@tr("welcome_title")
+    Label id=helloLabel text=@tr("hello_world")
+    
+    HBox id=langSelectorRow spacing=10:
+        Label id=selectLabel text=@tr("lang_selector")
+        Button id=btnEn text=@tr("switch_en") onClick=@signal.switchToEnglish
+        Button id=btnEs text=@tr("switch_es") onClick=@signal.switchToSpanish
+        Button id=btnDe text=@tr("switch_de") onClick=@signal.switchToGerman
+        
+    Label id=infoLabel text=@tr("current_lang_label")
+    
+    HBox id=counterRow spacing=15:
+        Label id=counterLabel text=@binding.counterText
+        Button id=btnClick text=@tr("click_me_btn") onClick=@signal.incrementCounter

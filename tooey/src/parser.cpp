@@ -144,6 +144,9 @@ std::shared_ptr<AstNode> Parser::parse(const std::vector<Token>& tokens, const s
                 } else if (val_tok.type == TokenType::THEME) {
                     p_val.type = PropertyType::Theme;
                     p_val.rawData = val_tok.text;
+                } else if (val_tok.type == TokenType::LOCALIZATION) {
+                    p_val.type = PropertyType::Localization;
+                    p_val.rawData = val_tok.text;
                 } else if (val_tok.type == TokenType::LBRACKET) {
                     p_val.type = PropertyType::String; // Fallback representation for list values
                     std::string arr_str = "[";
@@ -219,6 +222,9 @@ std::shared_ptr<AstNode> Parser::parse(const std::vector<Token>& tokens, const s
                             p_val.rawData = val_tok.text;
                         } else if (val_tok.type == TokenType::THEME) {
                             p_val.type = PropertyType::Theme;
+                            p_val.rawData = val_tok.text;
+                        } else if (val_tok.type == TokenType::LOCALIZATION) {
+                            p_val.type = PropertyType::Localization;
                             p_val.rawData = val_tok.text;
                         } else {
                             p_val.type = PropertyType::String;

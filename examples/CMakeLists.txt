@@ -100,6 +100,30 @@ if(OOEY_BUILD_CONTROLS)
         "${CMAKE_CURRENT_SOURCE_DIR}/todo"
         "${TODO_GEN_DIR}"
     )
+
+    # Generate LocalizationView.hpp and LocalizationView.cpp from LocalizationView.ooey
+    set(LOCALIZATION_OOEY "${CMAKE_CURRENT_SOURCE_DIR}/localization/LocalizationView.ooey")
+    set(LOCALIZATION_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/localization_gen")
+    set(LOCALIZATION_GEN_HDR "${LOCALIZATION_GEN_DIR}/LocalizationView.hpp")
+    set(LOCALIZATION_GEN_SRC "${LOCALIZATION_GEN_DIR}/LocalizationView.cpp")
+
+    add_custom_command(
+        OUTPUT "${LOCALIZATION_GEN_HDR}" "${LOCALIZATION_GEN_SRC}"
+        COMMAND tooey_compiler "${LOCALIZATION_OOEY}" "${LOCALIZATION_GEN_DIR}" "LocalizationView" "LocalizationViewModel"
+        DEPENDS "${LOCALIZATION_OOEY}" tooey_compiler
+        COMMENT "Compiling LocalizationView.ooey with tooey_compiler"
+    )
+
+    add_ooey_executable(hello_localization
+        localization/main.cpp
+        localization/LocalizationViewModel.cpp
+        "${LOCALIZATION_GEN_SRC}"
+    )
+    target_link_libraries(hello_localization PRIVATE ooey ooey_controls tooey)
+    target_include_directories(hello_localization PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/localization"
+        "${LOCALIZATION_GEN_DIR}"
+    )
 endif()
 
 if(OOEY_BUILD_WAYLAND)

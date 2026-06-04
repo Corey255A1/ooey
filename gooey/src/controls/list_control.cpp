@@ -91,12 +91,21 @@ const std::vector<std::string>& ListControl::get_items() const {
 }
 
 void ListControl::set_item_views(const std::vector<std::shared_ptr<GooeyElement>>& views) {
+    // 1. Sever parent-child linkages for all previous views (preventing dangling parent pointers)
     for (const auto& old_view : item_views_) {
-        remove_child(old_view);
+        if (old_view) {
+            old_view->set_parent(nullptr);
+            remove_child(old_view); // remove if in current active rendering children
+        }
     }
+    
+    // 2. Assign new views and establish linkage
     item_views_ = views;
     for (const auto& view : item_views_) {
-        add_child(view);
+        if (view) {
+            view->set_parent(this);
+            view->set_theme_manager(get_theme_manager());
+        }
     }
     
     if (selected_index_ >= static_cast<int>(item_views_.size())) {

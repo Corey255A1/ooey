@@ -4,6 +4,7 @@
 #include "gooey/mvvmc/subscription_sink.hpp"
 #include "gooey/mvvmc/property.hpp"
 #include "gooey/mvvmc/layout.hpp"
+#include "gooey/mvvmc/localization.hpp"
 #include <memory>
 #include <string>
 
@@ -23,6 +24,50 @@ public:
     template <typename T>
     void bind(Property<T>& property, typename Property<T>::Listener listener) {
         sink_.add(property.subscribe(std::move(listener)));
+    }
+
+    // Bind a property to a member function of a control using std::shared_ptr (converts to weak internally)
+    template <typename T, typename Target, typename ClassType>
+    void bind(Property<T>& property, const std::shared_ptr<Target>& target, void (ClassType::*member_func)(const T&)) {
+        static_assert(std::is_base_of_v<ClassType, Target>, "Target must derive from ClassType");
+        std::weak_ptr<Target> weak_target = target;
+        sink_.add(property.subscribe([weak_target, member_func](const T& val) {
+            if (auto locked = weak_target.lock()) {
+                (locked.get()->*member_func)(val);
+            }
+        }));
+    }
+
+    // Bind a property to a member function of a control using std::weak_ptr
+    template <typename T, typename Target, typename ClassType>
+    void bind(Property<T>& property, std::weak_ptr<Target> target, void (ClassType::*member_func)(const T&)) {
+        static_assert(std::is_base_of_v<ClassType, Target>, "Target must derive from ClassType");
+        sink_.add(property.subscribe([target = std::move(target), member_func](const T& val) {
+            if (auto locked = target.lock()) {
+                (locked.get()->*member_func)(val);
+            }
+        }));
+    }
+
+    // Bind a property to a lambda callback targeting a control weakly (using std::shared_ptr)
+    template <typename T, typename Target, typename Func>
+    void bind_weak(Property<T>& property, const std::shared_ptr<Target>& target, Func&& callback) {
+        std::weak_ptr<Target> weak_target = target;
+        sink_.add(property.subscribe([weak_target, callback = std::forward<Func>(callback)](const T& val) {
+            if (auto locked = weak_target.lock()) {
+                callback(locked.get(), val);
+            }
+        }));
+    }
+
+    // Bind a property to a lambda callback targeting a control weakly (using std::weak_ptr)
+    template <typename T, typename Target, typename Func>
+    void bind_weak(Property<T>& property, std::weak_ptr<Target> target, Func&& callback) {
+        sink_.add(property.subscribe([target = std::move(target), callback = std::forward<Func>(callback)](const T& val) {
+            if (auto locked = target.lock()) {
+                callback(locked.get(), val);
+            }
+        }));
     }
 
     // Layout configuration
@@ -102,8 +147,14 @@ protected:
     Size last_measure_constraints_{0, 0};
 };
 
+template <typename T>
+std::weak_ptr<T> weak(const std::shared_ptr<T>& ptr) {
+    return std::weak_ptr<T>(ptr);
+}
+
 } // namespace gooey::mvvmc
 namespace gooey {
     using namespace ooey;
 using gooey::mvvmc::GooeyElement;
+using gooey::mvvmc::weak;
 }

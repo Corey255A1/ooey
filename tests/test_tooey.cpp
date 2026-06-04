@@ -208,3 +208,46 @@ TEST(TooeyLayout, ListControlTemplateCodegen) {
     EXPECT_NE(result.source.find("tooey::set_control_value(taskCheck, item.text);"), std::string::npos);
     EXPECT_NE(result.source.find("list_val[i].completed = newValue;"), std::string::npos);
 }
+
+TEST(TooeyLayout, LocalizationTokenizationAndCodegen) {
+    std::string source = 
+        "VBox id=rootLayout:\n"
+        "    Label text=@tr(\"welcome_message\")\n"
+        "    Button text=@tr(\"start_wizard\")\n"
+        "    CheckBox text=@tr(\"check_this_out\")\n";
+
+    auto tokens = Lexer::tokenize(source);
+
+    std::vector<Token> filtered;
+    for (const auto& tok : tokens) {
+        if (tok.type != TokenType::NEWLINE && tok.type != TokenType::END_OF_FILE && tok.type != TokenType::COMMENT) {
+            filtered.push_back(tok);
+        }
+    }
+
+    ASSERT_GE(filtered.size(), 12);
+    EXPECT_EQ(filtered[7].type, TokenType::LOCALIZATION);
+    EXPECT_EQ(filtered[7].text, "welcome_message");
+
+    auto ast = Parser::parse(tokens);
+    ASSERT_NE(ast, nullptr);
+    auto vbox = ast->children[0];
+    ASSERT_EQ(vbox->children.size(), 3);
+
+    auto label = vbox->children[0];
+    EXPECT_EQ(label->properties["text"].type, PropertyType::Localization);
+    EXPECT_EQ(label->properties["text"].rawData, "welcome_message");
+
+    auto button = vbox->children[1];
+    EXPECT_EQ(button->properties["text"].type, PropertyType::Localization);
+    EXPECT_EQ(button->properties["text"].rawData, "start_wizard");
+
+    auto checkbox = vbox->children[2];
+    EXPECT_EQ(checkbox->properties["text"].type, PropertyType::Localization);
+    EXPECT_EQ(checkbox->properties["text"].rawData, "check_this_out");
+
+    auto result = CodeGenerator::generate(ast, "MyLocView", "MyLocViewModel");
+    EXPECT_NE(result.source.find("->set_localized_text(gooey::tr(\"welcome_message\"));"), std::string::npos);
+    EXPECT_NE(result.source.find("->set_localized_label_text(gooey::tr(\"start_wizard\"));"), std::string::npos);
+    EXPECT_NE(result.source.find("->set_localized_text(gooey::tr(\"check_this_out\"));"), std::string::npos);
+}

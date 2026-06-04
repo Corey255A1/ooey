@@ -1,0 +1,14 @@
+# Clang-Tidy configuration for OOEY
+Checks: >
+  -*,
+  bugprone-use-after-free,
+  bugprone-dangling-handle,
+  bugprone-parent-virtual-call,
+  bugprone-suspicious-missing-comma,
+  performance-*,
+  readability-redundant-smartptr-get,
+  readability-simplify-boolean-expr
+
+WarningsAsErrors: >
+  bugprone-use-after-free,
+  bugprone-dangling-handle

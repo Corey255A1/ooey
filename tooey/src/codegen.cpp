@@ -190,12 +190,25 @@ static std::string generate_template_node(
             }
 
             if (key == "text") {
-                if (node->nodeType == "Button") {
-                    instantiations << "                    " << var_name << "->set_label_text(" << val_repr << ");\n";
-                } else if (node->nodeType == "Label" || node->nodeType == "TextBox") {
-                    instantiations << "                    " << var_name << "->set_text(" << val_repr << ");\n";
-                } else if (node->nodeType == "CheckBox") {
-                    instantiations << "                    " << var_name << "->set_label_text(" << val_repr << ");\n";
+                if (val.type == PropertyType::Localization) {
+                    std::string loc_val = "gooey::tr(\"" + val.rawData + "\")";
+                    if (node->nodeType == "Button") {
+                        instantiations << "                    " << var_name << "->set_localized_label_text(" << loc_val << ");\n";
+                    } else if (node->nodeType == "Label") {
+                        instantiations << "                    " << var_name << "->set_localized_text(" << loc_val << ");\n";
+                    } else if (node->nodeType == "TextBox") {
+                        instantiations << "                    " << var_name << "->set_localized_text(" << loc_val << ");\n";
+                    } else if (node->nodeType == "CheckBox") {
+                        instantiations << "                    " << var_name << "->set_localized_text(" << loc_val << ");\n";
+                    }
+                } else {
+                    if (node->nodeType == "Button") {
+                        instantiations << "                    " << var_name << "->set_label_text(" << val_repr << ");\n";
+                    } else if (node->nodeType == "Label" || node->nodeType == "TextBox") {
+                        instantiations << "                    " << var_name << "->set_text(" << val_repr << ");\n";
+                    } else if (node->nodeType == "CheckBox") {
+                        instantiations << "                    " << var_name << "->set_label_text(" << val_repr << ");\n";
+                    }
                 }
             } else if (key == "checked") {
                 instantiations << "                    " << var_name << "->set_checked(" << val_repr << ");\n";
@@ -392,12 +405,25 @@ static void generate_node(
             }
 
             if (key == "text") {
-                if (node->nodeType == "Button") {
-                    instantiations << "        " << var_name << "->set_label_text(" << val_repr << ");\n";
-                } else if (node->nodeType == "Label" || node->nodeType == "TextBox") {
-                    instantiations << "        " << var_name << "->set_text(" << val_repr << ");\n";
-                } else if (node->nodeType == "CheckBox") {
-                    instantiations << "        " << var_name << "->set_label_text(" << val_repr << ");\n";
+                if (val.type == PropertyType::Localization) {
+                    std::string loc_val = "gooey::tr(\"" + val.rawData + "\")";
+                    if (node->nodeType == "Button") {
+                        instantiations << "        " << var_name << "->set_localized_label_text(" << loc_val << ");\n";
+                    } else if (node->nodeType == "Label") {
+                        instantiations << "        " << var_name << "->set_localized_text(" << loc_val << ");\n";
+                    } else if (node->nodeType == "TextBox") {
+                        instantiations << "        " << var_name << "->set_localized_text(" << loc_val << ");\n";
+                    } else if (node->nodeType == "CheckBox") {
+                        instantiations << "        " << var_name << "->set_localized_text(" << loc_val << ");\n";
+                    }
+                } else {
+                    if (node->nodeType == "Button") {
+                        instantiations << "        " << var_name << "->set_label_text(" << val_repr << ");\n";
+                    } else if (node->nodeType == "Label" || node->nodeType == "TextBox") {
+                        instantiations << "        " << var_name << "->set_text(" << val_repr << ");\n";
+                    } else if (node->nodeType == "CheckBox") {
+                        instantiations << "        " << var_name << "->set_label_text(" << val_repr << ");\n";
+                    }
                 }
             } else if (key == "checked") {
                 instantiations << "        " << var_name << "->set_checked(" << val_repr << ");\n";

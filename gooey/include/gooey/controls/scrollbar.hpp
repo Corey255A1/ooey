@@ -18,6 +18,10 @@ enum class ScrollBarOrientation {
 
 class ScrollBar : public mvvmc::GooeyElement, public IInteractive {
 public:
+    static std::shared_ptr<ScrollBar> create(Rect bounds, ScrollBarOrientation orientation) {
+        return std::make_shared<ScrollBar>(bounds, orientation);
+    }
+
     ScrollBar(Rect bounds, ScrollBarOrientation orientation);
 
     Rect bounds() const override;
@@ -34,6 +38,44 @@ public:
     void draw(ooey::IRenderTarget& target) const override;
 
     std::function<void(int)> on_value_changed;
+
+    template <typename Target>
+    void set_on_value_changed(const std::shared_ptr<Target>& target, void (Target::*member_func)(int)) {
+        std::weak_ptr<Target> weak_target = target;
+        on_value_changed = [weak_target, member_func](int val) {
+            if (auto locked = weak_target.lock()) {
+                (locked.get()->*member_func)(val);
+            }
+        };
+    }
+
+    template <typename Target>
+    void set_on_value_changed(std::weak_ptr<Target> target, void (Target::*member_func)(int)) {
+        on_value_changed = [target = std::move(target), member_func](int val) {
+            if (auto locked = target.lock()) {
+                (locked.get()->*member_func)(val);
+            }
+        };
+    }
+
+    template <typename Target, typename Func>
+    void set_on_value_changed_weak(const std::shared_ptr<Target>& target, Func&& callback) {
+        std::weak_ptr<Target> weak_target = target;
+        on_value_changed = [weak_target, callback = std::forward<Func>(callback)](int val) {
+            if (auto locked = weak_target.lock()) {
+                callback(locked.get(), val);
+            }
+        };
+    }
+
+    template <typename Target, typename Func>
+    void set_on_value_changed_weak(std::weak_ptr<Target> target, Func&& callback) {
+        on_value_changed = [target = std::move(target), callback = std::forward<Func>(callback)](int val) {
+            if (auto locked = target.lock()) {
+                callback(locked.get(), val);
+            }
+        };
+    }
 
 protected:
     Size do_measure(Size constraints) override;

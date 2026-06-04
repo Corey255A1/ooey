@@ -14,6 +14,25 @@ namespace gooey::controls {
 
 class Label : public mvvmc::GooeyElement {
 public:
+    static std::shared_ptr<Label> create() {
+        return std::make_shared<Label>();
+    }
+    static std::shared_ptr<Label> create(std::string text, Font font, Point position, Color color) {
+        return std::make_shared<Label>(std::move(text), font, position, color);
+    }
+    static std::shared_ptr<Label> create(LocalizedString text, Font font, Point position, Color color) {
+        auto lbl = std::make_shared<Label>("", font, position, color);
+        lbl->set_localized_text(std::move(text));
+        return lbl;
+    }
+
+    void set_localized_text(LocalizedString text) {
+        localized_key_ = std::move(text);
+        bind(LocalizationManager::get().active_locale, [this](const std::string&) {
+            this->set_text(LocalizationManager::get().translate(localized_key_.key));
+        });
+    }
+
     Label();
     Label(std::string text, Font font, Point position, Color color);
 
@@ -47,6 +66,7 @@ private:
 
     std::shared_ptr<TextPrimitive> text_primitive_;
     TextOverflow overflow_{TextOverflow::None};
+    LocalizedString localized_key_{""};
 };
 
 } // namespace gooey::controls

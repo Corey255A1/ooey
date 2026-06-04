@@ -15,6 +15,7 @@ std::string to_string(TokenType type) {
         case TokenType::BINDING: return "BINDING";
         case TokenType::SIGNAL: return "SIGNAL";
         case TokenType::THEME: return "THEME";
+        case TokenType::LOCALIZATION: return "LOCALIZATION";
         case TokenType::STRING: return "STRING";
         case TokenType::NUMBER: return "NUMBER";
         case TokenType::BOOLEAN: return "BOOLEAN";
@@ -256,6 +257,44 @@ std::vector<Token> Lexer::tokenize(const std::string& source) {
             Token tok;
             tok.type = TokenType::THEME;
             tok.text = theme_val;
+            tok.start_offset = start_off;
+            tok.end_offset = offset;
+            tok.line = start_line;
+            tok.column = start_col;
+            tokens.push_back(tok);
+            continue;
+        }
+
+        if (match_str("@tr(")) {
+            consume_str("@tr(");
+            char quote = '\0';
+            if (peek() == '"' || peek() == '\'') {
+                quote = consume();
+            }
+            std::string key = "";
+            if (quote != '\0') {
+                while (peek() != '\0' && peek() != quote) {
+                    if (peek() == '\\' && peek(1) != '\0') {
+                        key += consume();
+                        key += consume();
+                    } else {
+                        key += consume();
+                    }
+                }
+                if (peek() == quote) {
+                    consume();
+                }
+            } else {
+                while (std::isalnum(peek()) || peek() == '_' || peek() == '.') {
+                    key += consume();
+                }
+            }
+            if (peek() == ')') {
+                consume();
+            }
+            Token tok;
+            tok.type = TokenType::LOCALIZATION;
+            tok.text = key;
             tok.start_offset = start_off;
             tok.end_offset = offset;
             tok.line = start_line;
