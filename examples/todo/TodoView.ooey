@@ -5,7 +5,7 @@ VBox id=todoRootLayout spacing=15 width="MatchParent" height="MatchParent":
         Button id=btnAdd text="Add Task" onClick=@signal.addTask
     ListControl id=todoList items=@binding.taskList onSelected=@signal.selectTask(newValue) width="MatchParent" height=300:
         Row id=itemRow spacing=10 width="MatchParent" height=40:
-            CheckBox id=taskCheck checked=@binding.taskList.completed text=@binding.taskList.text
+            CheckBox id=taskCheck checked=@binding.taskList.completed text=@binding.taskList.text width=400
             Button id=btnRowDelete text="Delete" onClick=@signal.deleteTask(index)
     HBox id=actionRow spacing=10:
         Button id=btnToggle text="Mark Done / Undo" onClick=@signal.toggleTask

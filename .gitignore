@@ -1,5 +1,6 @@
 build/
 build-wasm/
+BUILD/
 .antigravitycli/
 CMakeLists.txt.user
 CMakeCache.txt
