@@ -1,5 +1,0 @@
-if(EXISTS "/home/corey/code/ooey/BUILD/tests/ooey_tests[1]_tests.cmake")
-  include("/home/corey/code/ooey/BUILD/tests/ooey_tests[1]_tests.cmake")
-else()
-  add_test(ooey_tests_NOT_BUILT ooey_tests_NOT_BUILT)
-endif()

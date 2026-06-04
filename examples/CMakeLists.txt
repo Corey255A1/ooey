@@ -76,6 +76,30 @@ if(OOEY_BUILD_CONTROLS)
             target_include_directories(hello_network PRIVATE ${Boost_INCLUDE_DIRS})
         endif()
     endif()
+
+    # Generate TodoView.hpp and TodoView.cpp from TodoView.ooey
+    set(TODO_OOEY "${CMAKE_CURRENT_SOURCE_DIR}/todo/TodoView.ooey")
+    set(TODO_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/todo_gen")
+    set(TODO_GEN_HDR "${TODO_GEN_DIR}/TodoView.hpp")
+    set(TODO_GEN_SRC "${TODO_GEN_DIR}/TodoView.cpp")
+
+    add_custom_command(
+        OUTPUT "${TODO_GEN_HDR}" "${TODO_GEN_SRC}"
+        COMMAND tooey_compiler "${TODO_OOEY}" "${TODO_GEN_DIR}" "TodoView" "TodoViewModel"
+        DEPENDS "${TODO_OOEY}" tooey_compiler
+        COMMENT "Compiling TodoView.ooey with tooey_compiler"
+    )
+
+    add_ooey_executable(hello_todo
+        todo/main.cpp
+        todo/TodoViewModel.cpp
+        "${TODO_GEN_SRC}"
+    )
+    target_link_libraries(hello_todo PRIVATE ooey ooey_controls tooey)
+    target_include_directories(hello_todo PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/todo"
+        "${TODO_GEN_DIR}"
+    )
 endif()
 
 if(OOEY_BUILD_WAYLAND)

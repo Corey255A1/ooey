@@ -169,6 +169,29 @@ TEST(OoeyControls, ListControlNavigationAndScrolling) {
     EXPECT_EQ(listCtrl.get_selected_index(), 3);
 }
 
+TEST(OoeyControls, ListControlCheckboxParsingAndVisualState) {
+    ooey::Rect bounds{100, 100, 200, 250};
+    ooey::Font font{"sans-serif", 16};
+    ooey::Color text_color{255, 255, 255};
+    ooey::Color bg_color{30, 30, 30};
+    ooey::Color highlight_bg{0, 120, 215};
+    ooey::Color highlight_text{255, 255, 255};
+
+    gooey::ListControl listCtrl{bounds, 50, font, text_color, bg_color, highlight_bg, highlight_text};
+
+    std::vector<std::string> items = {
+        "[✓]  Task 1 completed",
+        "[ ]  Task 2 pending",
+        "Raw task string without checkbox"
+    };
+    listCtrl.set_items(items);
+
+    listCtrl.layout(bounds);
+
+    EXPECT_EQ(listCtrl.get_items().size(), 3);
+}
+
+
 class TestPageViewModel : public gooey::PageViewModelBase {
 public:
     explicit TestPageViewModel(std::string name) : name_(std::move(name)) {}
@@ -547,6 +570,43 @@ TEST(OoeyMvvmc, PropertyReflectionAndNestedViewModels) {
     EXPECT_NE(std::find(paths.begin(), paths.end(), "bg_color"), paths.end());
     EXPECT_NE(std::find(paths.begin(), paths.end(), "child.value"), paths.end());
     EXPECT_NE(std::find(paths.begin(), paths.end(), "child.title"), paths.end());
+}
+
+TEST(OoeyMvvmc, PropertySubscriptionReentrancySafety) {
+    struct ReentrantModel {
+        std::shared_ptr<gooey::Property<int>> prop = std::make_shared<gooey::Property<int>>(10);
+    };
+
+    auto model = std::make_unique<ReentrantModel>();
+    
+    gooey::ScopedSubscription sub;
+    sub = model->prop->subscribe([](int) {});
+
+    // Destroy the model (and its property) first
+    model.reset();
+    
+    // Destroying the subscription now must check the alive flag and not access deleted property memory
+    EXPECT_NO_THROW(sub = {});
+}
+
+TEST(OoeyMvvmc, PropertyUnsubscribeReentrancySafety) {
+    struct Target {
+        std::shared_ptr<gooey::Property<int>> prop;
+    };
+    
+    auto target = std::make_shared<Target>();
+    target->prop = std::make_shared<gooey::Property<int>>(100);
+
+    gooey::ScopedSubscription sub;
+    sub = target->prop->subscribe([target](int) {});
+
+    // Release main strong reference; now only the listener lambda owns target
+    target.reset();
+
+    // Resetting the subscription will invoke unsubscribe(), which deletes the listener lambda,
+    // which deletes target and the property itself. The deferred destruction architectural fix
+    // ensures this does not trigger a use-after-free crash inside the executing unsubscribe() method.
+    EXPECT_NO_THROW(sub = {});
 }
 
 

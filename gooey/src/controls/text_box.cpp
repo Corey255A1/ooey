@@ -7,6 +7,8 @@
 namespace gooey::controls {
     using namespace ooey;
 
+TextBox::TextBox() : TextBox(Rect{0, 0, 150, 40}, Font{"sans-serif", 16}, Color{255, 255, 255}, Color{35, 35, 40}) {}
+
 TextBox::TextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     : bounds_(bounds) {
     width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};

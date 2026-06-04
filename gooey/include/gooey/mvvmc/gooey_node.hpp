@@ -19,9 +19,11 @@ public:
     void draw(ooey::IRenderTarget& target) const override;
 
     bool clip_children{false};
+    int spacing_{0};
 
     // Builder setters for chaining configuration
     GooeyNode& set_clip_children(bool clip) { clip_children = clip; return *this; }
+    GooeyNode& set_spacing(int spacing) { spacing_ = spacing; return *this; }
 
     void set_theme_manager(std::shared_ptr<ThemeManager> manager) override;
 

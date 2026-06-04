@@ -160,8 +160,7 @@ struct LinuxFontBackend::Impl {
         }
 
         if (freetype_lib) {
-            // Keep library loaded at exit to avoid LeakSanitizer false positives
-            // dlclose(freetype_lib);
+            dlclose(freetype_lib);
             freetype_lib = nullptr;
         }
         if (fc_config && FcConfigDestroy) {
@@ -172,7 +171,7 @@ struct LinuxFontBackend::Impl {
             if (FcFini) {
                 FcFini();
             }
-            // dlclose(fontconfig_lib);
+            dlclose(fontconfig_lib);
             fontconfig_lib = nullptr;
         }
         loaded = false;

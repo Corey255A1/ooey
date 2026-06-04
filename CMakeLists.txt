@@ -275,6 +275,7 @@ add_library(gooey)
 target_sources(gooey PRIVATE
     gooey/src/application.cpp
     gooey/src/controls/button.cpp
+    gooey/src/controls/checkbox.cpp
     gooey/src/controls/label.cpp
     gooey/src/controls/text_box.cpp
     gooey/src/controls/rich_text_box.cpp
@@ -305,6 +306,7 @@ target_link_libraries(gooey PUBLIC ooey)
 add_library(ooey_controls ALIAS gooey)
 
 # Subdirectories
+add_subdirectory(tooey)
 add_subdirectory(examples)
 
 # Testing setup

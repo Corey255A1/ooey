@@ -1,0 +1,12 @@
+VBox id=todoRootLayout spacing=15 width="MatchParent" height="MatchParent":
+    Label id=titleLabel text="OOEY TASK MANAGER"
+    HBox id=inputRow spacing=10 width="MatchParent":
+        TextBox id=taskInput text=@binding.newTaskText width=300
+        Button id=btnAdd text="Add Task" onClick=@signal.addTask
+    ListControl id=todoList items=@binding.taskList onSelected=@signal.selectTask(newValue) width="MatchParent" height=300:
+        Row id=itemRow spacing=10 width="MatchParent" height=40:
+            CheckBox id=taskCheck checked=@binding.taskList.completed text=@binding.taskList.text
+            Button id=btnRowDelete text="Delete" onClick=@signal.deleteTask(index)
+    HBox id=actionRow spacing=10:
+        Button id=btnToggle text="Mark Done / Undo" onClick=@signal.toggleTask
+        Button id=btnDelete text="Delete" onClick=@signal.deleteTask

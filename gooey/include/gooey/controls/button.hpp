@@ -17,6 +17,7 @@ namespace gooey::controls {
 
 class Button : public mvvmc::GooeyElement, public IInteractive {
 public:
+    Button();
     Button(Rect bounds, Color color);
     Button(Rect bounds, Color fill_color, Color stroke_color, float stroke_thickness, int corner_radius, const std::string& label_text = "", Color label_color = Color{255, 255, 255});
 

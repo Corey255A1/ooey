@@ -76,6 +76,7 @@ protected:
     wl_surface* surface_{nullptr};
     xdg_surface* xdg_surface_{nullptr};
     xdg_toplevel* xdg_toplevel_{nullptr};
+    xdg_wm_base* wm_base_{nullptr};
     wl_seat* seat_{nullptr};
 
     bool waiting_for_configure_{false};

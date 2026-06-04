@@ -14,6 +14,7 @@ namespace gooey::controls {
 
 class Label : public mvvmc::GooeyElement {
 public:
+    Label();
     Label(std::string text, Font font, Point position, Color color);
 
     void set_text(const std::string& text);

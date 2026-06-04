@@ -1,13 +1,10 @@
 #pragma once
 
-namespace ooey {}
-
-
 #include "gooey/mvvmc/gooey_element.hpp"
-#include "gooey/mvvmc/theme.hpp"
 #include "gooey/mvvmc/i_interactive.hpp"
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
-#include "ooey/renderer/primitives/text_primitive.hpp"
+#include "ooey/renderer/primitives/rect_primitive.hpp"
+#include "gooey/controls/label.hpp"
 #include <functional>
 #include <memory>
 #include <string>
@@ -15,43 +12,45 @@ namespace ooey {}
 namespace gooey::controls {
     using namespace ooey;
 
-class TextBox : public mvvmc::GooeyElement, public IInteractive {
+class CheckBox : public mvvmc::GooeyElement, public IInteractive {
 public:
-    TextBox();
-    TextBox(Rect bounds, Font font, Color text_color, Color bg_color);
+    CheckBox();
+    CheckBox(Rect bounds, std::string text, bool initial_checked = false);
 
     void draw(ooey::IRenderTarget& target) const override;
     Rect bounds() const override;
 
-    void set_text(const std::string& text);
-    const std::string& get_text() const;
+    // Value bindings compatibility
+    void set_value(bool checked);
+    bool get_value() const;
 
-    void set_font(const Font& font);
-    const Font& get_font() const;
+    void set_checked(bool checked);
+    bool is_checked() const;
+
+    void set_text(const std::string& text);
+    void set_label_text(const std::string& text);
+    const std::string& get_text() const;
 
     bool on_pointer_event(const Pointer& e) override;
     bool on_key_event(const KeyEvent& e) override;
-    bool on_text_event(const TextEvent& e) override;
 
-    std::function<void(const std::string&)> on_text_changed;
+    std::function<void(bool)> on_checked_changed;
 
 protected:
-    // Layout support
     Size do_measure(Size constraints) override;
     void do_layout(Rect bounds) override;
-    void apply_style(const mvvmc::Style& style) override;
 
 private:
     Rect bounds_;
-    std::shared_ptr<RoundedRectPrimitive> bg_;
-    std::shared_ptr<TextPrimitive> text_primitive_;
     std::string text_;
-    bool is_focused_{false};
-    mvvmc::Style current_style_;
+    bool checked_{false};
+    std::shared_ptr<RoundedRectPrimitive> box_bg_;
+    std::shared_ptr<RectPrimitive> checked_indicator_;
+    std::shared_ptr<Label> label_;
 };
 
 } // namespace gooey::controls
 namespace gooey {
     using namespace ooey;
-using gooey::controls::TextBox;
+using gooey::controls::CheckBox;
 }

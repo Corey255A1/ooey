@@ -332,7 +332,8 @@ bool WindowBackend::setup_registry(WaylandState& state) {
     shm_ = state.shm;
 
     if (state.wm_base) {
-        xdg_wm_base_add_listener(state.wm_base, &g_xdg_wm_base_listener, this);
+        wm_base_ = state.wm_base;
+        xdg_wm_base_add_listener(wm_base_, &g_xdg_wm_base_listener, this);
     }
     return true;
 }
@@ -342,7 +343,7 @@ void WindowBackend::create_surface_and_xdg(WaylandState& state) {
 
     xdg_surface* xdg_surface_ptr = nullptr;
     xdg_toplevel* xdg_toplevel_ptr = nullptr;
-    if (state.wm_base) {
+    if (wm_base_) {
         xdg_surface_ptr = xdg_wm_base_get_xdg_surface(state.wm_base, surface_);
         if (xdg_surface_ptr) {
             xdg_surface_add_listener(xdg_surface_ptr, &g_xdg_surface_listener, this);
@@ -454,6 +455,14 @@ void WindowBackend::destroy() {
         keyboard_obj_ = nullptr;
     }
     keyboard_data_.reset();
+    if (wm_base_) {
+        xdg_wm_base_destroy(wm_base_);
+        wm_base_ = nullptr;
+    }
+    if (seat_) {
+        wl_seat_destroy(seat_);
+        seat_ = nullptr;
+    }
     if (compositor_) {
         wl_compositor_destroy(compositor_);
         compositor_ = nullptr;

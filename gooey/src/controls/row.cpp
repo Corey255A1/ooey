@@ -11,6 +11,7 @@ Size Row::do_measure(Size constraints) {
     int avail_h = std::max(0, constraints.height - padding_top - padding_bottom);
     Size child_constraints{avail_w, avail_h};
 
+    bool first = true;
     for (const auto& child : get_children()) {
         auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
@@ -19,9 +20,13 @@ Size Row::do_measure(Size constraints) {
             int child_total_h = child_size.height + child_view->margin_top + child_view->margin_bottom;
 
             content_max_h = std::max(content_max_h, child_total_h);
+            if (!first) {
+                total_w += spacing_;
+            }
             total_w += child_total_w;
+            first = false;
 
-            avail_w = std::max(0, avail_w - child_total_w);
+            avail_w = std::max(0, avail_w - child_total_w - (first ? 0 : spacing_));
             child_constraints.width = avail_w;
         }
     }
@@ -38,9 +43,13 @@ void Row::do_layout(Rect bounds) {
     int current_x = bounds.x + padding_left;
     Size child_constraints{std::max(0, bounds.width - padding_left - padding_right), content_h};
 
+    bool first = true;
     for (const auto& child : get_children()) {
         auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
+            if (!first) {
+                current_x += spacing_;
+            }
             child_constraints.width = std::max(0, bounds.x + bounds.width - padding_right - current_x);
             Size child_size = child_view->measure(child_constraints);
 
@@ -56,6 +65,7 @@ void Row::do_layout(Rect bounds) {
             child_view->layout(Rect{cx, cy, child_w, child_h});
 
             current_x += child_w + child_view->margin_left + child_view->margin_right;
+            first = false;
         }
     }
 }

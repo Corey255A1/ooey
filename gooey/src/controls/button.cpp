@@ -5,6 +5,8 @@
 namespace gooey::controls {
     using namespace ooey;
 
+Button::Button() : Button(Rect{0, 0, 100, 40}, Color{60, 60, 65}) {}
+
 Button::Button(Rect bounds, Color color) : bounds_(bounds), color_(color) {
     width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};
     height = {SizePolicy::Fixed, static_cast<float>(bounds.height)};

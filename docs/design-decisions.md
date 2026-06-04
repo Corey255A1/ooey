@@ -40,3 +40,10 @@ Initially, `IRenderTarget` utilized a fixed-function immediate mode style (`draw
 To maximize portability (from Linux desktops to embedded Raspberry Pi systems without window managers), input is entirely decoupled from the OS Window.
 - **Universal Pointers:** The engine does not have a "Mouse". It has a collection of active `Pointer` objects. A `Pointer` can represent a mouse cursor, a multi-touch finger, or an arrow-key-driven virtual cursor. The core UI logic only cares that a pointer is hovering or clicking.
 - **Input Providers:** Backends (like X11) or custom plugins (like a serial port reader) act as `IInputProvider`s. They translate hardware-specific signals and push universal `Pointer` or `KeyEvent` data into the central `InputManager`.
+
+## 8. Retained List Item View Composition & AOT Generation
+To support lists containing rich graphical elements (like checkboxes, text, images, or buttons) while preserving performant virtualized scrolling:
+1. **Composition over Custom Cell Overrides**: Rather than requiring the user to subclass list items or implement custom draw overrides, the list control uses a composite visual tree hierarchy. Any layout container (e.g. `Row` or `Column`) can be instantiated and supplied as a custom item view, and inputs are naturally routed through the standard retained scene graph.
+2. **SFINAE-based Direct Value Setting**: To bind arbitrary properties on the visual template dynamically, we chose a template-based `tooey::set_control_value` dispatcher over heavy runtime type reflection or string hash mappings. This compiles to direct method calls (`set_checked`, `set_text`, etc.) on elements, minimizing overhead inside the template instantiation loop.
+3. **Leak-Free Weak Captures**: To prevent cyclic reference loops (where row views keep their parents or the central viewmodel alive indefinitely), all signals and layout observers generate lambda bindings capturing references weakly (`weak_todoList`, `weak_viewModel`), ensuring components can be cleanly garbage-collected when removed.
+

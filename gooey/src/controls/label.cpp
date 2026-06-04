@@ -6,6 +6,8 @@ namespace gooey::controls {
     using namespace ooey;
 
 
+Label::Label() : Label("", Font{"sans-serif", 16}, Point{0,0}, Color{255, 255, 255}) {}
+
 Label::Label(std::string text, Font font, Point position, Color color) {
     text_primitive_ = std::make_shared<TextPrimitive>(std::move(text), font, position, color);
 

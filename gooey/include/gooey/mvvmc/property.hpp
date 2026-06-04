@@ -200,7 +200,11 @@ public:
     }
 
     void unsubscribe(uint32_t id) {
-        listeners_.erase(id);
+        auto it = listeners_.find(id);
+        if (it != listeners_.end()) {
+            auto listener = std::move(it->second);
+            listeners_.erase(it);
+        }
     }
 
     void set(T new_value) {
@@ -254,8 +258,13 @@ public:
 
 private:
     void notify() {
-        for (auto& kv : listeners_) {
-            kv.second(value_);
+        std::vector<Listener> active_listeners;
+        active_listeners.reserve(listeners_.size());
+        for (const auto& kv : listeners_) {
+            active_listeners.push_back(kv.second);
+        }
+        for (const auto& listener : active_listeners) {
+            listener(value_);
         }
     }
 

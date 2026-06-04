@@ -15,6 +15,7 @@ set(OOEY_TEST_SRCS
     test_image.cpp
     test_font.cpp
     test_dpi_scaling.cpp
+    test_tooey.cpp
     ../examples/codeeditor/code_editor.cpp
 )
 
@@ -24,7 +25,7 @@ endif()
 
 add_executable(ooey_tests ${OOEY_TEST_SRCS})
 target_include_directories(ooey_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../examples/codeeditor)
-target_link_libraries(ooey_tests PRIVATE ooey ooey_controls GTest::gtest_main)
+target_link_libraries(ooey_tests PRIVATE ooey ooey_controls tooey GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(ooey_tests)

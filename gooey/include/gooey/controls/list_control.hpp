@@ -18,12 +18,19 @@ namespace gooey::controls {
 
 class ListControl : public GooeyNode, public IInteractive {
 public:
+    ListControl();
     ListControl(Rect bounds, int item_height, Font font, Color text_color, Color bg_color, Color highlight_bg_color, Color highlight_text_color);
 
     Rect bounds() const override;
 
     void set_items(const std::vector<std::string>& items);
     const std::vector<std::string>& get_items() const;
+
+    void set_item_views(const std::vector<std::shared_ptr<GooeyElement>>& views);
+    const std::vector<std::shared_ptr<GooeyElement>>& get_item_views() const;
+
+    void set_item_height(int height);
+    int get_item_height() const;
 
     void set_selected_index(int index);
     int get_selected_index() const;
@@ -58,12 +65,15 @@ private:
     Color highlight_text_color_;
 
     std::vector<std::string> items_;
+    std::vector<std::shared_ptr<GooeyElement>> item_views_;
     int selected_index_{0};
     int scroll_offset_{0};
     bool stylize_items_{false};
 
     std::shared_ptr<RoundedRectPrimitive> bg_;
     std::vector<std::shared_ptr<RectPrimitive>> item_bgs_;
+    std::vector<std::shared_ptr<RoundedRectPrimitive>> item_checkbox_bgs_;
+    std::vector<std::shared_ptr<RectPrimitive>> item_checkbox_checks_;
     std::vector<std::shared_ptr<TextPrimitive>> item_texts_;
 };
 
