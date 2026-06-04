@@ -13,3 +13,6 @@ target_include_directories(tooey PUBLIC
 
 add_executable(tooey_compiler src/compiler_main.cpp)
 target_link_libraries(tooey_compiler PRIVATE tooey)
+
+add_executable(tooey_lint src/linter_main.cpp)
+target_link_libraries(tooey_lint PRIVATE tooey)

@@ -110,6 +110,9 @@ private:
     RichTextBox& parent_;
 };
 
+RichTextBox::RichTextBox()
+    : RichTextBox(Rect{0, 0, 100, 100}, Font{}, Color{220, 220, 220}, Color{30, 30, 30}) {}
+
 RichTextBox::RichTextBox(Rect bounds, Font font, Color text_color, Color bg_color)
     : bounds_(bounds), font_(font), lines_{""}, line_formats_{std::vector<FormatRange>{}} {
     width = {SizePolicy::Fixed, static_cast<float>(bounds.width)};

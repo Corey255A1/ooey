@@ -34,6 +34,7 @@ class RichTextContentView;
 
 class RichTextBox : public GooeyNode, public IInteractive {
 public:
+    RichTextBox();
     RichTextBox(Rect bounds, Font font, Color text_color, Color bg_color);
     virtual ~RichTextBox() override = default;
 
