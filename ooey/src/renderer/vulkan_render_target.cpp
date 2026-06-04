@@ -4,6 +4,7 @@
 #include "ooey/renderer/glyph_atlas.hpp"
 #include "ooey/renderer/vulkan_shaders.hpp"
 #include "ooey/renderer/image.hpp"
+#include <cstddef>
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
@@ -91,8 +92,7 @@ VulkanRenderTarget::VulkanRenderTarget(int width, int height, VkInstance instanc
                                        std::function<void()>&& present_callback)
     : width_(width), height_(height), present_callback_(std::move(present_callback)),
       instance_(instance), physical_device_(physical_device), device_(device),
-      graphics_queue_(graphics_queue), queue_family_index_(queue_family_index),
-      surface_(VK_NULL_HANDLE), headless_(true) {
+      graphics_queue_(graphics_queue), queue_family_index_(queue_family_index) {
     
     create_vertex_buffers();
     create_command_buffers();
@@ -328,11 +328,11 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
                         int atlas_x = metrics.x + col;
                         int src_idx = (atlas_y * atlas_w + atlas_x) * 4;
                         uint8_t alpha_coverage = pixels[src_idx + 3];
-                        uint8_t alpha = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha_coverage) / 255);
+                        auto alpha = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha_coverage) / 255);
 
                         if (alpha > 0) {
-                            float fx = static_cast<float>(x0 + col);
-                            float fy = static_cast<float>(y0 + r);
+                            auto fx = static_cast<float>(x0 + col);
+                            auto fy = static_cast<float>(y0 + r);
                             float fw = 1.0f;
                             float fh = 1.0f;
 
@@ -340,10 +340,10 @@ void VulkanRenderTarget::draw_text(const std::string& text, const Font& font, co
                             Color blended_color = color;
                             blended_color.a = alpha;
 
-                            frame_vertices_.push_back(Vertex{fx, fy, blended_color});
-                            frame_vertices_.push_back(Vertex{fx + fw, fy, blended_color});
-                            frame_vertices_.push_back(Vertex{fx + fw, fy + fh, blended_color});
-                            frame_vertices_.push_back(Vertex{fx, fy + fh, blended_color});
+                            frame_vertices_.push_back(Vertex{.x=fx, .y=fy, .color=blended_color});
+                            frame_vertices_.push_back(Vertex{.x=fx + fw, .y=fy, .color=blended_color});
+                            frame_vertices_.push_back(Vertex{.x=fx + fw, .y=fy + fh, .color=blended_color});
+                            frame_vertices_.push_back(Vertex{.x=fx, .y=fy + fh, .color=blended_color});
 
                             frame_indices_.push_back(base + 0);
                             frame_indices_.push_back(base + 1);
@@ -408,7 +408,7 @@ void VulkanRenderTarget::copy_vertex_and_index_data() {
                 vkFreeMemory(device_, vertex_buffer_memory_, nullptr);
             }
             // Round up to next MB boundary to reduce future reallocations
-            vertex_buffer_size_ = ((needed_vertex_size + (1024 * 1024) - 1) / (1024 * 1024)) * (1024 * 1024);
+            vertex_buffer_size_ = ((needed_vertex_size + (static_cast<VkDeviceSize>(1024 * 1024)) - 1) / (static_cast<VkDeviceSize>(1024 * 1024))) * (static_cast<VkDeviceSize>(1024 * 1024));
             create_buffer(device_, physical_device_, vertex_buffer_size_, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                           vertex_buffer_, vertex_buffer_memory_);
@@ -423,7 +423,7 @@ void VulkanRenderTarget::copy_vertex_and_index_data() {
                 vkFreeMemory(device_, index_buffer_memory_, nullptr);
             }
             // Round up to next MB boundary
-            index_buffer_size_ = ((needed_index_size + (1024 * 1024) - 1) / (1024 * 1024)) * (1024 * 1024);
+            index_buffer_size_ = ((needed_index_size + (static_cast<VkDeviceSize>(1024 * 1024)) - 1) / (static_cast<VkDeviceSize>(1024 * 1024))) * (static_cast<VkDeviceSize>(1024 * 1024));
             create_buffer(device_, physical_device_, index_buffer_size_, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                           index_buffer_, index_buffer_memory_);
@@ -450,7 +450,7 @@ void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t im
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_info.renderPass = render_pass_;
     render_pass_info.framebuffer = swapchain_framebuffers_[image_index];
-    render_pass_info.renderArea.offset = {0, 0};
+    render_pass_info.renderArea.offset = {.x=0, .y=0};
     render_pass_info.renderArea.extent = swapchain_extent_;
 
     VkClearValue clear_value{};
@@ -470,13 +470,13 @@ void VulkanRenderTarget::record_render_commands(VkCommandBuffer cmd, uint32_t im
     vkCmdSetViewport(cmd, 0, 1, &viewport);
 
     VkRect2D scissor{};
-    scissor.offset = {0, 0};
+    scissor.offset = {.x=0, .y=0};
     scissor.extent = swapchain_extent_;
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
     // If we have geometry to draw, record pipeline bindings and draws
     if (!draw_calls_.empty()) {
-        PushConstants push_constants{ static_cast<float>(width_), static_cast<float>(height_) };
+        PushConstants push_constants{ .width=static_cast<float>(width_), .height=static_cast<float>(height_) };
         vkCmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
 
         VkPipeline last_pipeline = VK_NULL_HANDLE;
@@ -859,8 +859,8 @@ void VulkanRenderTarget::create_sync_objects() {
 
 void VulkanRenderTarget::create_vertex_buffers() {
     // Allocate 1 MB for vertex and index buffers
-    VkDeviceSize vertex_buffer_size = 1024 * 1024;
-    VkDeviceSize index_buffer_size = 1024 * 1024;
+    VkDeviceSize vertex_buffer_size = static_cast<VkDeviceSize>(1024 * 1024);
+    VkDeviceSize index_buffer_size = static_cast<VkDeviceSize>(1024 * 1024);
 
     create_buffer(device_, physical_device_, vertex_buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -1045,10 +1045,10 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
                 float fy = y * qh;
 
                 uint32_t base = quad_count * 4;
-                cached.vertices.push_back(Vertex{fx, fy, color});
-                cached.vertices.push_back(Vertex{fx + qw, fy, color});
-                cached.vertices.push_back(Vertex{fx + qw, fy + qh, color});
-                cached.vertices.push_back(Vertex{fx, fy + qh, color});
+                cached.vertices.push_back(Vertex{.x=fx, .y=fy, .color=color});
+                cached.vertices.push_back(Vertex{.x=fx + qw, .y=fy, .color=color});
+                cached.vertices.push_back(Vertex{.x=fx + qw, .y=fy + qh, .color=color});
+                cached.vertices.push_back(Vertex{.x=fx, .y=fy + qh, .color=color});
 
                 cached.indices.push_back(base + 0);
                 cached.indices.push_back(base + 1);
@@ -1085,16 +1085,16 @@ void VulkanRenderTarget::draw_image(const Image& image, const Rect& dest_rect) {
     frame_indices_.insert(frame_indices_.end(), cached.indices.begin(), cached.indices.end());
 
     // Scale and shift vertices to dest_rect (extremely fast linear projection, zero heap allocations)
-    float rx = static_cast<float>(dest_rect.x);
-    float ry = static_cast<float>(dest_rect.y);
-    float rw = static_cast<float>(dest_rect.width);
-    float rh = static_cast<float>(dest_rect.height);
+    auto rx = static_cast<float>(dest_rect.x);
+    auto ry = static_cast<float>(dest_rect.y);
+    auto rw = static_cast<float>(dest_rect.width);
+    auto rh = static_cast<float>(dest_rect.height);
 
     for (const auto& v : cached.vertices) {
         frame_vertices_.push_back(Vertex{
-            rx + v.x * rw,
-            ry + v.y * rh,
-            v.color
+            .x=rx + v.x * rw,
+            .y=ry + v.y * rh,
+            .color=v.color
         });
     }
 

@@ -5,7 +5,7 @@ namespace ooey {}
 namespace gooey::mvvmc {
     using namespace ooey;
 
-void NavigationCoordinator::navigate_to(std::shared_ptr<PageViewModelBase> vm) {
+void NavigationCoordinator::navigate_to(const std::shared_ptr<PageViewModelBase>& vm) {
     if (!vm) {
         return;
     }

@@ -84,7 +84,7 @@ static std::string generate_template_node(
 
         if (val.type == PropertyType::Binding) {
             std::string prefix = items_prop_name + ".";
-            if (val.rawData.rfind(prefix, 0) == 0) {
+            if (val.rawData.starts_with(prefix)) {
                 std::string sub_property = val.rawData.substr(prefix.length());
                 bindings << "                    tooey::set_control_value(" << var_name << ", item." << sub_property << ");\n";
                 

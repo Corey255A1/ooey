@@ -1,5 +1,6 @@
 #include "gooey/controls/scroll_container.hpp"
 #include <algorithm>
+#include <utility>
 
 namespace gooey::controls {
 
@@ -20,7 +21,7 @@ ScrollContainer::ScrollContainer() {
 }
 
 void ScrollContainer::set_child(std::shared_ptr<GooeyNode> child) {
-    child_ = child;
+    child_ = std::move(child);
     clear_children();
     if (child_) {
         add_child(child_);

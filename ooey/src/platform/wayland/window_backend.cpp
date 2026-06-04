@@ -15,13 +15,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstddef>
 #include <cstring>
 #include <iostream>
-#include <limits.h>
+#include <climits>
 #include <cstdlib>
 #include <string>
 #include <poll.h>
-#include <errno.h>
+#include <cerrno>
 
 namespace ooey::wayland {
 
@@ -69,12 +70,12 @@ static const xdg_surface_listener g_xdg_surface_listener = {
 };
 
 static const xdg_toplevel_listener g_xdg_toplevel_listener = {
-    xdg_toplevel_configure,
-    nullptr // close handler
+    .configure=xdg_toplevel_configure,
+    .close=nullptr // close handler
 };
 
 static void registry_global(void* data, wl_registry* registry, uint32_t id, const char* interface, uint32_t version) {
-    WaylandState* state = static_cast<WaylandState*>(data);
+    auto* state = static_cast<WaylandState*>(data);
     if (strcmp(interface, "wl_compositor") == 0) {
         state->compositor = static_cast<wl_compositor*>(wl_registry_bind(registry, id, &wl_compositor_interface, 4));
     } else if (strcmp(interface, "wl_shm") == 0) {
@@ -89,8 +90,8 @@ static void registry_global(void* data, wl_registry* registry, uint32_t id, cons
 static void registry_global_remove(void* /*data*/, wl_registry* /*registry*/, uint32_t /*id*/) {}
 
 static const wl_registry_listener g_registry_listener = {
-    registry_global,
-    registry_global_remove
+    .global=registry_global,
+    .global_remove=registry_global_remove
 };
 
 // xdg_wm_base ping handler
@@ -104,7 +105,7 @@ static const xdg_wm_base_listener g_xdg_wm_base_listener = {
 
 // Pointer and keyboard handling
 static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-    PointerData* pointer_data = static_cast<PointerData*>(data);
+    auto* pointer_data = static_cast<PointerData*>(data);
     if (!pointer_data || !pointer_data->input_manager || !pointer_data->backend) {
         return;
     }
@@ -113,7 +114,7 @@ static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*ser
     pointer_data->last_x = x;
     pointer_data->last_y = y;
 
-    ooey::Pointer p{0, x, y, PointerState::Moved};
+    ooey::Pointer p{.id=0, .x=x, .y=y, .state=PointerState::Moved};
 
     if (pointer_data->backend->get_window_chrome()) {
         auto chrome = pointer_data->backend->get_window_chrome();
@@ -131,7 +132,7 @@ static void pointer_enter(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*ser
 static void pointer_leave(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32_t /*serial*/, wl_surface* /*surface*/) {}
 
 static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*time*/, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-    PointerData* pointer_data = static_cast<PointerData*>(data);
+    auto* pointer_data = static_cast<PointerData*>(data);
     if (!pointer_data || !pointer_data->input_manager || !pointer_data->backend) {
         return;
     }
@@ -140,7 +141,7 @@ static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*ti
     pointer_data->last_x = x;
     pointer_data->last_y = y;
 
-    ooey::Pointer p{0, x, y, PointerState::Moved};
+    ooey::Pointer p{.id=0, .x=x, .y=y, .state=PointerState::Moved};
 
     if (pointer_data->backend->get_window_chrome()) {
         auto chrome = pointer_data->backend->get_window_chrome();
@@ -156,14 +157,14 @@ static void pointer_motion(void* data, wl_pointer* /*wl_pointer*/, uint32_t /*ti
 }
 
 static void pointer_button(void* data, wl_pointer* /*wl_pointer*/, uint32_t serial, uint32_t /*time*/, uint32_t button, uint32_t state) {
-    PointerData* pointer_data = static_cast<PointerData*>(data);
+    auto* pointer_data = static_cast<PointerData*>(data);
     if (!pointer_data || !pointer_data->input_manager || !pointer_data->backend) {
         return;
     }
     pointer_data->last_button_serial = serial;
 
     PointerState pointer_state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? PointerState::Pressed : PointerState::Released;
-    ooey::Pointer p{0, pointer_data->last_x, pointer_data->last_y, pointer_state};
+    ooey::Pointer p{.id=0, .x=pointer_data->last_x, .y=pointer_data->last_y, .state=pointer_state};
 
     if (pointer_data->backend->get_window_chrome()) {
         auto chrome = pointer_data->backend->get_window_chrome();
@@ -185,20 +186,20 @@ static void pointer_axis_stop(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32
 static void pointer_axis_discrete(void* /*data*/, wl_pointer* /*wl_pointer*/, uint32_t /*axis*/, int32_t /*discrete*/) {}
 
 static const wl_pointer_listener g_pointer_listener = {
-    pointer_enter,
-    pointer_leave,
-    pointer_motion,
-    pointer_button,
-    pointer_axis,
-    pointer_frame,
-    pointer_axis_source,
-    pointer_axis_stop,
-    pointer_axis_discrete
+    .enter=pointer_enter,
+    .leave=pointer_leave,
+    .motion=pointer_motion,
+    .button=pointer_button,
+    .axis=pointer_axis,
+    .frame=pointer_frame,
+    .axis_source=pointer_axis_source,
+    .axis_stop=pointer_axis_stop,
+    .axis_discrete=pointer_axis_discrete
 };
 
 // Keyboard handling with xkbcommon
 static void keyboard_keymap(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t format, int fd, uint32_t size) {
-    KeyboardData* keyboard_data = static_cast<KeyboardData*>(data);
+    auto* keyboard_data = static_cast<KeyboardData*>(data);
     if (!keyboard_data) {
         close(fd);
         return;
@@ -224,14 +225,14 @@ static void keyboard_enter(void* /*data*/, wl_keyboard* /*wl_keyboard*/, uint32_
 static void keyboard_leave(void* /*data*/, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, wl_surface* /*surface*/) {}
 
 static void keyboard_key(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, uint32_t /*time*/, uint32_t key, uint32_t state) {
-    KeyboardData* keyboard_data = static_cast<KeyboardData*>(data);
+    auto* keyboard_data = static_cast<KeyboardData*>(data);
     if (!keyboard_data || !keyboard_data->input_manager) {
         return;
     }
     KeyState key_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? KeyState::Pressed : KeyState::Released;
     if (keyboard_data->keymap_ && keyboard_data->xkb_state_) {
         xkb_keysym_t key_sym = xkb_state_key_get_one_sym(keyboard_data->xkb_state_, key + 8);
-        ooey::KeyEvent ev{static_cast<int>(key_sym), key_state};
+        ooey::KeyEvent ev{.key_code=static_cast<int>(key_sym), .state=key_state};
         keyboard_data->input_manager->push_key_event(ev);
 
         if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
@@ -243,7 +244,7 @@ static void keyboard_key(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*se
             int len = xkb_keysym_to_utf8(key_sym, buf, sizeof(buf));
             if (len > 0) {
                 for (int i = 0; i < len; ++i) {
-                    unsigned char ch = static_cast<unsigned char>(buf[i]);
+                    auto ch = static_cast<unsigned char>(buf[i]);
                     if (ch >= 32 || ch == '\n' || ch == '\t') {
                         keyboard_data->input_manager->push_text_event({static_cast<char32_t>(ch)});
                     }
@@ -251,13 +252,13 @@ static void keyboard_key(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*se
             }
         }
     } else {
-        ooey::KeyEvent ev{static_cast<int>(key), key_state};
+        ooey::KeyEvent ev{.key_code=static_cast<int>(key), .state=key_state};
         keyboard_data->input_manager->push_key_event(ev);
     }
 }
 
 static void keyboard_modifiers(void* data, wl_keyboard* /*wl_keyboard*/, uint32_t /*serial*/, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {
-    KeyboardData* keyboard_data = static_cast<KeyboardData*>(data);
+    auto* keyboard_data = static_cast<KeyboardData*>(data);
     if (keyboard_data && keyboard_data->xkb_state_) {
         xkb_state_update_mask(keyboard_data->xkb_state_, mods_depressed, mods_latched, mods_locked, 0, 0, group);
     }
@@ -265,17 +266,17 @@ static void keyboard_modifiers(void* data, wl_keyboard* /*wl_keyboard*/, uint32_
 static void keyboard_repeat_info(void* /*data*/, wl_keyboard* /*wl_keyboard*/, int32_t /*rate*/, int32_t /*delay*/) {}
 
 static const wl_keyboard_listener g_keyboard_listener = {
-    keyboard_keymap,
-    keyboard_enter,
-    keyboard_leave,
-    keyboard_key,
-    keyboard_modifiers,
-    keyboard_repeat_info
+    .keymap=keyboard_keymap,
+    .enter=keyboard_enter,
+    .leave=keyboard_leave,
+    .key=keyboard_key,
+    .modifiers=keyboard_modifiers,
+    .repeat_info=keyboard_repeat_info
 };
 
 // xdg_surface configure: ack then create buffer if needed
 static void xdg_surface_configure(void* data, xdg_surface* surface, uint32_t serial) {
-    WindowBackend* backend = static_cast<WindowBackend*>(data);
+    auto* backend = static_cast<WindowBackend*>(data);
     if (!backend) {
         return;
     }
@@ -284,13 +285,13 @@ static void xdg_surface_configure(void* data, xdg_surface* surface, uint32_t ser
 }
 
 static void xdg_toplevel_configure(void* data, xdg_toplevel* /*toplevel*/, int32_t width, int32_t height, wl_array* states) {
-    WindowBackend* backend = static_cast<WindowBackend*>(data);
+    auto* backend = static_cast<WindowBackend*>(data);
     if (!backend) {
         return;
     }
     bool maximized = false;
     if (states) {
-        uint32_t* states_data = static_cast<uint32_t*>(states->data);
+        auto* states_data = static_cast<uint32_t*>(states->data);
         size_t count = states->size / sizeof(uint32_t);
         for (size_t i = 0; i < count; ++i) {
             if (states_data[i] == XDG_TOPLEVEL_STATE_MAXIMIZED) {
@@ -611,7 +612,7 @@ void WindowBackend::recreate_render_target(int width, int height) {
     }
 
     int stride = width * 4;
-    mapped_size_ = stride * height;
+    mapped_size_ = static_cast<size_t>(stride * height);
     int fd = create_shm_file(mapped_size_);
     if (fd < 0) {
         std::cerr << "Wayland error: Failed to create shm file\n";
@@ -634,7 +635,7 @@ void WindowBackend::recreate_render_target(int width, int height) {
     released_ = false;
     static const wl_buffer_listener buffer_listener = {
         [](void* data, wl_buffer* /*buffer*/) {
-            WindowBackend* self = static_cast<WindowBackend*>(data);
+            auto* self = static_cast<WindowBackend*>(data);
             self->released_ = true;
         }
     };

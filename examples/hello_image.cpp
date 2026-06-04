@@ -55,8 +55,8 @@ void create_test_bmp_pattern(const std::string& path) {
 
     for (int y = 0; y < 128; ++y) {
         for (int x = 0; x < 128; ++x) {
-            uint8_t r = static_cast<uint8_t>(x * 2);
-            uint8_t g = static_cast<uint8_t>(y * 2);
+            auto r = static_cast<uint8_t>(x * 2);
+            auto g = static_cast<uint8_t>(y * 2);
             uint8_t b = 128;
             uint8_t a = 255;
             // BGRA layout in BMP

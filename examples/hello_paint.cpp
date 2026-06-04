@@ -1,5 +1,7 @@
 #include <iostream>
 #include <memory>
+#include <utility>
+#include <utility>
 #include <vector>
 #include <cmath>
 #include <string>
@@ -66,7 +68,7 @@ public:
         add_child(bg_);
     }
     
-    void set_canvas(std::shared_ptr<CanvasLayout> canvas) {
+    void set_canvas(const std::shared_ptr<CanvasLayout>& canvas) {
         canvas_ = canvas;
         add_child(canvas);
     }
@@ -347,8 +349,9 @@ int main() {
         if (active_tool == PaintTool::DrawPolygon && temp_poly_points.size() >= 3) {
             auto bounds = canvas->bounds();
             std::vector<Point> local_points;
-            for (const auto& pt : temp_poly_points) {
-                local_points.push_back(Point{pt.x - bounds.x, pt.y - bounds.y});
+            local_points.reserve(temp_poly_points.size());
+for (const auto& pt : temp_poly_points) {
+                local_points.emplace_back(pt.x - bounds.x, pt.y - bounds.y);
             }
 
             auto shape = std::make_shared<PolygonShapeView>(local_points, current_fill_color, current_stroke_color, current_stroke_thickness);
@@ -388,14 +391,14 @@ int main() {
         std::string name;
     };
     std::vector<ColorPreset> fill_presets = {
-        {Color{230, 75, 75, 200}, "Red"},
-        {Color{40, 180, 100, 200}, "Green"},
-        {Color{0, 120, 215, 200}, "Blue"},
-        {Color{240, 195, 48, 200}, "Yellow"},
-        {Color{26, 188, 156, 200}, "Cyan"},
-        {Color{155, 89, 182, 200}, "Magenta"},
-        {Color{255, 255, 255, 200}, "White"},
-        {Color{0, 0, 0, 0}, "None"}
+        {.color=Color{230, 75, 75, 200}, .name="Red"},
+        {.color=Color{40, 180, 100, 200}, .name="Green"},
+        {.color=Color{0, 120, 215, 200}, .name="Blue"},
+        {.color=Color{240, 195, 48, 200}, .name="Yellow"},
+        {.color=Color{26, 188, 156, 200}, .name="Cyan"},
+        {.color=Color{155, 89, 182, 200}, .name="Magenta"},
+        {.color=Color{255, 255, 255, 200}, .name="White"},
+        {.color=Color{0, 0, 0, 0}, .name="None"}
     };
 
     auto select_fill_color = [&](Color c) {
@@ -434,14 +437,14 @@ int main() {
 
     // --- Stroke Color Preset Row Setup ---
     std::vector<ColorPreset> stroke_presets = {
-        {Color{230, 75, 75, 255}, "Red"},
-        {Color{40, 180, 100, 255}, "Green"},
-        {Color{0, 120, 215, 255}, "Blue"},
-        {Color{240, 195, 48, 255}, "Yellow"},
-        {Color{26, 188, 156, 255}, "Cyan"},
-        {Color{155, 89, 182, 255}, "Magenta"},
-        {Color{255, 255, 255, 255}, "White"},
-        {Color{0, 0, 0, 0}, "None"}
+        {.color=Color{230, 75, 75, 255}, .name="Red"},
+        {.color=Color{40, 180, 100, 255}, .name="Green"},
+        {.color=Color{0, 120, 215, 255}, .name="Blue"},
+        {.color=Color{240, 195, 48, 255}, .name="Yellow"},
+        {.color=Color{26, 188, 156, 255}, .name="Cyan"},
+        {.color=Color{155, 89, 182, 255}, .name="Magenta"},
+        {.color=Color{255, 255, 255, 255}, .name="White"},
+        {.color=Color{0, 0, 0, 0}, .name="None"}
     };
 
     auto select_stroke_color = [&](Color c) {
@@ -570,11 +573,11 @@ int main() {
         else if (active_tool == PaintTool::DrawPolygon) {
             if (e.state == PointerState::Pressed) {
                 // Add vertex in screen coordinates for easy preview lines
-                temp_poly_points.push_back(Point{e.x, e.y});
+                temp_poly_points.emplace_back(e.x, e.y);
 
                 std::vector<Point> preview_pts = temp_poly_points;
                 // Add dummy end point that follows cursor
-                preview_pts.push_back(Point{e.x, e.y});
+                preview_pts.emplace_back(e.x, e.y);
 
                 if (!temp_poly_preview) {
                     temp_poly_preview = std::make_shared<PolygonPrimitive>(
@@ -594,7 +597,7 @@ int main() {
             else if (e.state == PointerState::Moved && !temp_poly_points.empty()) {
                 if (temp_poly_preview) {
                     std::vector<Point> preview_pts = temp_poly_points;
-                    preview_pts.push_back(Point{e.x, e.y});
+                    preview_pts.emplace_back(e.x, e.y);
                     temp_poly_preview->set_points(preview_pts);
                     canvas->invalidate_layout();
                 }
@@ -606,7 +609,7 @@ int main() {
     // Create a custom controller to intercept Enter keys
     class PaintController : public gooey::mvvmc::IController {
     public:
-        PaintController(std::function<void()> finish_cb) : finish_cb_(finish_cb) {}
+        PaintController(std::function<void()> finish_cb) : finish_cb_(std::move(std::move(finish_cb))) {}
         void process_events() override {
             // Check for Enter key press to finalize polygon
             auto& input = gooey::Application::get_instance()->get_input_manager();

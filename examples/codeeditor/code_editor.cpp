@@ -1,5 +1,6 @@
 #include "code_editor.hpp"
 #include <cctype>
+#include <utility>
 
 namespace gooey::controls {
     using namespace ooey;
@@ -164,7 +165,7 @@ CodeEditor::CodeEditor(Rect bounds, Font font, Color text_color, Color bg_color)
 }
 
 void CodeEditor::set_syntax_highlighter(std::shared_ptr<ISyntaxHighlighter> highlighter) {
-    highlighter_ = highlighter;
+    highlighter_ = std::move(highlighter);
     update_formatting();
 }
 

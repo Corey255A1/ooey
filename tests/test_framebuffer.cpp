@@ -3,6 +3,7 @@
 #include "ooey/renderer/software_render_target.hpp"
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstddef>
 #include <vector>
 #include <string>
 #include <cstdlib>
@@ -53,7 +54,7 @@ TEST(FramebufferRenderTarget, RotationMapping0) {
 
     uint32_t expected_pixel = (255 << 24) | (10 << 16) | (20 << 8) | 30;
 
-    std::vector<uint32_t> buffer(480 * 800);
+    std::vector<uint32_t> buffer(static_cast<size_t>(480 * 800));
     lseek(temp.fd, 0, SEEK_SET);
     ASSERT_EQ(read(temp.fd, buffer.data(), buffer.size() * 4), static_cast<ssize_t>(buffer.size() * 4));
 
@@ -77,18 +78,18 @@ TEST(FramebufferRenderTarget, RotationMapping90) {
 
     ooey::Color draw_color{255, 128, 64, 255};
     target->draw_geometry({
-        {
-            {10.0f, 20.0f, draw_color},
-            {11.0f, 20.0f, draw_color},
-            {11.0f, 21.0f, draw_color},
-            {10.0f, 21.0f, draw_color}
+        .vertices={
+            {.x=10.0f, .y=20.0f, .color=draw_color},
+            {.x=11.0f, .y=20.0f, .color=draw_color},
+            {.x=11.0f, .y=21.0f, .color=draw_color},
+            {.x=10.0f, .y=21.0f, .color=draw_color}
         },
-        {0, 1, 2, 0, 2, 3},
-        ooey::PrimitiveType::Triangles
+        .indices={0, 1, 2, 0, 2, 3},
+        .type=ooey::PrimitiveType::Triangles
     });
     target->present();
 
-    std::vector<uint32_t> buffer(480 * 800);
+    std::vector<uint32_t> buffer(static_cast<size_t>(480 * 800));
     lseek(temp.fd, 0, SEEK_SET);
     ASSERT_EQ(read(temp.fd, buffer.data(), buffer.size() * 4), static_cast<ssize_t>(buffer.size() * 4));
 
@@ -113,18 +114,18 @@ TEST(FramebufferRenderTarget, RotationMapping180) {
 
     ooey::Color draw_color{255, 128, 64, 255};
     target->draw_geometry({
-        {
-            {10.0f, 20.0f, draw_color},
-            {11.0f, 20.0f, draw_color},
-            {11.0f, 21.0f, draw_color},
-            {10.0f, 21.0f, draw_color}
+        .vertices={
+            {.x=10.0f, .y=20.0f, .color=draw_color},
+            {.x=11.0f, .y=20.0f, .color=draw_color},
+            {.x=11.0f, .y=21.0f, .color=draw_color},
+            {.x=10.0f, .y=21.0f, .color=draw_color}
         },
-        {0, 1, 2, 0, 2, 3},
-        ooey::PrimitiveType::Triangles
+        .indices={0, 1, 2, 0, 2, 3},
+        .type=ooey::PrimitiveType::Triangles
     });
     target->present();
 
-    std::vector<uint32_t> buffer(480 * 800);
+    std::vector<uint32_t> buffer(static_cast<size_t>(480 * 800));
     lseek(temp.fd, 0, SEEK_SET);
     ASSERT_EQ(read(temp.fd, buffer.data(), buffer.size() * 4), static_cast<ssize_t>(buffer.size() * 4));
 
@@ -149,18 +150,18 @@ TEST(FramebufferRenderTarget, RotationMapping270) {
 
     ooey::Color draw_color{255, 128, 64, 255};
     target->draw_geometry({
-        {
-            {10.0f, 20.0f, draw_color},
-            {11.0f, 20.0f, draw_color},
-            {11.0f, 21.0f, draw_color},
-            {10.0f, 21.0f, draw_color}
+        .vertices={
+            {.x=10.0f, .y=20.0f, .color=draw_color},
+            {.x=11.0f, .y=20.0f, .color=draw_color},
+            {.x=11.0f, .y=21.0f, .color=draw_color},
+            {.x=10.0f, .y=21.0f, .color=draw_color}
         },
-        {0, 1, 2, 0, 2, 3},
-        ooey::PrimitiveType::Triangles
+        .indices={0, 1, 2, 0, 2, 3},
+        .type=ooey::PrimitiveType::Triangles
     });
     target->present();
 
-    std::vector<uint32_t> buffer(480 * 800);
+    std::vector<uint32_t> buffer(static_cast<size_t>(480 * 800));
     lseek(temp.fd, 0, SEEK_SET);
     ASSERT_EQ(read(temp.fd, buffer.data(), buffer.size() * 4), static_cast<ssize_t>(buffer.size() * 4));
 

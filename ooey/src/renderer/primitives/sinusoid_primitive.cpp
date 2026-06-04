@@ -1,11 +1,12 @@
 #include "ooey/renderer/primitives/sinusoid_primitive.hpp"
 #include "ooey/renderer/i_render_target.hpp"
 #include <cmath>
+#include <numbers>
 #include <vector>
 
 namespace ooey {
 
-constexpr float PI = 3.14159265f;
+constexpr float PI = std::numbers::pi_v<float>;
 
 static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey, float thickness, Color color) {
     if (thickness <= 0.0f) {
@@ -23,7 +24,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
     float ox = nx * half_t;
     float oy = ny * half_t;
 
-    unsigned int base = static_cast<unsigned int>(geo.vertices.size());
+    auto base = static_cast<unsigned int>(geo.vertices.size());
     geo.vertices.push_back({sx + ox, sy + oy, color});
     geo.vertices.push_back({sx - ox, sy - oy, color});
     geo.vertices.push_back({ex - ox, ey - oy, color});
@@ -38,7 +39,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
 }
 
 SinusoidPrimitive::SinusoidPrimitive(Point start, Point end, float amplitude, float frequency, float phase, Color color, float thickness)
-    : start_(start), end_(end), amplitude_(amplitude), frequency_(frequency), phase_(phase), color_(color), thickness_(thickness), is_dirty_(true) {}
+    : start_(start), end_(end), amplitude_(amplitude), frequency_(frequency), phase_(phase), color_(color), thickness_(thickness) {}
 
 void SinusoidPrimitive::set_start(Point start) {
     if (start_ != start) {
@@ -136,20 +137,20 @@ void SinusoidPrimitive::rebuild_geometry() const {
     std::vector<Point> points;
     points.reserve(num_segments + 1);
 
-    float cy = static_cast<float>(start_.y);
+    auto cy = static_cast<float>(start_.y);
 
     for (int i = 0; i <= num_segments; ++i) {
         float t = static_cast<float>(i) / static_cast<float>(num_segments);
         float x = static_cast<float>(x_start) + t * static_cast<float>(width);
         float angle = 2.0f * PI * (frequency_ * t) + phase_;
         float y = cy + amplitude_ * std::sin(angle);
-        points.push_back({static_cast<int>(std::round(x)), static_cast<int>(std::round(y))});
+        points.emplace_back(static_cast<int>(std::round(x)), static_cast<int>(std::round(y)));
     }
 
     if (thickness_ <= 1.0f) {
         cached_geometry_.type = PrimitiveType::Lines;
         for (int i = 0; i < num_segments; ++i) {
-            unsigned int base = static_cast<unsigned int>(cached_geometry_.vertices.size());
+            auto base = static_cast<unsigned int>(cached_geometry_.vertices.size());
             cached_geometry_.vertices.push_back({static_cast<float>(points[i].x), static_cast<float>(points[i].y), color_});
             cached_geometry_.vertices.push_back({static_cast<float>(points[i + 1].x), static_cast<float>(points[i + 1].y), color_});
             cached_geometry_.indices.push_back(base);

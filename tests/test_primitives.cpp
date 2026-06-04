@@ -326,13 +326,13 @@ public:
     ooey::IRenderTarget* get_render_target() override { return nullptr; }
     void set_input_manager(ooey::InputManager* /*manager*/) override {}
     void set_window_chrome(std::shared_ptr<ooey::WindowChrome> /*chrome*/) override {}
-    std::shared_ptr<ooey::WindowChrome> get_window_chrome() const override { return nullptr; }
+    [[nodiscard]] std::shared_ptr<ooey::WindowChrome> get_window_chrome() const override { return nullptr; }
     void start_interactive_move() override { move_called = true; }
     void start_interactive_resize(ooey::WindowResizeEdge edge) override { resize_called = true; last_edge = edge; }
     void request_close() override { close_called = true; }
-    ooey::Size get_size() const override { return ooey::Size{800, 600}; }
+    [[nodiscard]] ooey::Size get_size() const override { return ooey::Size{800, 600}; }
 
-    bool is_maximized() const override { return maximized_; }
+    [[nodiscard]] bool is_maximized() const override { return maximized_; }
     void request_maximize() override { maximize_called = true; maximized_ = true; }
     void request_restore() override { restore_called = true; maximized_ = false; }
 
@@ -375,31 +375,31 @@ TEST(WindowChromeTest, HandlePointerEventMoveResizeClose) {
     MockWindowBackend backend;
 
     // 1. Move test (click on title bar)
-    ooey::Pointer p_move{0, 100, 15, ooey::PointerState::Pressed};
+    ooey::Pointer p_move{.id=0, .x=100, .y=15, .state=ooey::PointerState::Pressed};
     EXPECT_TRUE(chrome->handle_pointer_event(p_move, win_size, &backend));
     EXPECT_TRUE(backend.move_called);
 
     // 2. Resize test (click on top-left corner)
-    ooey::Pointer p_resize{0, 2, 2, ooey::PointerState::Pressed};
+    ooey::Pointer p_resize{.id=0, .x=2, .y=2, .state=ooey::PointerState::Pressed};
     EXPECT_TRUE(chrome->handle_pointer_event(p_resize, win_size, &backend));
     EXPECT_TRUE(backend.resize_called);
     EXPECT_EQ(backend.last_edge, ooey::WindowResizeEdge::TopLeft);
 
     // 3. Close test (press and release on close button)
-    ooey::Pointer p_close_press{0, 780, 15, ooey::PointerState::Pressed};
+    ooey::Pointer p_close_press{.id=0, .x=780, .y=15, .state=ooey::PointerState::Pressed};
     EXPECT_TRUE(chrome->handle_pointer_event(p_close_press, win_size, &backend));
     EXPECT_FALSE(backend.close_called); // only called on release
 
-    ooey::Pointer p_close_release{0, 780, 15, ooey::PointerState::Released};
+    ooey::Pointer p_close_release{.id=0, .x=780, .y=15, .state=ooey::PointerState::Released};
     EXPECT_TRUE(chrome->handle_pointer_event(p_close_release, win_size, &backend));
     EXPECT_TRUE(backend.close_called);
 
     // 4. Maximize/Restore test
-    ooey::Pointer p_max_press{0, 750, 15, ooey::PointerState::Pressed};
+    ooey::Pointer p_max_press{.id=0, .x=750, .y=15, .state=ooey::PointerState::Pressed};
     EXPECT_TRUE(chrome->handle_pointer_event(p_max_press, win_size, &backend));
     EXPECT_FALSE(backend.maximize_called); // only called on release
     
-    ooey::Pointer p_max_release{0, 750, 15, ooey::PointerState::Released};
+    ooey::Pointer p_max_release{.id=0, .x=750, .y=15, .state=ooey::PointerState::Released};
     EXPECT_TRUE(chrome->handle_pointer_event(p_max_release, win_size, &backend));
     EXPECT_TRUE(backend.maximize_called);
     EXPECT_TRUE(backend.is_maximized());

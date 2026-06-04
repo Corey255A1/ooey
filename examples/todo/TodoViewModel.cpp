@@ -1,7 +1,9 @@
 #include "TodoViewModel.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <ranges>
 
 TodoViewModel::TodoViewModel() : newTaskText(""), taskList(std::vector<Task>{}) {
     loadTasks();
@@ -27,10 +29,10 @@ TodoViewModel::TodoViewModel() : newTaskText(""), taskList(std::vector<Task>{}) 
 void TodoViewModel::addTask() {
     std::string text = newTaskText.get();
     // Trim whitespace
-    text.erase(text.begin(), std::find_if(text.begin(), text.end(), [](unsigned char ch) {
+    text.erase(text.begin(), std::ranges::find_if(text, [](unsigned char ch) {
         return !std::isspace(ch);
     }));
-    text.erase(std::find_if(text.rbegin(), text.rend(), [](unsigned char ch) {
+    text.erase(std::ranges::find_if(std::ranges::reverse_view(text), [](unsigned char ch) {
         return !std::isspace(ch);
     }).base(), text.end());
 
@@ -92,9 +94,9 @@ void TodoViewModel::loadTasks() {
     std::string line;
     while (std::getline(ifs, line)) {
         if (line.empty()) continue;
-        if (line.rfind("[X] ", 0) == 0) {
+        if (line.starts_with("[X] ")) {
             tasks_.push_back({line.substr(4), true});
-        } else if (line.rfind("[ ] ", 0) == 0) {
+        } else if (line.starts_with("[ ] ")) {
             tasks_.push_back({line.substr(4), false});
         } else {
             tasks_.push_back({line, false});

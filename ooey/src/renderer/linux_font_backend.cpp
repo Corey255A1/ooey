@@ -7,24 +7,24 @@
 namespace ooey {
 
 // --- Fontconfig Typedefs ---
-typedef struct _FcConfig FcConfig;
-typedef struct _FcPattern FcPattern;
-typedef int FcBool;
-typedef enum _FcResult {
+using FcConfig = struct _FcConfig;
+using FcPattern = struct _FcPattern;
+using FcBool = int;
+using FcResult = enum _FcResult {
     FcResultMatch, FcResultNoMatch, FcResultTypeMismatch, FcResultNoId, FcResultOutOfMemory
-} FcResult;
+};
 
 // --- FreeType Typedefs ---
-typedef void* FT_Library;
-typedef void* FT_Face;
-typedef int FT_Error;
+using FT_Library = void *;
+using FT_Face = void *;
+using FT_Error = int;
 
-typedef struct FT_Vector_ {
+using FT_Vector = struct FT_Vector_ {
     long x;
     long y;
-} FT_Vector;
+};
 
-typedef struct FT_Glyph_Metrics_ {
+using FT_Glyph_Metrics = struct FT_Glyph_Metrics_ {
     long width;
     long height;
     long horiBearingX;
@@ -33,9 +33,9 @@ typedef struct FT_Glyph_Metrics_ {
     long vertBearingX;
     long vertBearingY;
     long vertAdvance;
-} FT_Glyph_Metrics;
+};
 
-typedef struct FT_Bitmap_ {
+using FT_Bitmap = struct FT_Bitmap_ {
     unsigned int rows;
     unsigned int width;
     int pitch;
@@ -44,9 +44,9 @@ typedef struct FT_Bitmap_ {
     unsigned char pixel_mode;
     unsigned char palette_mode;
     void* palette;
-} FT_Bitmap;
+};
 
-typedef struct FT_GlyphSlotRec_ {
+using FT_GlyphSlotRec = struct FT_GlyphSlotRec_ {
     void* library;
     void* face;
     void* next;
@@ -60,9 +60,10 @@ typedef struct FT_GlyphSlotRec_ {
     FT_Bitmap bitmap;
     int bitmap_left;
     int bitmap_top;
-} FT_GlyphSlotRec, *FT_GlyphSlot;
+};
+using FT_GlyphSlot = FT_GlyphSlotRec*;
 
-typedef struct FT_Size_Metrics_ {
+using FT_Size_Metrics = struct FT_Size_Metrics_ {
     unsigned short x_ppem;
     unsigned short y_ppem;
     long x_scale;
@@ -71,16 +72,16 @@ typedef struct FT_Size_Metrics_ {
     long descender;
     long height;
     long max_advance;
-} FT_Size_Metrics;
+};
 
-typedef struct FT_SizeRec_ {
+using FT_SizeRec = struct FT_SizeRec_ {
     void* face;
     void* generic[2];
     FT_Size_Metrics metrics;
     void* internal;
-} FT_SizeRec;
+};
 
-typedef struct FT_FaceRec_ {
+using FT_FaceRec = struct FT_FaceRec_ {
     long num_faces;
     long face_index;
     long face_flags;
@@ -104,7 +105,7 @@ typedef struct FT_FaceRec_ {
     short underline_thickness;
     FT_GlyphSlot glyph;
     FT_SizeRec* size;
-} FT_FaceRec;
+};
 
 struct LinuxFontBackend::Impl {
     void* fontconfig_lib{nullptr};
@@ -313,7 +314,7 @@ struct LinuxFontBackend::Impl {
 
         FT_Face face = nullptr;
         if (FT_New_Face(ft_library, path.c_str(), 0, &face) == 0) {
-            loaded_faces_[key] = {face, path};
+            loaded_faces_[key] = {.face=face, .path=path};
             return face;
         }
         return nullptr;
@@ -339,7 +340,7 @@ Size LinuxFontBackend::measure_text(const std::string& text, const Font& font) {
 
     impl_->FT_Set_Pixel_Sizes(face, 0, font.size);
 
-    FT_FaceRec* face_rec = reinterpret_cast<FT_FaceRec*>(face);
+    auto* face_rec = reinterpret_cast<FT_FaceRec*>(face);
     int total_width = 0;
     
     // Set standard line height derived from font size
@@ -366,7 +367,7 @@ void LinuxFontBackend::draw_text(const std::string& text, const Font& font, cons
 
     impl_->FT_Set_Pixel_Sizes(face, 0, font.size);
 
-    FT_FaceRec* face_rec = reinterpret_cast<FT_FaceRec*>(face);
+    auto* face_rec = reinterpret_cast<FT_FaceRec*>(face);
 
     int pen_x = position.x;
     int ascender = static_cast<int>(face_rec->size->metrics.ascender >> 6);

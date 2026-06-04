@@ -268,9 +268,7 @@ void DataGrid::update_layout_elements() {
         }
 
         col_x_offset = bounds_.x - scroll_offset_x_;
-        for (size_t col_idx = 0; col_idx < columns_.size(); ++col_idx) {
-            const auto& col = columns_[col_idx];
-
+        for (const auto & col : columns_) {
             if (col_x_offset + col.width < bounds_.x || col_x_offset > bounds_.x + viewport_w) {
                 col_x_offset += col.width;
                 continue;

@@ -174,7 +174,7 @@ std::vector<std::string> Label::wrap_text(const std::string& text, const Font& f
 
 void Label::wrap_single_line(const std::string& line, const Font& font, int max_width, std::vector<std::string>& out_lines, ooey::IRenderTarget* target) const {
     if (line.empty()) {
-        out_lines.push_back("");
+        out_lines.emplace_back("");
         return;
     }
     std::vector<std::string> words;
@@ -187,8 +187,7 @@ void Label::wrap_single_line(const std::string& line, const Font& font, int max_
     words.push_back(line.substr(prev));
 
     std::string current_line = "";
-    for (size_t i = 0; i < words.size(); ++i) {
-        const auto& word = words[i];
+    for (const auto & word : words) {
         std::string test_line = current_line;
         if (!test_line.empty()) {
             test_line += " ";

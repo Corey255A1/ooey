@@ -24,7 +24,7 @@ static std::vector<StyledSegment> split_line_into_segments(
     int line_len = static_cast<int>(line.size());
 
     auto sorted_formats = formats;
-    std::sort(sorted_formats.begin(), sorted_formats.end(), 
+    std::ranges::sort(sorted_formats, 
               [](const FormatRange& a, const FormatRange& b) {
                   return a.start_col < b.start_col;
               });
@@ -55,16 +55,16 @@ static std::vector<StyledSegment> split_line_into_segments(
 
 static Geometry make_rect_geometry(const Rect& rect, Color color) {
     Geometry geom;
-    float x1 = static_cast<float>(rect.x);
-    float y1 = static_cast<float>(rect.y);
-    float x2 = static_cast<float>(rect.x + rect.width);
-    float y2 = static_cast<float>(rect.y + rect.height);
+    auto x1 = static_cast<float>(rect.x);
+    auto y1 = static_cast<float>(rect.y);
+    auto x2 = static_cast<float>(rect.x + rect.width);
+    auto y2 = static_cast<float>(rect.y + rect.height);
     
     geom.vertices = {
-        { x1, y1, color },
-        { x2, y1, color },
-        { x2, y2, color },
-        { x1, y2, color }
+        { .x=x1, .y=y1, .color=color },
+        { .x=x2, .y=y1, .color=color },
+        { .x=x2, .y=y2, .color=color },
+        { .x=x1, .y=y2, .color=color }
     };
     geom.indices = { 0, 1, 2, 0, 2, 3 };
     return geom;
@@ -76,7 +76,7 @@ public:
         is_absolute = true;
     }
 
-    Rect bounds() const override {
+    [[nodiscard]] Rect bounds() const override {
         return layout_bounds;
     }
 
@@ -293,7 +293,7 @@ int RichTextBox::get_column_x_offset(int line_idx, int col) const {
     const std::string& line = lines_[line_idx];
     const auto& formats = (line_idx < static_cast<int>(line_formats_.size())) ? line_formats_[line_idx] : std::vector<FormatRange>{};
     
-    TextFormat default_fmt{default_text_color, FontWeight::Normal, FontStyle::Normal, font_.size};
+    TextFormat default_fmt{.color=default_text_color, .weight=FontWeight::Normal, .style=FontStyle::Normal, .size=font_.size};
     auto segments = split_line_into_segments(line, formats, default_fmt);
     
     int x_offset = 0;
@@ -583,7 +583,7 @@ bool RichTextBox::on_content_key_event(const KeyEvent& e) {
 
     bool handled = false;
 
-    auto move_cursor = [&](std::function<void()> move_fn) {
+    auto move_cursor = [&](const std::function<void()>& move_fn) {
         if (shift_pressed_) {
             if (!has_selection_) {
                 anchor_line_ = cursor_line_;
@@ -833,7 +833,7 @@ void RichTextBox::draw_content(ooey::IRenderTarget& target) const {
         }
 
         const auto& formats = (l < static_cast<int>(line_formats_.size())) ? line_formats_[l] : std::vector<FormatRange>{};
-        TextFormat default_fmt{default_text_color, FontWeight::Normal, FontStyle::Normal, font_.size};
+        TextFormat default_fmt{.color=default_text_color, .weight=FontWeight::Normal, .style=FontStyle::Normal, .size=font_.size};
         auto segments = split_line_into_segments(lines_[l], formats, default_fmt);
 
         int token_x = content_view_->bounds().x + 8;

@@ -1,4 +1,5 @@
 #include "metrics.hpp"
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -156,15 +157,15 @@ void read_ram_usage(size_t& total, size_t& free) {
     std::ifstream file("/proc/meminfo");
     std::string line;
     while (file && std::getline(file, line)) {
-        if (line.rfind("MemTotal:", 0) == 0) {
+        if (line.starts_with("MemTotal:")) {
             std::stringstream ss(line.substr(9));
             ss >> total;
             total *= 1024;
-        } else if (line.rfind("MemAvailable:", 0) == 0) {
+        } else if (line.starts_with("MemAvailable:")) {
             std::stringstream ss(line.substr(13));
             ss >> free;
             free *= 1024;
-        } else if (free == 0 && line.rfind("MemFree:", 0) == 0) {
+        } else if (free == 0 && line.starts_with("MemFree:")) {
             std::stringstream ss(line.substr(8));
             ss >> free;
             free *= 1024;
@@ -207,7 +208,7 @@ std::vector<ProcessInfo> read_process_list(double dt, std::unordered_map<int, un
         for (const auto& entry : std::filesystem::directory_iterator("/proc")) {
             if (!entry.is_directory()) continue;
             std::string filename = entry.path().filename().string();
-            if (!std::all_of(filename.begin(), filename.end(), ::isdigit)) continue;
+            if (!std::ranges::all_of(filename, ::isdigit)) continue;
             int pid = std::stoi(filename);
             
             std::ifstream f(entry.path() / "stat");
@@ -254,7 +255,7 @@ std::vector<ProcessInfo> read_process_list(double dt, std::unordered_map<int, un
         }
     }
 
-    std::sort(list.begin(), list.end(), [](const ProcessInfo& a, const ProcessInfo& b) {
+    std::ranges::sort(list, [](const ProcessInfo& a, const ProcessInfo& b) {
         return a.memory_bytes > b.memory_bytes;
     });
     return list;

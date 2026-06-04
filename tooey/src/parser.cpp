@@ -1,4 +1,5 @@
 #include "tooey/parser.hpp"
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -78,7 +79,7 @@ std::shared_ptr<AstNode> Parser::parse(const std::vector<Token>& tokens, const s
 
     // Node stack: pair of (NodePtr, Indentation Level)
     std::vector<std::pair<std::shared_ptr<AstNode>, int>> node_stack;
-    node_stack.push_back({root, -1});
+    node_stack.emplace_back(root, -1);
 
     auto active_scope = [&](int current_indent) -> std::shared_ptr<AstNode> {
         while (node_stack.size() > 1 && node_stack.back().second >= current_indent) {
@@ -174,7 +175,7 @@ std::shared_ptr<AstNode> Parser::parse(const std::vector<Token>& tokens, const s
 
             // Check if element is a custom component file in the directory
             std::string elem_type = new_node->nodeType;
-            bool is_custom = std::find(custom_components.begin(), custom_components.end(), elem_type) != custom_components.end();
+            bool is_custom = std::ranges::find(custom_components, elem_type) != custom_components.end();
             if (is_custom) {
                 new_node->isCustomComponent = true;
                 if (std::find(root->customIncludes.begin(), root->customIncludes.end(), elem_type) == root->customIncludes.end()) {
@@ -232,7 +233,7 @@ std::shared_ptr<AstNode> Parser::parse(const std::vector<Token>& tokens, const s
             parent_node->children.push_back(new_node);
 
             if (ends_with_colon) {
-                node_stack.push_back({new_node, current_indent});
+                node_stack.emplace_back(new_node, current_indent);
             }
             continue;
         }

@@ -3,6 +3,7 @@
 #include "gooey/controls/scroll_container.hpp"
 #include "gooey/controls/scrollbar.hpp"
 #include <cmath>
+#include <ranges>
 
 namespace {
 
@@ -67,7 +68,7 @@ void Controller::process_events() {
             if (pointer_event.state == PointerState::Moved && !captured_element_stolen_) {
                 int dy = pointer_event.y - pointer_pressed_y_;
                 if (std::abs(dy) >= 8) {
-                    GooeyElement* curr = dynamic_cast<GooeyElement*>(captured_element_.get());
+                    auto* curr = dynamic_cast<GooeyElement*>(captured_element_.get());
                     gooey::controls::ScrollContainer* scroll_container = nullptr;
                     while (curr) {
                         auto* scroll = dynamic_cast<gooey::controls::ScrollContainer*>(curr);
@@ -84,7 +85,7 @@ void Controller::process_events() {
                         // Cancel current captured element by sending a Released event outside
                         auto* cap_interactive = dynamic_cast<IInteractive*>(captured_element_.get());
                         if (cap_interactive) {
-                            cap_interactive->on_pointer_event(Pointer{pointer_event.id, -9999, -9999, PointerState::Released});
+                            cap_interactive->on_pointer_event(Pointer{.id=pointer_event.id, .x=-9999, .y=-9999, .state=PointerState::Released});
                         }
                         
                         // Switch capture to ScrollContainer
@@ -94,7 +95,7 @@ void Controller::process_events() {
                             captured_element_stolen_ = true;
                             
                             // Initialize ScrollContainer drag
-                            scroll_container->on_pointer_event(Pointer{pointer_event.id, pointer_pressed_x_, pointer_pressed_y_, PointerState::Pressed});
+                            scroll_container->on_pointer_event(Pointer{.id=pointer_event.id, .x=pointer_pressed_x_, .y=pointer_pressed_y_, .state=PointerState::Pressed});
                         }
                     }
                 }
@@ -146,15 +147,15 @@ void Controller::set_focused_element(std::shared_ptr<IDrawable> element) {
     focused_element_ = std::move(element);
 }
 
-bool Controller::route_pointer_event(const Pointer& pointer, std::shared_ptr<IDrawable> node) {
+bool Controller::route_pointer_event(const Pointer& pointer, const std::shared_ptr<IDrawable>& node) {
     if (!node) return false;
 
     // Traverse children first (top-most elements usually drawn last, so reverse order)
     auto* view = dynamic_cast<GooeyNode*>(node.get());
     if (view) {
         auto children = view->get_children();
-        for (auto it = children.rbegin(); it != children.rend(); ++it) {
-            if (route_pointer_event(pointer, *it)) {
+        for (auto & it : std::ranges::reverse_view(children)) {
+            if (route_pointer_event(pointer, it)) {
                 return true;
             }
         }

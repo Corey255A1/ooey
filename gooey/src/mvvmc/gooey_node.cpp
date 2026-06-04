@@ -22,7 +22,7 @@ const std::vector<std::shared_ptr<IDrawable>>& GooeyNode::get_children() const {
 }
 
 void GooeyNode::remove_child(const std::shared_ptr<IDrawable>& child) {
-    auto it = std::find(children_.begin(), children_.end(), child);
+    auto it = std::ranges::find(children_, child);
     if (it != children_.end()) {
         auto* child_elem = dynamic_cast<GooeyElement*>(it->get());
         if (child_elem) {

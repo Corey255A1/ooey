@@ -38,7 +38,7 @@ public:
     void set_controller(std::unique_ptr<mvvmc::IController>&& controller);
 
     // Set the theme manager
-    void set_theme_manager(std::shared_ptr<mvvmc::ThemeManager> manager);
+    void set_theme_manager(const std::shared_ptr<mvvmc::ThemeManager>& manager);
 
     // Get the global controller
     mvvmc::IController* get_controller() { return controller_.get(); }

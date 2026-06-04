@@ -20,7 +20,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
     float ox = nx * half_t;
     float oy = ny * half_t;
 
-    unsigned int base = static_cast<unsigned int>(geo.vertices.size());
+    auto base = static_cast<unsigned int>(geo.vertices.size());
     geo.vertices.push_back({sx + ox, sy + oy, color});
     geo.vertices.push_back({sx - ox, sy - oy, color});
     geo.vertices.push_back({ex - ox, ey - oy, color});
@@ -35,7 +35,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
 }
 
 PolygonPrimitive::PolygonPrimitive(std::vector<Point> points, Color fill_color, Color stroke_color, float stroke_thickness)
-    : points_(std::move(points)), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness), is_dirty_(true) {}
+    : points_(std::move(points)), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness) {}
 
 void PolygonPrimitive::set_points(std::vector<Point> points) {
     if (points_ != points) {
@@ -95,7 +95,7 @@ void PolygonPrimitive::rebuild_geometry() const {
     }
 
     if (fill_color_.a > 0) {
-        unsigned int start_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
+        auto start_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
         for (const auto& pt : points_) {
             cached_geometry_.vertices.push_back({static_cast<float>(pt.x), static_cast<float>(pt.y), fill_color_});
         }

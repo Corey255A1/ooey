@@ -224,19 +224,19 @@ void ListControl::update_children() {
             std::string text_to_display = raw_item;
 
             // Check if string starts with checkbox patterns
-            if (raw_item.rfind("[✓]  ", 0) == 0 || raw_item.rfind("[✓] ", 0) == 0) {
+            if (raw_item.starts_with("[✓]  ") || raw_item.starts_with("[✓] ")) {
                 has_checkbox = true;
                 is_checked = true;
-                text_to_display = raw_item.substr(raw_item.rfind("[✓]  ", 0) == 0 ? 5 : 4);
-            } else if (raw_item.rfind("[ ]  ", 0) == 0 || raw_item.rfind("[ ] ", 0) == 0) {
+                text_to_display = raw_item.substr(raw_item.starts_with("[✓]  ") ? 5 : 4);
+            } else if (raw_item.starts_with("[ ]  ") || raw_item.starts_with("[ ] ")) {
                 has_checkbox = true;
                 is_checked = false;
-                text_to_display = raw_item.substr(raw_item.rfind("[ ]  ", 0) == 0 ? 5 : 4);
-            } else if (raw_item.rfind("[X]  ", 0) == 0 || raw_item.rfind("[X] ", 0) == 0 ||
-                       raw_item.rfind("[x]  ", 0) == 0 || raw_item.rfind("[x] ", 0) == 0) {
+                text_to_display = raw_item.substr(raw_item.starts_with("[ ]  ") ? 5 : 4);
+            } else if (raw_item.starts_with("[X]  ") || raw_item.starts_with("[X] ") ||
+                       raw_item.starts_with("[x]  ") || raw_item.starts_with("[x] ")) {
                 has_checkbox = true;
                 is_checked = true;
-                text_to_display = raw_item.substr(raw_item.rfind("[X]  ", 0) == 0 || raw_item.rfind("[x]  ", 0) == 0 ? 5 : 4);
+                text_to_display = raw_item.substr(raw_item.starts_with("[X]  ") || raw_item.starts_with("[x]  ") ? 5 : 4);
             }
 
             item_texts_[i]->set_text(text_to_display);

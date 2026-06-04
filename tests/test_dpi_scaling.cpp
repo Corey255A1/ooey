@@ -33,13 +33,13 @@ public:
     }
     
     Size measure_text(const std::string& text, const Font& font) override {
-        text_measures.push_back({text, font});
+        text_measures.emplace_back(text, font);
         // Return physical size: we pretend physical size is twice the font size
         return Size{static_cast<int>(text.length() * font.size), font.size};
     }
     
     void draw_text(const std::string& text, const Font& font, const Point& position, Color color) override {
-        texts.push_back({text, font, position, color});
+        texts.emplace_back(text, font, position, color);
     }
 
     void push_clip(const Rect& rect) override {
@@ -65,8 +65,8 @@ TEST(DpiScalingTest, GeometryScaling) {
 
     Geometry geom;
     geom.vertices = {
-        Vertex{10.0f, 20.0f, Color{255, 255, 255, 255}},
-        Vertex{30.0f, 40.0f, Color{255, 255, 255, 255}}
+        Vertex{.x=10.0f, .y=20.0f, .color=Color{255, 255, 255, 255}},
+        Vertex{.x=30.0f, .y=40.0f, .color=Color{255, 255, 255, 255}}
     };
 
     scaled_target.draw_geometry(geom);
@@ -133,7 +133,7 @@ TEST(DpiScalingTest, InputCoordinateScaling) {
     InputManager input;
     input.set_scale(2.5f);
 
-    Pointer p{0, 250, 500, PointerState::Pressed};
+    Pointer p{.id=0, .x=250, .y=500, .state=PointerState::Pressed};
     input.push_pointer_event(p);
 
     const auto& events = input.get_pointer_events();

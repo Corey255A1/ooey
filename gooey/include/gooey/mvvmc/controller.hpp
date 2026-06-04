@@ -22,7 +22,7 @@ public:
     std::shared_ptr<IDrawable> get_focused_element() const { return focused_element_; }
 
 private:
-    bool route_pointer_event(const Pointer& pointer, std::shared_ptr<IDrawable> node);
+    bool route_pointer_event(const Pointer& pointer, const std::shared_ptr<IDrawable>& node);
 
     InputManager& input_manager_;
     std::shared_ptr<GooeyNode> root_view_;

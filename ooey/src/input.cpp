@@ -11,7 +11,7 @@ void InputManager::push_pointer_event(const Pointer& pointer) {
     }
     pointer_events_.push_back(scaled_pointer);
 
-    auto it = std::find_if(pointers_.begin(), pointers_.end(),
+    auto it = std::ranges::find_if(pointers_,
                            [&](const Pointer& p) { return p.id == scaled_pointer.id; });
                            
     if (it != pointers_.end()) {

@@ -3,6 +3,7 @@
 #include "ooey/renderer/bitmap_font.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
 
 namespace ooey {
@@ -42,7 +43,7 @@ bool GlyphAtlas::get_glyph_metrics(char c, GlyphMetrics& metrics) const {
 void GlyphAtlas::generate(const Font& font, IFontBackend* backend) {
     int atlas_w = 512;
     int atlas_h = 512;
-    std::vector<uint8_t> data(atlas_w * atlas_h * 4, 0);
+    std::vector<uint8_t> data(static_cast<size_t>(atlas_w * atlas_h * 4), 0);
     // Initialize color channels to white, alpha to 0 (transparent)
     for (int i = 0; i < atlas_w * atlas_h; ++i) {
         data[i * 4 + 0] = 255;
@@ -115,7 +116,7 @@ void GlyphAtlas::generate(const Font& font, IFontBackend* backend) {
         int W = max_x - min_x + 1;
         int H = max_y - min_y + 1;
 
-        std::vector<uint8_t> gray_buf(W * H, 0);
+        std::vector<uint8_t> gray_buf(static_cast<size_t>(W * H), 0);
         for (const auto& p : collected) {
             int gx = p.x - min_x;
             int gy = p.y - min_y;
@@ -127,7 +128,7 @@ void GlyphAtlas::generate(const Font& font, IFontBackend* backend) {
         // Copy exact alpha coverage into padded buffer
         int pw = W + 2 * padding;
         int ph = H + 2 * padding;
-        std::vector<uint8_t> padded_buf(pw * ph, 0);
+        std::vector<uint8_t> padded_buf(static_cast<size_t>(pw * ph), 0);
 
         for (int gy = 0; gy < H; ++gy) {
             for (int gx = 0; gx < W; ++gx) {

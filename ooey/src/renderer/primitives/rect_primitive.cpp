@@ -20,7 +20,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
     float ox = nx * half_t;
     float oy = ny * half_t;
 
-    unsigned int base = static_cast<unsigned int>(geo.vertices.size());
+    auto base = static_cast<unsigned int>(geo.vertices.size());
     geo.vertices.push_back({sx + ox, sy + oy, color});
     geo.vertices.push_back({sx - ox, sy - oy, color});
     geo.vertices.push_back({ex - ox, ey - oy, color});
@@ -35,7 +35,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
 }
 
 RectPrimitive::RectPrimitive(Rect rect, Color fill_color, Color stroke_color, float stroke_thickness)
-    : rect_(rect), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness), is_dirty_(true) {}
+    : rect_(rect), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness) {}
 
 void RectPrimitive::set_rect(Rect rect) {
     if (rect_ != rect) {
@@ -107,10 +107,10 @@ void RectPrimitive::rebuild_geometry() const {
     }
 
     if (stroke_thickness_ > 0.0f && stroke_color_.a > 0) {
-        float x = static_cast<float>(rect_.x);
-        float y = static_cast<float>(rect_.y);
-        float w = static_cast<float>(rect_.width);
-        float h = static_cast<float>(rect_.height);
+        auto x = static_cast<float>(rect_.x);
+        auto y = static_cast<float>(rect_.y);
+        auto w = static_cast<float>(rect_.width);
+        auto h = static_cast<float>(rect_.height);
         float t = stroke_thickness_;
 
         add_thick_line(cached_geometry_, x, y, x + w, y, t, stroke_color_);

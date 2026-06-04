@@ -91,7 +91,7 @@ void WindowBackend::destroy() {
 
 void WindowBackend::handle_motion_event(const void* event_ptr) {
     const XEvent& event = *static_cast<const XEvent*>(event_ptr);
-    ooey::Pointer p{0, event.xmotion.x, event.xmotion.y, PointerState::Moved};
+    ooey::Pointer p{.id=0, .x=event.xmotion.x, .y=event.xmotion.y, .state=PointerState::Moved};
     if (window_chrome_) {
         if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
             return;
@@ -104,7 +104,7 @@ void WindowBackend::handle_motion_event(const void* event_ptr) {
 
 void WindowBackend::handle_button_event(const void* event_ptr, PointerState state) {
     const XEvent& event = *static_cast<const XEvent*>(event_ptr);
-    ooey::Pointer p{0, event.xbutton.x, event.xbutton.y, state};
+    ooey::Pointer p{.id=0, .x=event.xbutton.x, .y=event.xbutton.y, .state=state};
     if (window_chrome_) {
         if (window_chrome_->handle_pointer_event(p, Size{width_, height_}, this)) {
             return;
@@ -121,10 +121,10 @@ void WindowBackend::handle_key_press_event(const void* event_ptr) {
     KeySym key_symbol;
     XKeyEvent xkey = event.xkey;
     int length = XLookupString(&xkey, buffer, sizeof(buffer), &key_symbol, nullptr);
-    input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Pressed});
+    input_manager_->push_key_event({.key_code=static_cast<int>(key_symbol), .state=KeyState::Pressed});
     if (length > 0) {
         for (int i = 0; i < length; ++i) {
-            unsigned char ch = static_cast<unsigned char>(buffer[i]);
+            auto ch = static_cast<unsigned char>(buffer[i]);
             if (ch >= 32 || ch == '\n' || ch == '\t') {
                 input_manager_->push_text_event({static_cast<char32_t>(ch)});
             }
@@ -137,7 +137,7 @@ void WindowBackend::handle_key_release_event(const void* event_ptr) {
     KeySym key_symbol;
     XKeyEvent xkey = event.xkey;
     XLookupString(&xkey, nullptr, 0, &key_symbol, nullptr);
-    input_manager_->push_key_event({static_cast<int>(key_symbol), KeyState::Released});
+    input_manager_->push_key_event({.key_code=static_cast<int>(key_symbol), .state=KeyState::Released});
 }
 
 bool WindowBackend::poll_events(int timeout_ms) {

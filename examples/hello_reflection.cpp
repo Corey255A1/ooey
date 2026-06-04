@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -61,7 +62,7 @@ public:
         target.draw_text(text_, font, Point{tx, ty}, Color{220, 220, 220});
     }
 
-    Rect bounds() const override { return bounds_; }
+    [[nodiscard]] Rect bounds() const override { return bounds_; }
 
     bool on_pointer_event(const Pointer& e) override {
         if (e.state == PointerState::Pressed) {
@@ -174,7 +175,7 @@ private:
         invalidate_layout();
     }
 
-    void add_node_to_ui(std::shared_ptr<InspectorNode> node, int depth) {
+    void add_node_to_ui(const std::shared_ptr<InspectorNode>& node, int depth) {
         auto row = std::make_shared<Row>();
         row->set_absolute(false);
         row->set_height(SizePolicy::Fixed, 28.0f);
@@ -183,7 +184,7 @@ private:
 
         // Indentation spacer label
         if (depth > 0) {
-            auto indent = std::make_shared<Label>(std::string(depth * 3, ' '), Font{"monospace", 14}, Point{0,0}, Color{0,0,0,0});
+            auto indent = std::make_shared<Label>(std::string(static_cast<size_t>(depth * 3), ' '), Font{"monospace", 14}, Point{0,0}, Color{0,0,0,0});
             indent->set_absolute(false);
             row->add_child(std::move(indent));
         }

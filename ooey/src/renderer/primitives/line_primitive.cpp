@@ -5,7 +5,7 @@
 namespace ooey {
 
 LinePrimitive::LinePrimitive(Point start, Point end, Color color, float thickness, LineStyle style)
-    : start_(start), end_(end), color_(color), thickness_(thickness), style_(style), is_dirty_(true) {}
+    : start_(start), end_(end), color_(color), thickness_(thickness), style_(style) {}
 
 void LinePrimitive::set_start(Point start) {
     if (start_ != start) {
@@ -70,8 +70,8 @@ void LinePrimitive::rebuild_geometry() const {
     cached_geometry_.vertices.clear();
     cached_geometry_.indices.clear();
 
-    float dx = static_cast<float>(end_.x - start_.x);
-    float dy = static_cast<float>(end_.y - start_.y);
+    auto dx = static_cast<float>(end_.x - start_.x);
+    auto dy = static_cast<float>(end_.y - start_.y);
     float len = std::sqrt(dx * dx + dy * dy);
     if (len < 1e-5f) {
         return;

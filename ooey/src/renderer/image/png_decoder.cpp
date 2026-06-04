@@ -1,6 +1,7 @@
 #include "ooey/renderer/image/png_decoder.hpp"
 #include "ooey/renderer/image.hpp"
 #include <png.h>
+#include <cstddef>
 #include <fstream>
 #include <vector>
 #include <iostream>
@@ -65,10 +66,10 @@ std::shared_ptr<Image> PngDecoder::decode(const std::string& path) {
 
     png_read_update_info(png, info);
 
-    std::vector<uint8_t> pixels(width * height * 4, 0);
+    std::vector<uint8_t> pixels(static_cast<size_t>(width * height * 4), 0);
     std::vector<png_bytep> row_pointers(height);
     for (int y = 0; y < height; ++y) {
-        row_pointers[y] = pixels.data() + y * width * 4;
+        row_pointers[y] = pixels.data() + static_cast<ptrdiff_t>(y * width * 4);
     }
 
     png_read_image(png, row_pointers.data());
@@ -118,7 +119,7 @@ std::shared_ptr<Image> PngDecoder::decode_from_memory(const std::vector<uint8_t>
         return nullptr;
     }
 
-    PngMemorySource source{ data.data(), data.size(), 0 };
+    PngMemorySource source{ .data=data.data(), .size=data.size(), .offset=0 };
     png_set_read_fn(png, &source, png_memory_read_callback);
 
     png_read_info(png, info);
@@ -149,10 +150,10 @@ std::shared_ptr<Image> PngDecoder::decode_from_memory(const std::vector<uint8_t>
 
     png_read_update_info(png, info);
 
-    std::vector<uint8_t> pixels(width * height * 4, 0);
+    std::vector<uint8_t> pixels(static_cast<size_t>(width * height * 4), 0);
     std::vector<png_bytep> row_pointers(height);
     for (int y = 0; y < height; ++y) {
-        row_pointers[y] = pixels.data() + y * width * 4;
+        row_pointers[y] = pixels.data() + static_cast<ptrdiff_t>(y * width * 4);
     }
 
     png_read_image(png, row_pointers.data());

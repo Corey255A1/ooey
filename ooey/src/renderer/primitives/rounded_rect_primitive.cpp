@@ -1,12 +1,13 @@
 #include "ooey/renderer/primitives/rounded_rect_primitive.hpp"
 #include "ooey/renderer/i_render_target.hpp"
 #include <cmath>
+#include <numbers>
 #include <vector>
 #include <algorithm>
 
 namespace ooey {
 
-constexpr float PI = 3.14159265f;
+constexpr float PI = std::numbers::pi_v<float>;
 
 static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey, float thickness, Color color) {
     if (thickness <= 0.0f) {
@@ -24,7 +25,7 @@ static void add_thick_line(Geometry& geo, float sx, float sy, float ex, float ey
     float ox = nx * half_t;
     float oy = ny * half_t;
 
-    unsigned int base = static_cast<unsigned int>(geo.vertices.size());
+    auto base = static_cast<unsigned int>(geo.vertices.size());
     geo.vertices.push_back({sx + ox, sy + oy, color});
     geo.vertices.push_back({sx - ox, sy - oy, color});
     geo.vertices.push_back({ex - ox, ey - oy, color});
@@ -47,7 +48,7 @@ static void add_corner_arc(std::vector<Vertex>& points, float cx, float cy, floa
 }
 
 RoundedRectPrimitive::RoundedRectPrimitive(Rect rect, int corner_radius, Color fill_color, Color stroke_color, float stroke_thickness)
-    : rect_(rect), corner_radius_(corner_radius), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness), is_dirty_(true) {}
+    : rect_(rect), corner_radius_(corner_radius), fill_color_(fill_color), stroke_color_(stroke_color), stroke_thickness_(stroke_thickness) {}
 
 void RoundedRectPrimitive::set_rect(Rect rect) {
     if (rect_ != rect) {
@@ -113,11 +114,11 @@ void RoundedRectPrimitive::rebuild_geometry() const {
     cached_geometry_.indices.clear();
     cached_geometry_.type = PrimitiveType::Triangles;
 
-    float x = static_cast<float>(rect_.x);
-    float y = static_cast<float>(rect_.y);
-    float w = static_cast<float>(rect_.width);
-    float h = static_cast<float>(rect_.height);
-    float r = static_cast<float>(corner_radius_);
+    auto x = static_cast<float>(rect_.x);
+    auto y = static_cast<float>(rect_.y);
+    auto w = static_cast<float>(rect_.width);
+    auto h = static_cast<float>(rect_.height);
+    auto r = static_cast<float>(corner_radius_);
 
     if (2.0f * r > w) {
         r = w * 0.5f;
@@ -137,10 +138,10 @@ void RoundedRectPrimitive::rebuild_geometry() const {
     add_corner_arc(perimeter, x + r, y + h - r, r, 0.5f * PI, PI, fill_color_);
 
     if (fill_color_.a > 0) {
-        unsigned int center_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
+        auto center_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
         cached_geometry_.vertices.push_back({x + w * 0.5f, y + h * 0.5f, fill_color_});
 
-        unsigned int start_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
+        auto start_index = static_cast<unsigned int>(cached_geometry_.vertices.size());
         for (const auto& v : perimeter) {
             cached_geometry_.vertices.push_back(v);
         }

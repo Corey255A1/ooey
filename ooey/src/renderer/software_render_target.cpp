@@ -4,6 +4,7 @@
 #include "ooey/renderer/image.hpp"
 #include <cmath>
 #include <algorithm>
+#include <cstddef>
 
 namespace ooey {
 
@@ -47,7 +48,7 @@ void SoftwareRenderTarget::clear(Color color) {
     uint8_t a = color.a;
     uint32_t pixel = (static_cast<uint32_t>(a) << 24) | (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | (static_cast<uint32_t>(b));
     for (int y = 0; y < height_; ++y) {
-        uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y * stride_);
+        auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(y * stride_));
         for (int x = 0; x < width_; ++x) {
             row[x] = pixel;
         }
@@ -132,14 +133,14 @@ void SoftwareRenderTarget::draw_text(const std::string& text, const Font& font, 
                 int end_x = std::min(clip.x + clip.width, x0 + metrics.width);
 
                 for (int yy = start_y; yy < end_y; ++yy) {
-                    uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+                    auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(yy * stride_));
                     int atlas_y = metrics.y + (yy - y0);
 
                     for (int xx = start_x; xx < end_x; ++xx) {
                         int atlas_x = metrics.x + (xx - x0);
                         int src_idx = (atlas_y * atlas_w + atlas_x) * 4;
                         uint8_t alpha_coverage = pixels[src_idx + 3];
-                        uint8_t alpha = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha_coverage) / 255);
+                        auto alpha = static_cast<uint8_t>((static_cast<uint32_t>(color.a) * alpha_coverage) / 255);
 
                         if (alpha > 0) {
                             if (alpha == 255) {
@@ -230,7 +231,7 @@ void SoftwareRenderTarget::draw_filled_rect(int x, int y, int w, int h, Color co
     // Performance optimization: Cache the pointer to the start of the row outside the inner loop.
     // This reduces pointer arithmetic to simple offsets/increments in the tight inner loop.
     for (int yy = start_y; yy < end_y; ++yy) {
-        uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+        auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(yy * stride_));
         for (int xx = start_x; xx < end_x; ++xx) {
             row[xx] = pixel;
         }
@@ -253,7 +254,7 @@ void SoftwareRenderTarget::draw_filled_rect_blended(int x, int y, int w, int h, 
     if (color.a == 255) {
         uint32_t pixel = (static_cast<uint32_t>(255) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
         for (int yy = start_y; yy < end_y; ++yy) {
-            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+            auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(yy * stride_));
             for (int xx = start_x; xx < end_x; ++xx) {
                 row[xx] = pixel;
             }
@@ -262,7 +263,7 @@ void SoftwareRenderTarget::draw_filled_rect_blended(int x, int y, int w, int h, 
         uint32_t src_a = color.a;
         uint32_t inv_a = 255 - src_a;
         for (int yy = start_y; yy < end_y; ++yy) {
-            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+            auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(yy * stride_));
             for (int xx = start_x; xx < end_x; ++xx) {
                 uint32_t dest_pixel = row[xx];
                 uint8_t dest_b = dest_pixel & 0xFF;
@@ -298,7 +299,7 @@ void SoftwareRenderTarget::draw_line(int start_x, int start_y, int end_x, int en
     Rect clip = get_current_clip();
     while (true) {
         if (start_x >= clip.x && start_x < clip.x + clip.width && start_y >= clip.y && start_y < clip.y + clip.height) {
-            uint32_t* row = reinterpret_cast<uint32_t*>(data_ + start_y * stride_);
+            auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(start_y * stride_));
             row[start_x] = pixel;
         }
         if (start_x == end_x && start_y == end_y) {
@@ -319,7 +320,7 @@ void SoftwareRenderTarget::draw_line(int start_x, int start_y, int end_x, int en
 void SoftwareRenderTarget::draw_pixel(int x, int y, Color color) {
     Rect clip = get_current_clip();
     if (x >= clip.x && x < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height) {
-        uint32_t* row = reinterpret_cast<uint32_t*>(data_ + y * stride_);
+        auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(y * stride_));
         uint32_t pixel = (static_cast<uint32_t>(color.a) << 24) | (static_cast<uint32_t>(color.r) << 16) | (static_cast<uint32_t>(color.g) << 8) | (static_cast<uint32_t>(color.b));
         row[x] = pixel;
     }
@@ -358,7 +359,7 @@ void SoftwareRenderTarget::draw_flat_bottom_triangle(const Vertex& v0, const Ver
             if (start_x <= end_x) {
                 // Performance optimization: Cache row pointer per scanline (outer loop).
                 // Minimizes address calculation overhead for individual pixel writes.
-                uint32_t* row = reinterpret_cast<uint32_t*>(data_ + scanline_y * stride_);
+                auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(scanline_y * stride_));
                 for (int x = start_x; x <= end_x; ++x) {
                     row[x] = pixel;
                 }
@@ -402,7 +403,7 @@ void SoftwareRenderTarget::draw_flat_top_triangle(const Vertex& v0, const Vertex
             if (start_x <= end_x) {
                 // Performance optimization: Cache row pointer per scanline (outer loop).
                 // Minimizes address calculation overhead for individual pixel writes.
-                uint32_t* row = reinterpret_cast<uint32_t*>(data_ + scanline_y * stride_);
+                auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(scanline_y * stride_));
                 for (int x = start_x; x <= end_x; ++x) {
                     row[x] = pixel;
                 }
@@ -466,7 +467,7 @@ void SoftwareRenderTarget::draw_image(const Image& image, const Rect& dest_rect)
         int src_y = (y * img_h) / dest_rect.height;
         if (src_y < 0 || src_y >= img_h) continue;
 
-        uint32_t* row = reinterpret_cast<uint32_t*>(data_ + yy * stride_);
+        auto* row = reinterpret_cast<uint32_t*>(data_ + static_cast<ptrdiff_t>(yy * stride_));
 
         for (int x = start_x; x < end_x; ++x) {
             int xx = dest_rect.x + x;

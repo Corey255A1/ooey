@@ -464,9 +464,9 @@ TEST(LayoutTest, DataGridVirtualizationAndSetup) {
     DataGrid grid(Rect{0, 0, 400, 300}, 20, font);
 
     std::vector<DataGridColumn> cols = {
-        {"Col 1", 100},
-        {"Col 2", 150},
-        {"Col 3", 150}
+        {.header="Col 1", .width=100},
+        {.header="Col 2", .width=150},
+        {.header="Col 3", .width=150}
     };
     grid.set_columns(cols);
 
@@ -652,9 +652,9 @@ TEST(LayoutTest, ScrollContainerWithScrollAndDrag) {
 
     // Simulated drag scroll pointer events
     // 1. Pressed inside container
-    scroll->on_pointer_event(Pointer{0, 200, 150, PointerState::Pressed});
+    scroll->on_pointer_event(Pointer{.id=0, .x=200, .y=150, .state=PointerState::Pressed});
     // 2. Dragged up by 50px (e.y = 100) -> dy = -50 -> scroll offset increases by 50
-    scroll->on_pointer_event(Pointer{0, 200, 100, PointerState::Moved});
+    scroll->on_pointer_event(Pointer{.id=0, .x=200, .y=100, .state=PointerState::Moved});
     EXPECT_EQ(scroll->get_scroll_offset_y(), 50);
 
     // Apply layout again with new scroll offset
@@ -663,7 +663,7 @@ TEST(LayoutTest, ScrollContainerWithScrollAndDrag) {
     EXPECT_EQ(child->layout_bounds.y, -40);
 
     // 3. Drag release
-    scroll->on_pointer_event(Pointer{0, 200, 100, PointerState::Released});
+    scroll->on_pointer_event(Pointer{.id=0, .x=200, .y=100, .state=PointerState::Released});
 }
 
 TEST(LayoutTest, ScrollContainerControllerInterception) {
@@ -695,12 +695,12 @@ TEST(LayoutTest, ScrollContainerControllerInterception) {
     Controller controller(input_manager, scroll);
 
     // 1. Press on the button
-    input_manager.push_pointer_event(Pointer{0, 50, 30, PointerState::Pressed});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=50, .y=30, .state=PointerState::Pressed});
     controller.process_events();
     input_manager.update();
 
     // 2. Drag pointer vertically by 20 pixels (from y=30 to y=10)
-    input_manager.push_pointer_event(Pointer{0, 50, 10, PointerState::Moved});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=50, .y=10, .state=PointerState::Moved});
     controller.process_events();
     input_manager.update();
 
@@ -708,7 +708,7 @@ TEST(LayoutTest, ScrollContainerControllerInterception) {
     EXPECT_EQ(scroll->get_scroll_offset_y(), 20);
 
     // 3. Release pointer
-    input_manager.push_pointer_event(Pointer{0, 50, 10, PointerState::Released});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=50, .y=10, .state=PointerState::Released});
     controller.process_events();
     input_manager.update();
 
@@ -736,7 +736,7 @@ public:
                 max_x = std::max(max_x, (int)v.x);
                 max_y = std::max(max_y, (int)v.y);
             }
-            geometry_draws.push_back(Rect{min_x, min_y, max_x - min_x, max_y - min_y});
+            geometry_draws.emplace_back(min_x, min_y, max_x - min_x, max_y - min_y);
         }
     }
     void draw_image(const Image&, const Rect&) override {}
@@ -883,7 +883,7 @@ TEST(LayoutTest, CanvasAndVectorShapes) {
     Controller controller(input_manager, canvas);
 
     // Click inside circle (center is screen coordinates: 50 + 100 = 150, 50 + 100 = 150)
-    input_manager.push_pointer_event(Pointer{0, 150, 150, PointerState::Pressed});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=150, .y=150, .state=PointerState::Pressed});
     controller.process_events();
     input_manager.update();
 
@@ -891,14 +891,14 @@ TEST(LayoutTest, CanvasAndVectorShapes) {
     EXPECT_FALSE(polygon->is_selected());
 
     // Drag circle right by 30 pixels (to screen x = 180)
-    input_manager.push_pointer_event(Pointer{0, 180, 150, PointerState::Moved});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=180, .y=150, .state=PointerState::Moved});
     controller.process_events();
     input_manager.update();
 
     EXPECT_EQ(circle->absolute_bounds.x, 80 + 30);
     EXPECT_EQ(circle->absolute_bounds.y, 80);
 
-    input_manager.push_pointer_event(Pointer{0, 180, 150, PointerState::Released});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=180, .y=150, .state=PointerState::Released});
     controller.process_events();
     input_manager.update();
 
@@ -907,12 +907,12 @@ TEST(LayoutTest, CanvasAndVectorShapes) {
 
     // Click TL handle: TL handle is at top-left of circle layout_bounds
     // layout_bounds for circle is now at: x = 50 + 110 = 160, y = 50 + 80 = 130
-    input_manager.push_pointer_event(Pointer{0, 160, 130, PointerState::Pressed});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=160, .y=130, .state=PointerState::Pressed});
     controller.process_events();
     input_manager.update();
 
     // Drag TL handle top-left by 10px (x=150, y=120)
-    input_manager.push_pointer_event(Pointer{0, 150, 120, PointerState::Moved});
+    input_manager.push_pointer_event(Pointer{.id=0, .x=150, .y=120, .state=PointerState::Moved});
     controller.process_events();
     input_manager.update();
 
@@ -928,8 +928,8 @@ TEST(LayoutTest, RichTextBoxTextFormatting) {
     
     box.set_text("Hello World");
     
-    TextFormat red_bold{Color{255, 0, 0}, FontWeight::Bold, FontStyle::Normal, 0};
-    TextFormat green_italic{Color{0, 255, 0}, FontWeight::Normal, FontStyle::Italic, 18};
+    TextFormat red_bold{.color=Color{255, 0, 0}, .weight=FontWeight::Bold, .style=FontStyle::Normal, .size=0};
+    TextFormat green_italic{.color=Color{0, 255, 0}, .weight=FontWeight::Normal, .style=FontStyle::Italic, .size=18};
     
     box.apply_format(0, 0, 5, red_bold);
     box.apply_format(0, 6, 11, green_italic);

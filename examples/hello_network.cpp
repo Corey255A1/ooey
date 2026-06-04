@@ -1,6 +1,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
+#include <utility>
 #include <vector>
 #include <chrono>
 #include <boost/asio.hpp>
@@ -35,7 +37,7 @@ public:
         : io_context_(io_context),
           acceptor_(io_context, tcp::endpoint(tcp::v4(), 12345)),
           socket_(io_context),
-          vm_(vm) {
+          vm_(std::move(std::move(vm))) {
         
         boost::system::error_code ec;
         acceptor_.non_blocking(true, ec);
@@ -98,7 +100,7 @@ private:
     void handle_command(const std::string& cmd) {
         std::cout << "NetworkController: Processing command: \"" << cmd << "\"\n";
         
-        if (cmd.rfind("SELECT ", 0) == 0) {
+        if (cmd.starts_with("SELECT ")) {
             std::string val_str = cmd.substr(7);
             try {
                 int index = std::stoi(val_str);
@@ -106,7 +108,7 @@ private:
             } catch (...) {
                 std::cerr << "NetworkController: Failed to parse index in: " << cmd << "\n";
             }
-        } else if (cmd.rfind("TEXT ", 0) == 0) {
+        } else if (cmd.starts_with("TEXT ")) {
             std::string text = cmd.substr(5);
             vm_->text_content.set(text);
         } else if (cmd == "EXIT") {
@@ -130,7 +132,7 @@ private:
 // ---------------------------------------------------------
 class NetworkView : public gooey::GooeyNode {
 public:
-    explicit NetworkView(std::shared_ptr<NetworkViewModel> vm) : vm_(vm) {
+    explicit NetworkView(std::shared_ptr<NetworkViewModel> vm) : vm_(std::move(std::move(vm))) {
         // Outer card frame
         auto frame = std::make_shared<ooey::RoundedRectPrimitive>(
             ooey::Rect{50, 50, 700, 480},

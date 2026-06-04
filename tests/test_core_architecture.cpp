@@ -1,4 +1,8 @@
 #include <gtest/gtest.h>
+
+#include <utility>
+
+#include <utility>
 #include "ooey/types.hpp"
 #include "gooey/application.hpp"
 #include "gooey/controls/text_box.hpp"
@@ -62,11 +66,11 @@ public:
     }
 
     void set_window_chrome(std::shared_ptr<ooey::WindowChrome> chrome) override { window_chrome_ = chrome; }
-    std::shared_ptr<ooey::WindowChrome> get_window_chrome() const override { return window_chrome_; }
+    [[nodiscard]] std::shared_ptr<ooey::WindowChrome> get_window_chrome() const override { return window_chrome_; }
     void start_interactive_move() override {}
     void start_interactive_resize(ooey::WindowResizeEdge /*edge*/) override {}
     void request_close() override {}
-    ooey::Size get_size() const override { return ooey::Size{800, 600}; }
+    [[nodiscard]] ooey::Size get_size() const override { return ooey::Size{800, 600}; }
 
 private:
     std::shared_ptr<ooey::WindowChrome> window_chrome_;
@@ -97,7 +101,7 @@ TEST(OoeyControls, TextBoxKeyboardInput) {
     gooey::TextBox textBox{ooey::Rect{0, 0, 100, 100}, font, ooey::Color{0, 0, 0}, ooey::Color{255, 255, 255}};
 
     // Text box needs to be focused to process key/text events
-    textBox.on_pointer_event({0, 10, 10, ooey::PointerState::Pressed});
+    textBox.on_pointer_event({.id=0, .x=10, .y=10, .state=ooey::PointerState::Pressed});
 
     // Send character text events
     textBox.on_text_event({static_cast<char32_t>('H')});
@@ -109,11 +113,11 @@ TEST(OoeyControls, TextBoxKeyboardInput) {
     EXPECT_EQ(textBox.get_text(), "Hello");
 
     // Send backspace key event (using keysym 0xFF08 / XKB_KEY_BackSpace / XK_BackSpace)
-    textBox.on_key_event({0xFF08, ooey::KeyState::Pressed});
+    textBox.on_key_event({.key_code=0xFF08, .state=ooey::KeyState::Pressed});
     EXPECT_EQ(textBox.get_text(), "Hell");
 
     // Send backspace key event (using ASCII backspace 8)
-    textBox.on_key_event({8, ooey::KeyState::Pressed});
+    textBox.on_key_event({.key_code=8, .state=ooey::KeyState::Pressed});
     EXPECT_EQ(textBox.get_text(), "Hel");
 }
 
@@ -158,14 +162,14 @@ TEST(OoeyControls, ListControlNavigationAndScrolling) {
     // item_height is 250 / 5 = 50.
     // 3rd slot: y from 100 + 2 * 50 = 200 to 250.
     // Click at y = 225, x = 150.
-    listCtrl.on_pointer_event({0, 150, 225, ooey::PointerState::Pressed});
+    listCtrl.on_pointer_event({.id=0, .x=150, .y=225, .state=ooey::PointerState::Pressed});
     EXPECT_EQ(listCtrl.get_selected_index(), 3);
 
     // Key events (XK_Down = 0xFF54, XK_Up = 0xFF52)
-    listCtrl.on_key_event({0xFF54, ooey::KeyState::Pressed}); // Down arrow
+    listCtrl.on_key_event({.key_code=0xFF54, .state=ooey::KeyState::Pressed}); // Down arrow
     EXPECT_EQ(listCtrl.get_selected_index(), 4);
 
-    listCtrl.on_key_event({0xFF52, ooey::KeyState::Pressed}); // Up arrow
+    listCtrl.on_key_event({.key_code=0xFF52, .state=ooey::KeyState::Pressed}); // Up arrow
     EXPECT_EQ(listCtrl.get_selected_index(), 3);
 }
 
@@ -195,7 +199,7 @@ TEST(OoeyControls, ListControlCheckboxParsingAndVisualState) {
 class TestPageViewModel : public gooey::PageViewModelBase {
 public:
     explicit TestPageViewModel(std::string name) : name_(std::move(name)) {}
-    std::string get_title() const override { return name_; }
+    [[nodiscard]] std::string get_title() const override { return name_; }
 private:
     std::string name_;
 };
@@ -320,7 +324,7 @@ public:
         absolute_bounds = ooey::Rect{0, 0, 100, 100};
     }
 
-    ooey::Rect bounds() const override { return absolute_bounds; }
+    [[nodiscard]] ooey::Rect bounds() const override { return absolute_bounds; }
 
     bool on_pointer_event(const ooey::Pointer& e) override {
         if (e.state == ooey::PointerState::Pressed) {
@@ -345,13 +349,13 @@ TEST(OoeyMvvmc, SafeControllerElementDeletions) {
 
     gooey::Controller controller(input_manager, root_view);
 
-    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+    input_manager.push_pointer_event(ooey::Pointer{.id=1, .x=10, .y=10, .state=ooey::PointerState::Pressed});
     controller.process_events();
 
     EXPECT_TRUE(deleting_view->clicked);
     
     // Send Released event; should not crash despite deleting_view being deleted
-    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Released});
+    input_manager.push_pointer_event(ooey::Pointer{.id=1, .x=10, .y=10, .state=ooey::PointerState::Released});
     controller.process_events();
 }
 
@@ -371,12 +375,12 @@ TEST(OoeyMvvmc, RealRealElementDeletions) {
         bool clicked = false;
 
         NestedDeletingView(std::shared_ptr<gooey::GooeyNode> container)
-            : container_to_clear(container) {
+            : container_to_clear(std::move(std::move(container))) {
             is_absolute = true;
             absolute_bounds = ooey::Rect{0, 0, 100, 100};
         }
 
-        ooey::Rect bounds() const override { return absolute_bounds; }
+        [[nodiscard]] ooey::Rect bounds() const override { return absolute_bounds; }
 
         bool on_pointer_event(const ooey::Pointer& e) override {
             if (e.state == ooey::PointerState::Pressed) {
@@ -397,11 +401,11 @@ TEST(OoeyMvvmc, RealRealElementDeletions) {
 
     gooey::Controller controller(input_manager, root_view);
 
-    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+    input_manager.push_pointer_event(ooey::Pointer{.id=1, .x=10, .y=10, .state=ooey::PointerState::Pressed});
     controller.process_events();
 
     // Send Released event
-    input_manager.push_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Released});
+    input_manager.push_pointer_event(ooey::Pointer{.id=1, .x=10, .y=10, .state=ooey::PointerState::Released});
     controller.process_events();
 }
 
@@ -410,7 +414,7 @@ TEST(OoeyControls, CodeEditorEditingAndHighlighting) {
     gooey::CodeEditor editor{ooey::Rect{0, 0, 400, 300}, font, ooey::Color{255, 255, 255}, ooey::Color{30, 30, 30}};
 
     // Focus CodeEditor
-    editor.on_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+    editor.on_pointer_event(ooey::Pointer{.id=1, .x=10, .y=10, .state=ooey::PointerState::Pressed});
 
     // Type text: "int x = 42;"
     editor.on_text_event({static_cast<char32_t>('i')});
@@ -428,15 +432,15 @@ TEST(OoeyControls, CodeEditorEditingAndHighlighting) {
     EXPECT_EQ(editor.get_text(), "int x = 42;");
 
     // Press Backspace
-    editor.on_key_event({0xFF08, ooey::KeyState::Pressed}); // XK_BackSpace
+    editor.on_key_event({.key_code=0xFF08, .state=ooey::KeyState::Pressed}); // XK_BackSpace
     EXPECT_EQ(editor.get_text(), "int x = 42");
 
     // Move cursor left twice to be before "42"
-    editor.on_key_event({0xFF51, ooey::KeyState::Pressed}); // Left
-    editor.on_key_event({0xFF51, ooey::KeyState::Pressed}); // Left
+    editor.on_key_event({.key_code=0xFF51, .state=ooey::KeyState::Pressed}); // Left
+    editor.on_key_event({.key_code=0xFF51, .state=ooey::KeyState::Pressed}); // Left
 
     // Press Return to split line
-    editor.on_key_event({0xFF0D, ooey::KeyState::Pressed}); // XK_Return
+    editor.on_key_event({.key_code=0xFF0D, .state=ooey::KeyState::Pressed}); // XK_Return
     EXPECT_EQ(editor.get_text(), "int x = \n42");
 
     // Verify syntax highlighting works
@@ -460,14 +464,14 @@ TEST(OoeyControls, RichTextBoxSelectionAndCopyPaste) {
     gooey::RichTextBox box{ooey::Rect{0, 0, 400, 300}, font, ooey::Color{255, 255, 255}, ooey::Color{30, 30, 30}};
 
     box.set_text("Hello World");
-    box.on_pointer_event(ooey::Pointer{1, 10, 10, ooey::PointerState::Pressed});
+    box.on_pointer_event(ooey::Pointer{.id=1, .x=10, .y=10, .state=ooey::PointerState::Pressed});
 
     // Press Shift+Right five times to select "Hello"
-    box.on_key_event({0xFFE1, ooey::KeyState::Pressed}); // Shift Pressed
+    box.on_key_event({.key_code=0xFFE1, .state=ooey::KeyState::Pressed}); // Shift Pressed
     for (int i = 0; i < 5; ++i) {
-        box.on_key_event({0xFF53, ooey::KeyState::Pressed}); // Right arrow
+        box.on_key_event({.key_code=0xFF53, .state=ooey::KeyState::Pressed}); // Right arrow
     }
-    box.on_key_event({0xFFE1, ooey::KeyState::Released}); // Shift Released
+    box.on_key_event({.key_code=0xFFE1, .state=ooey::KeyState::Released}); // Shift Released
 
     // Verify selection text
     EXPECT_TRUE(box.has_selection());
@@ -478,7 +482,7 @@ TEST(OoeyControls, RichTextBoxSelectionAndCopyPaste) {
     EXPECT_EQ(clipboard, "Hello");
 
     // Clear selection by moving cursor to end
-    box.on_key_event({0xFF57, ooey::KeyState::Pressed}); // End
+    box.on_key_event({.key_code=0xFF57, .state=ooey::KeyState::Pressed}); // End
     EXPECT_FALSE(box.has_selection());
 
     // Insert hyphen and paste "Hello" back at the end
@@ -567,9 +571,9 @@ TEST(OoeyMvvmc, PropertyReflectionAndNestedViewModels) {
     // Verify dynamic path listing
     auto paths = vm.get_property_paths();
     ASSERT_EQ(paths.size(), 3);
-    EXPECT_NE(std::find(paths.begin(), paths.end(), "bg_color"), paths.end());
-    EXPECT_NE(std::find(paths.begin(), paths.end(), "child.value"), paths.end());
-    EXPECT_NE(std::find(paths.begin(), paths.end(), "child.title"), paths.end());
+    EXPECT_NE(std::ranges::find(paths, "bg_color"), paths.end());
+    EXPECT_NE(std::ranges::find(paths, "child.value"), paths.end());
+    EXPECT_NE(std::ranges::find(paths, "child.title"), paths.end());
 }
 
 TEST(OoeyMvvmc, PropertySubscriptionReentrancySafety) {

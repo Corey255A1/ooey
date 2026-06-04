@@ -4,6 +4,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <cstddef>
 #include <cstring>
 #include <cmath>
 #include <algorithm>
@@ -13,6 +14,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <utility>
 
 namespace ooey::framebuffer {
 
@@ -30,8 +32,8 @@ WindowBackend::WindowBackend() {
     device_path_ = dev_env ? dev_env : "/dev/fb0";
 }
 
-WindowBackend::WindowBackend(int rotation, const std::string& device_path)
-    : rotation_(rotation), device_path_(device_path) {
+WindowBackend::WindowBackend(int rotation, std::string  device_path)
+    : rotation_(rotation), device_path_(std::move(device_path)) {
     if (rotation_ != 0 && rotation_ != 90 && rotation_ != 180 && rotation_ != 270) {
         std::cerr << "Warning: Invalid rotation=" << rotation_ << ", defaulting to 0\n";
         rotation_ = 0;
@@ -96,7 +98,7 @@ bool WindowBackend::create(const Size& /*size*/, const char* /*title*/) {
         logical_h_ = phys_h_;
     }
 
-    fb_mem_size_ = finfo_.line_length * vinfo_.yres;
+    fb_mem_size_ = static_cast<size_t>(finfo_.line_length * vinfo_.yres);
     fb_mem_ = static_cast<uint8_t*>(mmap(nullptr, fb_mem_size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0));
     if (fb_mem_ == MAP_FAILED) {
         std::cerr << "Framebuffer error: mmap failed\n";
@@ -106,7 +108,7 @@ bool WindowBackend::create(const Size& /*size*/, const char* /*title*/) {
         return false;
     }
 
-    logical_backbuffer_.resize(logical_w_ * logical_h_ * 4, 0);
+    logical_backbuffer_.resize(static_cast<size_t>(logical_w_ * logical_h_ * 4), 0);
 
     render_target_ = std::make_unique<SoftwareRenderTarget>(logical_backbuffer_.data(), logical_w_, logical_h_, logical_w_ * 4, [this]() {
         present_framebuffer();
@@ -194,7 +196,7 @@ void WindowBackend::present_framebuffer() {
     }
 
     for (int ly = 0; ly < logical_h_; ++ly) {
-        const uint32_t* src_row = reinterpret_cast<const uint32_t*>(logical_backbuffer_.data() + ly * logical_w_ * 4);
+        const auto* src_row = reinterpret_cast<const uint32_t*>(logical_backbuffer_.data() + static_cast<ptrdiff_t>(ly * logical_w_ * 4));
         for (int lx = 0; lx < logical_w_; ++lx) {
             uint32_t pixel = src_row[lx]; // ARGB format
 

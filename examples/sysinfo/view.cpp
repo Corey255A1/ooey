@@ -187,11 +187,11 @@ SystemMonitorView::SystemMonitorView(std::shared_ptr<SystemMonitorViewModel> vie
 
     // Define columns matching standard process specs: PID, Name, CPU, RAM, State
     proc_grid->set_columns({
-        {"PID", 65},
-        {"Process Name", 160},
-        {"CPU %", 80},
-        {"Memory", 110},
-        {"State", 60}
+        {.header="PID", .width=65},
+        {.header="Process Name", .width=160},
+        {.header="CPU %", .width=80},
+        {.header="Memory", .width=110},
+        {.header="State", .width=60}
     });
 
     bind(view_model_->process_rows, [proc_grid](const std::vector<std::vector<std::string>>& rows) {

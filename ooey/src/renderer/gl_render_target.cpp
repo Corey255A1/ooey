@@ -132,8 +132,8 @@ void GlRenderTarget::draw_text(const std::string& text, const Font& font, const 
         GlyphMetrics metrics;
         if (atlas->get_glyph_metrics(c, metrics)) {
             if (metrics.width > 0 && metrics.height > 0) {
-                float x0 = static_cast<float>(pen_x + metrics.offset_x);
-                float y0 = static_cast<float>(pen_y + metrics.offset_y);
+                auto x0 = static_cast<float>(pen_x + metrics.offset_x);
+                auto y0 = static_cast<float>(pen_y + metrics.offset_y);
                 float x1 = x0 + metrics.width;
                 float y1 = y0 + metrics.height;
 

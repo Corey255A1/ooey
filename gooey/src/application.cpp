@@ -67,7 +67,7 @@ void Application::set_controller(std::unique_ptr<mvvmc::IController>&& controlle
     OOEY_LOG_INFO("Application", "Custom controller set");
 }
 
-void Application::set_theme_manager(std::shared_ptr<mvvmc::ThemeManager> manager) {
+void Application::set_theme_manager(const std::shared_ptr<mvvmc::ThemeManager>& manager) {
     theme_manager_ = manager;
     if (manager) {
         theme_subscription_ = manager->active_theme.subscribe([this](const std::shared_ptr<mvvmc::Theme>& theme) {

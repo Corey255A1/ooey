@@ -1,6 +1,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
+#include <utility>
 #include <vector>
 #include <chrono>
 #include <cmath>
@@ -76,10 +78,10 @@ static void create_benchmark_bmp_pattern(const std::string& path) {
 
     for (int y = 0; y < 64; ++y) {
         for (int x = 0; x < 64; ++x) {
-            uint8_t r = static_cast<uint8_t>(x * 4);
-            uint8_t g = static_cast<uint8_t>(y * 4);
+            auto r = static_cast<uint8_t>(x * 4);
+            auto g = static_cast<uint8_t>(y * 4);
             uint8_t b = 128;
-            uint8_t a = static_cast<uint8_t>(128 + y * 2); // Alpha gradient
+            auto a = static_cast<uint8_t>(128 + y * 2); // Alpha gradient
             // BGRA layout in BMP
             f.put(b);
             f.put(g);
@@ -208,7 +210,8 @@ std::shared_ptr<GooeyNode> create_scenario_view(const std::string& scenario, con
         );
 
         std::vector<std::string> items;
-        for (int i = 0; i < 5000; ++i) {
+        items.reserve(5000);
+for (int i = 0; i < 5000; ++i) {
             items.push_back("List item number " + std::to_string(i + 1) + " - Performance benchmarking");
         }
         list->set_items(items);
@@ -218,7 +221,7 @@ std::shared_ptr<GooeyNode> create_scenario_view(const std::string& scenario, con
             std::shared_ptr<ListControl> list_ref;
             mutable int frames{0};
 
-            ScrollSimulation(std::shared_ptr<ListControl> l) : list_ref(l) {}
+            ScrollSimulation(std::shared_ptr<ListControl> l) : list_ref(std::move(std::move(l))) {}
             void draw(IRenderTarget& target) const override {
                 frames++;
                 // Scroll down 1 item every 2 frames
@@ -274,14 +277,14 @@ BenchmarkResult run_single_benchmark(const std::string& backend_name, const std:
     auto backend = create_backend(backend_name);
     if (!backend) {
         std::cerr << "[BENCHMARK] Warning: Could not create backend: " << backend_name << "\n";
-        return {backend_name, scenario_name, 0.0, 0.0, false};
+        return {.backend=backend_name, .scenario=scenario_name, .avg_frame_time_ms=0.0, .fps=0.0, .success=false};
     }
 
     try {
         Application app;
         if (!backend->create({800, 600}, "OOEY Performance Benchmark")) {
             std::cerr << "[BENCHMARK] Warning: Failed to create window backend: " << backend_name << "\n";
-            return {backend_name, scenario_name, 0.0, 0.0, false};
+            return {.backend=backend_name, .scenario=scenario_name, .avg_frame_time_ms=0.0, .fps=0.0, .success=false};
         }
 
         app.set_window_backend(std::move(backend));
@@ -290,7 +293,7 @@ BenchmarkResult run_single_benchmark(const std::string& backend_name, const std:
         auto root = create_scenario_view(scenario_name, bmp_path);
         if (!root) {
             std::cerr << "[BENCHMARK] Warning: Scenario not found: " << scenario_name << "\n";
-            return {backend_name, scenario_name, 0.0, 0.0, false};
+            return {.backend=backend_name, .scenario=scenario_name, .avg_frame_time_ms=0.0, .fps=0.0, .success=false};
         }
         app.set_root_view(std::move(root));
 
@@ -326,14 +329,14 @@ BenchmarkResult run_single_benchmark(const std::string& backend_name, const std:
         double fps = frame_count / (total_time_ms / 1000.0);
 
         std::cout << "[BENCHMARK] Result: " << avg_frame_time << " ms/frame (" << fps << " FPS)\n";
-        return {backend_name, scenario_name, avg_frame_time, fps, true};
+        return {.backend=backend_name, .scenario=scenario_name, .avg_frame_time_ms=avg_frame_time, .fps=fps, .success=true};
 
     } catch (const std::exception& e) {
         std::cerr << "[BENCHMARK] Error: Exception during run: " << e.what() << "\n";
-        return {backend_name, scenario_name, 0.0, 0.0, false};
+        return {.backend=backend_name, .scenario=scenario_name, .avg_frame_time_ms=0.0, .fps=0.0, .success=false};
     } catch (...) {
         std::cerr << "[BENCHMARK] Error: Unknown exception during run\n";
-        return {backend_name, scenario_name, 0.0, 0.0, false};
+        return {.backend=backend_name, .scenario=scenario_name, .avg_frame_time_ms=0.0, .fps=0.0, .success=false};
     }
 }
 

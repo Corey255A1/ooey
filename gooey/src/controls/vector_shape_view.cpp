@@ -25,8 +25,8 @@ VectorShapeView::VectorShapeView() {
     is_absolute = true;
     
     selection_box_ = std::make_shared<RectPrimitive>(Rect{0,0,0,0}, Color{0,0,0,0}, Color{0, 120, 215, 255}, 1.5f);
-    for (int i = 0; i < 4; ++i) {
-        handles_[i] = std::make_shared<RectPrimitive>(Rect{0,0,0,0}, Color{255, 255, 255, 255}, Color{0, 120, 215, 255}, 1.5f);
+    for (auto & handle : handles_) {
+        handle = std::make_shared<RectPrimitive>(Rect{0,0,0,0}, Color{255, 255, 255, 255}, Color{0, 120, 215, 255}, 1.5f);
     }
 }
 
@@ -237,7 +237,7 @@ void CircleShapeView::do_layout(Rect bounds) {
 }
 
 // PolygonShapeView Implementation
-PolygonShapeView::PolygonShapeView(std::vector<Point> points, Color fill_color, Color stroke_color, float stroke_thickness) {
+PolygonShapeView::PolygonShapeView(const std::vector<Point>& points, Color fill_color, Color stroke_color, float stroke_thickness) {
     is_absolute = true;
     
     int min_x = 999999, max_x = -999999;
@@ -258,7 +258,7 @@ PolygonShapeView::PolygonShapeView(std::vector<Point> points, Color fill_color, 
     for (const auto& pt : points) {
         float rx = (pt.x - min_x) / (float)w;
         float ry = (pt.y - min_y) / (float)h;
-        relative_points_.push_back({rx, ry});
+        relative_points_.emplace_back(rx, ry);
     }
 
     polygon_ = std::make_shared<PolygonPrimitive>(points, fill_color, stroke_color, stroke_thickness);
@@ -294,7 +294,7 @@ std::vector<Point> PolygonShapeView::get_vertices() const {
     for (const auto& rp : relative_points_) {
         int cx = absolute_bounds.x + static_cast<int>(rp.first * absolute_bounds.width);
         int cy = absolute_bounds.y + static_cast<int>(rp.second * absolute_bounds.height);
-        original_points.push_back(Point{cx, cy});
+        original_points.emplace_back(cx, cy);
     }
     return original_points;
 }
@@ -313,7 +313,7 @@ void PolygonShapeView::do_layout(Rect bounds) {
         for (const auto& rp : relative_points_) {
             int sx = bounds.x + static_cast<int>(rp.first * bounds.width);
             int sy = bounds.y + static_cast<int>(rp.second * bounds.height);
-            screen_points.push_back(Point{sx, sy});
+            screen_points.emplace_back(sx, sy);
         }
         polygon_->set_points(screen_points);
     }

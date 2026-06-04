@@ -16,7 +16,7 @@ namespace ooey::framebuffer {
 class WindowBackend : public IWindowBackend {
 public:
     WindowBackend();
-    explicit WindowBackend(int rotation, const std::string& device_path = "/dev/fb0");
+    explicit WindowBackend(int rotation, std::string  device_path = "/dev/fb0");
     ~WindowBackend() override;
 
     bool create(const Size& size, const char* title) override;

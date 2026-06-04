@@ -86,7 +86,7 @@ private:
 
 class PolygonShapeView : public VectorShapeView {
 public:
-    PolygonShapeView(std::vector<Point> points, Color fill_color, Color stroke_color = Color{0,0,0,0}, float stroke_thickness = 0.0f);
+    PolygonShapeView(const std::vector<Point>& points, Color fill_color, Color stroke_color = Color{0,0,0,0}, float stroke_thickness = 0.0f);
 
     void set_fill_color(Color color) override;
     Color get_fill_color() const override;

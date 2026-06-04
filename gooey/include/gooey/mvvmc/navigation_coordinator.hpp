@@ -28,7 +28,7 @@ public:
     Property<bool> can_go_forward{false};
 
     // Navigation actions
-    void navigate_to(std::shared_ptr<PageViewModelBase> vm);
+    void navigate_to(const std::shared_ptr<PageViewModelBase>& vm);
     void go_back();
     void go_forward();
 
