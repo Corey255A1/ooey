@@ -253,6 +253,7 @@ static void generate_node(
     std::stringstream& bindings, 
     std::stringstream& hierarchy, 
     const std::string& parent_var, 
+    const std::string& parent_type,
     int& unique_id, 
     std::vector<std::string>& member_declarations,
     const std::string& view_model_class
@@ -261,7 +262,7 @@ static void generate_node(
 
     if (node->nodeType == "Root") {
         for (const auto& child : node->children) {
-            generate_node(child, instantiations, bindings, hierarchy, "this", unique_id, member_declarations, view_model_class);
+            generate_node(child, instantiations, bindings, hierarchy, "this", "", unique_id, member_declarations, view_model_class);
         }
         return;
     }
@@ -454,6 +455,8 @@ static void generate_node(
     // Hierarchy additions
     if (parent_var == "this") {
         hierarchy << "        this->add_child(" << var_name << ");\n";
+    } else if (parent_type == "ScrollContainer") {
+        hierarchy << "        " << parent_var << "->set_child(" << var_name << ");\n";
     } else {
         hierarchy << "        " << parent_var << "->add_child(" << var_name << ");\n";
     }
@@ -516,7 +519,7 @@ static void generate_node(
         bindings << "        }\n";
     } else {
         for (const auto& child : node->children) {
-            generate_node(child, instantiations, bindings, hierarchy, var_name, unique_id, member_declarations, view_model_class);
+            generate_node(child, instantiations, bindings, hierarchy, var_name, node->nodeType, unique_id, member_declarations, view_model_class);
         }
     }
 }
@@ -532,7 +535,7 @@ CodegenResult CodeGenerator::generate(
     std::vector<std::string> member_declarations;
     int unique_id = 0;
 
-    generate_node(ast, instantiations, bindings, hierarchy, "this", unique_id, member_declarations, view_model_class);
+    generate_node(ast, instantiations, bindings, hierarchy, "this", "", unique_id, member_declarations, view_model_class);
 
     std::string root_base_type = "gooey::Column";
     if (ast && !ast->children.empty()) {
