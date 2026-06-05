@@ -23,3 +23,8 @@ These standards ensure a consistent, maintainable, and readable C++ codebase. Al
 - **Explicit Move Semantics:** When a function takes ownership of an object (e.g., a `std::unique_ptr` or storing a `std::function`), explicitly take the parameter by rvalue reference (`&&`) instead of by value (e.g., `void set_backend(std::unique_ptr<IWindowBackend>&& backend)`). This makes the transfer of ownership hyper-explicit in the API surface.
 - **Composition over Inheritance:** Use interfaces for abstracting platform details and `std::function` for callbacks, but prefer composition (like the Retained Mode Scene Graph) for building complex UI logic.
 - **Method Length:** Keep functions and methods short, focused, and single-purpose. If a method grows large or has commented steps/phases (e.g., `// 1. Create ...`), split those steps out into well-named private or protected helper methods to make the code self-documenting and maintainable.
+
+## 4. Design Guidelines
+- **SOLID Principles:** Strictly adhere to the SOLID design principles (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, and Dependency Inversion) to maintain a decoupled and extensible architecture.
+- **Precise Methods:** Strive for small, precise methods where appropriate. Keep functions and methods focused on a single responsibility.
+- **Descriptive Naming:** Prefer descriptive names over short, ambiguous names for variables, parameters, and symbols to ensure the code remains clear and self-documenting.
