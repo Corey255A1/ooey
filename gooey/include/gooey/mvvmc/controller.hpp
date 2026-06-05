@@ -21,6 +21,9 @@ public:
     void set_focused_element(std::shared_ptr<IDrawable> element);
     std::shared_ptr<IDrawable> get_focused_element() const { return focused_element_; }
 
+    void set_captured_element(std::shared_ptr<IDrawable> element) { captured_element_ = std::move(element); }
+    std::shared_ptr<IDrawable> get_captured_element() const { return captured_element_; }
+
 private:
     bool route_pointer_event(const Pointer& pointer, const std::shared_ptr<IDrawable>& node);
 
