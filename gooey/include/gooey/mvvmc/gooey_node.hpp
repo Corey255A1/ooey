@@ -11,7 +11,7 @@ public:
     GooeyNode();
     virtual ~GooeyNode() override = default;
 
-    void add_child(std::shared_ptr<IDrawable>&& child);
+    virtual void add_child(std::shared_ptr<IDrawable>&& child);
     void remove_child(const std::shared_ptr<IDrawable>& child);
     const std::vector<std::shared_ptr<IDrawable>>& get_children() const;
     void clear_children();

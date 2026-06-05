@@ -15,6 +15,7 @@ public:
 
     void set_child(std::shared_ptr<GooeyNode> child);
     std::shared_ptr<GooeyNode> get_child() const { return child_; }
+    void add_child(std::shared_ptr<IDrawable>&& child) override;
 
     int get_scroll_offset_x() const { return scroll_offset_x_; }
     void set_scroll_offset_x(int offset);

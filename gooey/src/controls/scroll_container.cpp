@@ -38,6 +38,19 @@ void ScrollContainer::set_child(std::shared_ptr<GooeyNode> child) {
     invalidate_layout();
 }
 
+void ScrollContainer::add_child(std::shared_ptr<IDrawable>&& child) {
+    if (child != v_scroll_ && child != h_scroll_ && child != child_) {
+        auto gooey_node = std::dynamic_pointer_cast<GooeyNode>(child);
+        if (gooey_node) {
+            set_child(gooey_node);
+        } else {
+            GooeyNode::add_child(std::move(child));
+        }
+    } else {
+        GooeyNode::add_child(std::move(child));
+    }
+}
+
 void ScrollContainer::set_scroll_offset_x(int offset) {
     int clamped = std::clamp(offset, 0, max_scroll_x_);
     if (scroll_offset_x_ != clamped) {
