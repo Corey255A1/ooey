@@ -70,6 +70,33 @@ static Geometry make_rect_geometry(const Rect& rect, Color color) {
     return geom;
 }
 
+static Geometry make_squiggle_geometry(int x1, int x2, int y, Color color) {
+    Geometry geom;
+    geom.type = PrimitiveType::Lines;
+    
+    int step = 2; // pixel interval for wave peak/valley
+    int amp = 1;  // amplitude height
+    
+    int vertex_index = 0;
+    float prev_x = static_cast<float>(x1);
+    float prev_y = static_cast<float>(y);
+    
+    for (int x = x1 + 1; x <= x2; ++x) {
+        float next_x = static_cast<float>(x);
+        float next_y = static_cast<float>(y + (((x / step) % 2 == 0) ? amp : -amp));
+        
+        geom.vertices.push_back({ .x=prev_x, .y=prev_y, .color=color });
+        geom.vertices.push_back({ .x=next_x, .y=next_y, .color=color });
+        
+        geom.indices.push_back(vertex_index++);
+        geom.indices.push_back(vertex_index++);
+        
+        prev_x = next_x;
+        prev_y = next_y;
+    }
+    return geom;
+}
+
 class RichTextContentView : public GooeyNode, public IInteractive {
 public:
     RichTextContentView(RichTextBox& parent) : parent_(parent) {
@@ -863,6 +890,20 @@ void RichTextBox::draw_content(ooey::IRenderTarget& target) const {
             }
         }
 
+        // Draw squiggles for errors/warnings under text
+        for (const auto& sq : squiggles_) {
+            if (sq.line_idx == l) {
+                int sq_start = std::max(0, sq.start_col);
+                int sq_end = std::min(static_cast<int>(lines_[l].size()), sq.end_col);
+                if (sq_start < sq_end) {
+                    int x1 = content_view_->bounds().x + 8 + get_column_x_offset(l, sq_start);
+                    int x2 = content_view_->bounds().x + 8 + get_column_x_offset(l, sq_end);
+                    int y = current_y + char_h;
+                    target.draw_geometry(make_squiggle_geometry(x1, x2, y, sq.color));
+                }
+            }
+        }
+
         if (l == cursor_line_ && is_focused) {
             int cursor_x = content_view_->bounds().x + 8 + get_column_x_offset(l, cursor_col_);
             Rect cursor_rect{cursor_x, current_y, 2, char_h};
@@ -939,6 +980,20 @@ void RichTextBox::do_layout(Rect bounds) {
             bounds.height
         });
     }
+}
+
+void RichTextBox::add_squiggle(int line_idx, int start_col, int end_col, Color color) {
+    squiggles_.push_back({line_idx, start_col, end_col, color});
+    invalidate_content_layout();
+}
+
+void RichTextBox::clear_squiggles() {
+    squiggles_.clear();
+    invalidate_content_layout();
+}
+
+const std::vector<SquiggleRange>& RichTextBox::get_squiggles() const {
+    return squiggles_;
 }
 
 } // namespace gooey::controls

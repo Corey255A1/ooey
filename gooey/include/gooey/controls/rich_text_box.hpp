@@ -29,6 +29,15 @@ struct FormatRange {
     bool operator==(const FormatRange&) const = default;
 };
 
+struct SquiggleRange {
+    int line_idx{0};
+    int start_col{0};
+    int end_col{0};
+    Color color;
+
+    bool operator==(const SquiggleRange&) const = default;
+};
+
 class ScrollContainer;
 class RichTextContentView;
 
@@ -52,6 +61,11 @@ public:
     void apply_format(int line_idx, int start_col, int end_col, const TextFormat& format);
     void set_line_formats(int line_idx, const std::vector<FormatRange>& formats);
     const std::vector<FormatRange>& get_line_formats(int line_idx) const;
+
+    // Squiggle API
+    void add_squiggle(int line_idx, int start_col, int end_col, Color color);
+    void clear_squiggles();
+    const std::vector<SquiggleRange>& get_squiggles() const;
 
     // Line/Text inspection APIs
     int get_lines_count() const;
@@ -119,6 +133,8 @@ private:
 
     std::shared_ptr<ScrollContainer> scroll_container_;
     std::shared_ptr<RichTextContentView> content_view_;
+
+    std::vector<SquiggleRange> squiggles_;
 };
 
 } // namespace gooey::controls
