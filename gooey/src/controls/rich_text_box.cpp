@@ -161,6 +161,18 @@ Rect RichTextBox::bounds() const {
 }
 
 void RichTextBox::set_text(const std::string& text) {
+    if (get_text() == text) {
+        return;
+    }
+
+    int old_cursor_line = cursor_line_;
+    int old_cursor_col = cursor_col_;
+    int old_anchor_line = anchor_line_;
+    int old_anchor_col = anchor_col_;
+    bool old_has_selection = has_selection_;
+    int old_scroll_x = scroll_container_ ? scroll_container_->get_scroll_offset_x() : 0;
+    int old_scroll_y = scroll_container_ ? scroll_container_->get_scroll_offset_y() : 0;
+
     lines_.clear();
     std::string current_line = "";
     for (size_t i = 0; i < text.size(); ++i) {
@@ -181,9 +193,12 @@ void RichTextBox::set_text(const std::string& text) {
         }
     }
     lines_.push_back(current_line);
-    cursor_line_ = 0;
-    cursor_col_ = 0;
-    has_selection_ = false;
+
+    cursor_line_ = std::max(0, std::min(old_cursor_line, static_cast<int>(lines_.size()) - 1));
+    cursor_col_ = std::max(0, std::min(old_cursor_col, static_cast<int>(lines_[cursor_line_].size())));
+    anchor_line_ = std::max(0, std::min(old_anchor_line, static_cast<int>(lines_.size()) - 1));
+    anchor_col_ = std::max(0, std::min(old_anchor_col, static_cast<int>(lines_[anchor_line_].size())));
+    has_selection_ = old_has_selection;
 
     line_formats_.clear();
     line_formats_.resize(lines_.size());
@@ -191,8 +206,8 @@ void RichTextBox::set_text(const std::string& text) {
     update_formatting();
     
     if (scroll_container_) {
-        scroll_container_->set_scroll_offset_x(0);
-        scroll_container_->set_scroll_offset_y(0);
+        scroll_container_->set_scroll_offset_x(old_scroll_x);
+        scroll_container_->set_scroll_offset_y(old_scroll_y);
     }
     
     scroll_cursor_into_view();
@@ -608,8 +623,27 @@ bool RichTextBox::on_content_key_event(const KeyEvent& e) {
         shift_pressed_ = (e.state == KeyState::Pressed);
         return true;
     }
+    if (e.key_code == 0xFFE3 /* Left Ctrl */ || e.key_code == 0xFFE4 /* Right Ctrl */) {
+        ctrl_pressed_ = (e.state == KeyState::Pressed);
+        return true;
+    }
 
     if (e.state != KeyState::Pressed) return false;
+
+    if (ctrl_pressed_) {
+        if (e.key_code == 'z' || e.key_code == 'Z') {
+            if (shift_pressed_) {
+                if (on_redo) on_redo();
+            } else {
+                if (on_undo) on_undo();
+            }
+            return true;
+        }
+        if (e.key_code == 'y' || e.key_code == 'Y') {
+            if (on_redo) on_redo();
+            return true;
+        }
+    }
 
     bool handled = false;
 

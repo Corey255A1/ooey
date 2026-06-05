@@ -86,6 +86,8 @@ public:
     bool needs_scroll_y() const;
 
     std::function<void(const std::string&)> on_text_changed;
+    std::function<void()> on_undo;
+    std::function<void()> on_redo;
 
     Color bg_color = Color{30, 30, 30};
     Color line_num_bg = Color{38, 38, 38};
@@ -130,6 +132,7 @@ private:
     bool has_selection_{false};
     bool dragging_selection_{false};
     bool shift_pressed_{false};
+    bool ctrl_pressed_{false};
 
     std::shared_ptr<ScrollContainer> scroll_container_;
     std::shared_ptr<RichTextContentView> content_view_;
