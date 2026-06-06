@@ -20,10 +20,14 @@ public:
 
     bool clip_children{false};
     int spacing_{0};
+    Align align_items{Align::Start};
+    Justify justify_content{Justify::Start};
 
     // Builder setters for chaining configuration
     GooeyNode& set_clip_children(bool clip) { clip_children = clip; return *this; }
     GooeyNode& set_spacing(int spacing) { spacing_ = spacing; return *this; }
+    GooeyNode& set_align_items(Align align) { align_items = align; return *this; }
+    GooeyNode& set_justify_content(Justify justify) { justify_content = justify; return *this; }
 
     void set_theme_manager(std::shared_ptr<ThemeManager> manager) override;
 

@@ -2,10 +2,29 @@
 #include "gooey/mvvmc/theme.hpp"
 #include "ooey/renderer/font_engine.hpp"
 #include "ooey/renderer/i_render_target.hpp"
+#include "gooey/application.hpp"
 #include <iostream>
+#include <algorithm>
 
 namespace gooey::controls {
     using namespace ooey;
+
+static Size measure_text_logical(const std::string& text, const Font& font) {
+    float scale = 1.0f;
+    if (gooey::Application::get_instance()) {
+        scale = gooey::Application::get_instance()->get_dpi_scale();
+    }
+    if (scale == 1.0f) {
+        return FontEngine::measure_text(text, font);
+    }
+    Font scaled_font = font;
+    scaled_font.size = static_cast<int>(font.size * scale);
+    Size physical_size = FontEngine::measure_text(text, scaled_font);
+    return Size{
+        static_cast<int>(physical_size.width / scale),
+        static_cast<int>(physical_size.height / scale)
+    };
+}
 
 TextBox::TextBox() : TextBox(Rect{0, 0, 150, 40}, Font{"sans-serif", 16}, Color{255, 255, 255}, Color{35, 35, 40}) {}
 
@@ -32,7 +51,13 @@ void TextBox::draw(ooey::IRenderTarget& target) const {
         bg_->draw(target);
     }
 
-    target.push_clip(bounds_);
+    Rect clip_rect = bounds_;
+    clip_rect.x += padding_left + 6;
+    clip_rect.width = std::max(0, clip_rect.width - (padding_left + padding_right + 12));
+    clip_rect.y += padding_top + 2;
+    clip_rect.height = std::max(0, clip_rect.height - (padding_top + padding_bottom + 4));
+
+    target.push_clip(clip_rect);
     if (text_primitive_) {
         text_primitive_->draw(target);
     }
@@ -138,8 +163,30 @@ bool TextBox::on_text_event(const TextEvent& e) {
 }
 
 Size TextBox::do_measure(Size constraints) {
-    int w = resolve_width(constraints.width, absolute_bounds.width);
-    int h = resolve_height(constraints.height, absolute_bounds.height);
+    Size text_size = {0, 0};
+    Size font_size = {0, 0};
+    if (text_primitive_) {
+        text_size = measure_text_logical(text_, text_primitive_->get_font());
+        font_size = measure_text_logical("A", text_primitive_->get_font());
+    } else {
+        text_size = measure_text_logical("", Font{});
+        font_size = measure_text_logical("A", Font{});
+    }
+
+    int content_w = text_size.width + padding_left + padding_right + 20;
+    int min_default_w = absolute_bounds.width > 0 ? absolute_bounds.width : 150;
+    if (content_w < min_default_w) {
+        content_w = min_default_w;
+    }
+
+    int content_h = std::max(font_size.height, text_size.height) + padding_top + padding_bottom + 12; // vertical padding/margin
+    int min_default_h = absolute_bounds.height > 0 ? absolute_bounds.height : 30;
+    if (content_h < min_default_h) {
+        content_h = min_default_h;
+    }
+
+    int w = resolve_width(constraints.width, content_w);
+    int h = resolve_height(constraints.height, content_h);
     return Size{w, h};
 }
 
@@ -152,8 +199,8 @@ void TextBox::do_layout(Rect bounds) {
     }
 
     if (text_primitive_) {
-        Size font_size = FontEngine::measure_text("A", text_primitive_->get_font());
-        Size text_size = FontEngine::measure_text(text_, text_primitive_->get_font());
+        Size font_size = measure_text_logical("A", text_primitive_->get_font());
+        Size text_size = measure_text_logical(text_, text_primitive_->get_font());
         int avail_w = std::max(0, bounds_.width - padding_left - padding_right - 20);
         int scroll_x = 0;
         if (text_size.width > avail_w) {

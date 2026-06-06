@@ -38,7 +38,14 @@ int main() {
     // Set our background clear color
     app.set_clear_color(ooey::Color{40, 40, 40});
 
+    const char* auto_quit = std::getenv("OOEY_AUTO_QUIT");
+    if (auto_quit) {
+        app.dispatch([&app]() {
+            app.quit();
+        });
+    }
+
     app.run();
 
     return 0;
-    }
+}

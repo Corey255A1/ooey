@@ -54,6 +54,10 @@ int GooeyElement::resolve_width(int constraint_w, int content_w) const {
     int w = 0;
     if (width.policy == SizePolicy::Fixed) {
         w = static_cast<int>(width.value);
+    } else if (width.policy == SizePolicy::Percentage) {
+        w = static_cast<int>(constraint_w * (width.value / 100.0f));
+    } else if (width.policy == SizePolicy::Flex) {
+        w = constraint_w;
     } else if (width.policy == SizePolicy::MatchParent) {
         if (constraint_w >= 50000) {
             w = content_w;
@@ -63,6 +67,7 @@ int GooeyElement::resolve_width(int constraint_w, int content_w) const {
     } else {
         w = content_w;
     }
+    w = std::clamp(static_cast<float>(w), min_width, max_width);
     return std::max(0, std::min(w, constraint_w));
 }
 
@@ -70,6 +75,10 @@ int GooeyElement::resolve_height(int constraint_h, int content_h) const {
     int h = 0;
     if (height.policy == SizePolicy::Fixed) {
         h = static_cast<int>(height.value);
+    } else if (height.policy == SizePolicy::Percentage) {
+        h = static_cast<int>(constraint_h * (height.value / 100.0f));
+    } else if (height.policy == SizePolicy::Flex) {
+        h = constraint_h;
     } else if (height.policy == SizePolicy::MatchParent) {
         if (constraint_h >= 50000) {
             h = content_h;
@@ -79,6 +88,7 @@ int GooeyElement::resolve_height(int constraint_h, int content_h) const {
     } else {
         h = content_h;
     }
+    h = std::clamp(static_cast<float>(h), min_height, max_height);
     return std::max(0, std::min(h, constraint_h));
 }
 

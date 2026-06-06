@@ -19,11 +19,35 @@ static std::string to_snake_case(const std::string& s) {
     return res;
 }
 
+static void parse_spacing_shorthand(const std::string& val_str, int& left, int& top, int& right, int& bottom) {
+    std::vector<int> vals;
+    std::stringstream ss(val_str);
+    std::string token;
+    while (ss >> token) {
+        try {
+            vals.push_back(std::stoi(token));
+        } catch (...) {}
+    }
+    if (vals.empty()) return;
+    if (vals.size() == 1) {
+        left = top = right = bottom = vals[0];
+    } else if (vals.size() == 2) {
+        top = bottom = vals[0];
+        left = right = vals[1];
+    } else if (vals.size() >= 4) {
+        top = vals[0];
+        right = vals[1];
+        bottom = vals[2];
+        left = vals[3];
+    }
+}
+
 static std::string generate_template_node(
     const std::shared_ptr<AstNode>& node, 
     std::stringstream& instantiations, 
     std::stringstream& bindings, 
     std::stringstream& hierarchy, 
+    std::stringstream& updates,
     const std::string& parent_var, 
     int& unique_id, 
     const std::string& items_prop_name,
@@ -76,7 +100,9 @@ static std::string generate_template_node(
     }
 
     instantiations << "                    auto " << var_name << " = std::make_shared<" << cpp_type << ">();\n";
+    instantiations << "                    " << var_name << "->id = \"" << var_name << "\";\n";
     instantiations << "                    " << var_name << "->set_absolute(false);\n";
+    updates << "                            auto " << var_name << " = std::dynamic_pointer_cast<" << cpp_type << ">(tooey::find_element_by_id(item_root, \"" << var_name << "\"));\n";
 
     for (const auto& prop : node->properties) {
         std::string key = prop.first;
@@ -87,6 +113,9 @@ static std::string generate_template_node(
             if (val.rawData.starts_with(prefix)) {
                 std::string sub_property = val.rawData.substr(prefix.length());
                 bindings << "                    tooey::set_control_value(" << var_name << ", item." << sub_property << ");\n";
+                updates << "                            if (" << var_name << ") {\n";
+                updates << "                                tooey::update_control_value_if_different(" << var_name << ", item." << sub_property << ");\n";
+                updates << "                            }\n";
                 
                 bool should_gen_reverse = false;
                 std::string cb_field = "";
@@ -213,23 +242,103 @@ static std::string generate_template_node(
             } else if (key == "checked") {
                 instantiations << "                    " << var_name << "->set_checked(" << val_repr << ");\n";
             } else if (key == "width") {
-                if (val_repr == "\"MatchParent\"" || val_repr == "MatchParent") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                if (raw == "MatchParent") {
                     instantiations << "                    " << var_name << "->set_width(gooey::SizePolicy::MatchParent);\n";
-                } else if (val_repr == "\"WrapContent\"" || val_repr == "WrapContent") {
+                } else if (raw == "WrapContent") {
                     instantiations << "                    " << var_name << "->set_width(gooey::SizePolicy::WrapContent);\n";
+                } else if (!raw.empty() && raw.back() == '%') {
+                    std::string pct_val = raw.substr(0, raw.size() - 1);
+                    instantiations << "                    " << var_name << "->set_width(gooey::SizePolicy::Percentage, " << pct_val << "f);\n";
+                } else if (!raw.empty() && raw.back() == '*') {
+                    std::string flex_val = "1.0f";
+                    if (raw.size() > 1) {
+                        flex_val = raw.substr(0, raw.size() - 1) + "f";
+                    }
+                    instantiations << "                    " << var_name << "->set_width(gooey::SizePolicy::Flex, " << flex_val << ");\n";
                 } else {
                     instantiations << "                    " << var_name << "->set_width(gooey::SizePolicy::Fixed, " << val_repr << ");\n";
                 }
             } else if (key == "height") {
-                if (val_repr == "\"MatchParent\"" || val_repr == "MatchParent") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                if (raw == "MatchParent") {
                     instantiations << "                    " << var_name << "->set_height(gooey::SizePolicy::MatchParent);\n";
-                } else if (val_repr == "\"WrapContent\"" || val_repr == "WrapContent") {
+                } else if (raw == "WrapContent") {
                     instantiations << "                    " << var_name << "->set_height(gooey::SizePolicy::WrapContent);\n";
+                } else if (!raw.empty() && raw.back() == '%') {
+                    std::string pct_val = raw.substr(0, raw.size() - 1);
+                    instantiations << "                    " << var_name << "->set_height(gooey::SizePolicy::Percentage, " << pct_val << "f);\n";
+                } else if (!raw.empty() && raw.back() == '*') {
+                    std::string flex_val = "1.0f";
+                    if (raw.size() > 1) {
+                        flex_val = raw.substr(0, raw.size() - 1) + "f";
+                    }
+                    instantiations << "                    " << var_name << "->set_height(gooey::SizePolicy::Flex, " << flex_val << ");\n";
                 } else {
                     instantiations << "                    " << var_name << "->set_height(gooey::SizePolicy::Fixed, " << val_repr << ");\n";
                 }
             } else if (key == "spacing") {
                 instantiations << "                    " << var_name << "->set_spacing(" << val_repr << ");\n";
+            } else if (key == "alignSelf") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                instantiations << "                    " << var_name << "->set_align_self(gooey::Align::" << raw << ");\n";
+            } else if (key == "alignItems") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                instantiations << "                    " << var_name << "->set_align_items(gooey::Align::" << raw << ");\n";
+            } else if (key == "justifyContent") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                instantiations << "                    " << var_name << "->set_justify_content(gooey::Justify::" << raw << ");\n";
+            } else if (key == "minWidth") {
+                instantiations << "                    " << var_name << "->set_min_width(" << val_repr << ");\n";
+            } else if (key == "maxWidth") {
+                instantiations << "                    " << var_name << "->set_max_width(" << val_repr << ");\n";
+            } else if (key == "minHeight") {
+                instantiations << "                    " << var_name << "->set_min_height(" << val_repr << ");\n";
+            } else if (key == "maxHeight") {
+                instantiations << "                    " << var_name << "->set_max_height(" << val_repr << ");\n";
+            } else if (key == "margin" || key == "padding") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                if (raw.find(' ') != std::string::npos) {
+                    int l=0, t=0, r=0, b=0;
+                    parse_spacing_shorthand(raw, l, t, r, b);
+                    instantiations << "                    " << var_name << "->set_" << key << "(" << l << ", " << t << ", " << r << ", " << b << ");\n";
+                } else {
+                    instantiations << "                    " << var_name << "->set_" << key << "(" << raw << ");\n";
+                }
+            } else if (key == "marginLeft") {
+                instantiations << "                    " << var_name << "->margin_left = " << val_repr << ";\n";
+            } else if (key == "marginTop") {
+                instantiations << "                    " << var_name << "->margin_top = " << val_repr << ";\n";
+            } else if (key == "marginRight") {
+                instantiations << "                    " << var_name << "->margin_right = " << val_repr << ";\n";
+            } else if (key == "marginBottom") {
+                instantiations << "                    " << var_name << "->margin_bottom = " << val_repr << ";\n";
+            } else if (key == "paddingLeft") {
+                instantiations << "                    " << var_name << "->padding_left = " << val_repr << ";\n";
+            } else if (key == "paddingTop") {
+                instantiations << "                    " << var_name << "->padding_top = " << val_repr << ";\n";
+            } else if (key == "paddingRight") {
+                instantiations << "                    " << var_name << "->padding_right = " << val_repr << ";\n";
+            } else if (key == "paddingBottom") {
+                instantiations << "                    " << var_name << "->padding_bottom = " << val_repr << ";\n";
             } else {
                 instantiations << "                    // " << key << ": " << val_repr << "\n";
             }
@@ -241,7 +350,7 @@ static std::string generate_template_node(
     }
 
     for (const auto& child : node->children) {
-        generate_template_node(child, instantiations, bindings, hierarchy, var_name, unique_id, items_prop_name, view_model_class);
+        generate_template_node(child, instantiations, bindings, hierarchy, updates, var_name, unique_id, items_prop_name, view_model_class);
     }
 
     return var_name;
@@ -320,6 +429,7 @@ static void generate_node(
         } else {
             instantiations << "        " << var_name << " = std::make_shared<" << cpp_type << ">();\n";
         }
+        instantiations << "        " << var_name << "->id = \"" << var_name << "\";\n";
         instantiations << "        " << var_name << "->set_absolute(false);\n";
     } else {
         if (node->isCustomComponent) {
@@ -327,6 +437,7 @@ static void generate_node(
         } else {
             instantiations << "        auto " << var_name << " = std::make_shared<" << cpp_type << ">();\n";
         }
+        instantiations << "        " << var_name << "->id = \"" << var_name << "\";\n";
         instantiations << "        " << var_name << "->set_absolute(false);\n";
     }
 
@@ -429,23 +540,103 @@ static void generate_node(
             } else if (key == "checked") {
                 instantiations << "        " << var_name << "->set_checked(" << val_repr << ");\n";
             } else if (key == "width") {
-                if (val_repr == "\"MatchParent\"" || val_repr == "MatchParent") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                if (raw == "MatchParent") {
                     instantiations << "        " << var_name << "->set_width(gooey::SizePolicy::MatchParent);\n";
-                } else if (val_repr == "\"WrapContent\"" || val_repr == "WrapContent") {
+                } else if (raw == "WrapContent") {
                     instantiations << "        " << var_name << "->set_width(gooey::SizePolicy::WrapContent);\n";
+                } else if (!raw.empty() && raw.back() == '%') {
+                    std::string pct_val = raw.substr(0, raw.size() - 1);
+                    instantiations << "        " << var_name << "->set_width(gooey::SizePolicy::Percentage, " << pct_val << "f);\n";
+                } else if (!raw.empty() && raw.back() == '*') {
+                    std::string flex_val = "1.0f";
+                    if (raw.size() > 1) {
+                        flex_val = raw.substr(0, raw.size() - 1) + "f";
+                    }
+                    instantiations << "        " << var_name << "->set_width(gooey::SizePolicy::Flex, " << flex_val << ");\n";
                 } else {
                     instantiations << "        " << var_name << "->set_width(gooey::SizePolicy::Fixed, " << val_repr << ");\n";
                 }
             } else if (key == "height") {
-                if (val_repr == "\"MatchParent\"" || val_repr == "MatchParent") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                if (raw == "MatchParent") {
                     instantiations << "        " << var_name << "->set_height(gooey::SizePolicy::MatchParent);\n";
-                } else if (val_repr == "\"WrapContent\"" || val_repr == "WrapContent") {
+                } else if (raw == "WrapContent") {
                     instantiations << "        " << var_name << "->set_height(gooey::SizePolicy::WrapContent);\n";
+                } else if (!raw.empty() && raw.back() == '%') {
+                    std::string pct_val = raw.substr(0, raw.size() - 1);
+                    instantiations << "        " << var_name << "->set_height(gooey::SizePolicy::Percentage, " << pct_val << "f);\n";
+                } else if (!raw.empty() && raw.back() == '*') {
+                    std::string flex_val = "1.0f";
+                    if (raw.size() > 1) {
+                        flex_val = raw.substr(0, raw.size() - 1) + "f";
+                    }
+                    instantiations << "        " << var_name << "->set_height(gooey::SizePolicy::Flex, " << flex_val << ");\n";
                 } else {
                     instantiations << "        " << var_name << "->set_height(gooey::SizePolicy::Fixed, " << val_repr << ");\n";
                 }
             } else if (key == "spacing") {
                 instantiations << "        " << var_name << "->set_spacing(" << val_repr << ");\n";
+            } else if (key == "alignSelf") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                instantiations << "        " << var_name << "->set_align_self(gooey::Align::" << raw << ");\n";
+            } else if (key == "alignItems") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                instantiations << "        " << var_name << "->set_align_items(gooey::Align::" << raw << ");\n";
+            } else if (key == "justifyContent") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                instantiations << "        " << var_name << "->set_justify_content(gooey::Justify::" << raw << ");\n";
+            } else if (key == "minWidth") {
+                instantiations << "        " << var_name << "->set_min_width(" << val_repr << ");\n";
+            } else if (key == "maxWidth") {
+                instantiations << "        " << var_name << "->set_max_width(" << val_repr << ");\n";
+            } else if (key == "minHeight") {
+                instantiations << "        " << var_name << "->set_min_height(" << val_repr << ");\n";
+            } else if (key == "maxHeight") {
+                instantiations << "        " << var_name << "->set_max_height(" << val_repr << ");\n";
+            } else if (key == "margin" || key == "padding") {
+                std::string raw = val_repr;
+                if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"') {
+                    raw = raw.substr(1, raw.size() - 2);
+                }
+                if (raw.find(' ') != std::string::npos) {
+                    int l=0, t=0, r=0, b=0;
+                    parse_spacing_shorthand(raw, l, t, r, b);
+                    instantiations << "        " << var_name << "->set_" << key << "(" << l << ", " << t << ", " << r << ", " << b << ");\n";
+                } else {
+                    instantiations << "        " << var_name << "->set_" << key << "(" << raw << ");\n";
+                }
+            } else if (key == "marginLeft") {
+                instantiations << "        " << var_name << "->margin_left = " << val_repr << ";\n";
+            } else if (key == "marginTop") {
+                instantiations << "        " << var_name << "->margin_top = " << val_repr << ";\n";
+            } else if (key == "marginRight") {
+                instantiations << "        " << var_name << "->margin_right = " << val_repr << ";\n";
+            } else if (key == "marginBottom") {
+                instantiations << "        " << var_name << "->margin_bottom = " << val_repr << ";\n";
+            } else if (key == "paddingLeft") {
+                instantiations << "        " << var_name << "->padding_left = " << val_repr << ";\n";
+            } else if (key == "paddingTop") {
+                instantiations << "        " << var_name << "->padding_top = " << val_repr << ";\n";
+            } else if (key == "paddingRight") {
+                instantiations << "        " << var_name << "->padding_right = " << val_repr << ";\n";
+            } else if (key == "paddingBottom") {
+                instantiations << "        " << var_name << "->padding_bottom = " << val_repr << ";\n";
             } else {
                 instantiations << "        // " << key << ": " << val_repr << "\n";
             }
@@ -487,24 +678,38 @@ static void generate_node(
         bindings << "            using ItemListType = decltype(static_cast<" << view_model_class << "*>(nullptr)->" << items_prop_name << ".get());\n";
         bindings << "            using ItemType = typename std::decay_t<ItemListType>::value_type;\n";
         bindings << "            " << var_name << "->bind(viewModel->" << items_prop_name << ", [weak_viewModel, weak_" << var_name << "](const ItemListType& items) {\n";
-        bindings << "                std::vector<std::shared_ptr<gooey::mvvmc::GooeyElement>> views;\n";
-        bindings << "                for (size_t i = 0; i < items.size(); ++i) {\n";
-        bindings << "                    const auto& item = items[i];\n";
+        bindings << "                if (auto " << var_name << "_locked = weak_" << var_name << ".lock()) {\n";
+        bindings << "                    auto existing_views = " << var_name << "_locked->get_item_views();\n";
+        bindings << "                    if (existing_views.size() == items.size()) {\n";
+        bindings << "                        for (size_t i = 0; i < items.size(); ++i) {\n";
+        bindings << "                            const auto& item = items[i];\n";
+        bindings << "                            auto item_root = existing_views[i];\n";
         
         int template_unique_id = 0;
         std::stringstream template_inst;
         std::stringstream template_bind;
         std::stringstream template_hier;
+        std::stringstream template_update;
         std::string template_root_var = generate_template_node(
             template_root, 
             template_inst, 
             template_bind, 
             template_hier, 
+            template_update,
             "", 
             template_unique_id, 
             items_prop_name, 
             view_model_class
         );
+        
+        bindings << template_update.str();
+        bindings << "                        }\n";
+        bindings << "                        return;\n";
+        bindings << "                    }\n";
+        bindings << "                }\n";
+        bindings << "                std::vector<std::shared_ptr<gooey::mvvmc::GooeyElement>> views;\n";
+        bindings << "                for (size_t i = 0; i < items.size(); ++i) {\n";
+        bindings << "                    const auto& item = items[i];\n";
         
         bindings << template_inst.str();
         bindings << template_bind.str();

@@ -26,7 +26,7 @@ int main() {
     gooey::Application app;
 
     auto backend = ooey::create_default_window_backend();
-    if (!backend || !backend->create({850, 650}, "OOEY Font Handling Demo")) {
+    if (!backend || !backend->create({1024, 768}, "OOEY Font Handling Demo")) {
         std::cerr << "Failed to create window\n";
         return 1;
     }
@@ -285,6 +285,14 @@ int main() {
     update_preview();
 
     app.set_root_view(std::move(root_view));
+
+    const char* auto_quit = std::getenv("OOEY_AUTO_QUIT");
+    if (auto_quit) {
+        app.set_after_render_callback([&app](ooey::IRenderTarget*) {
+            app.quit();
+        });
+    }
+
     app.run();
 
     return 0;

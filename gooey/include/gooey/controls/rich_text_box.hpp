@@ -82,6 +82,8 @@ public:
     void insert_text(const std::string& text);
     bool has_selection() const { return has_selection_; }
     void clear_selection() { has_selection_ = false; }
+    int get_cursor_line() const { return cursor_line_; }
+    int get_cursor_col() const { return cursor_col_; }
     bool needs_scroll_x() const;
     bool needs_scroll_y() const;
 

@@ -1013,6 +1013,81 @@ TEST(LayoutTest, RichTextBoxScrollbarVisibility) {
     EXPECT_TRUE(box.needs_scroll_x());
 }
 
+TEST(LayoutTest, ProportionalFlexAndAlignment) {
+    auto row = std::make_shared<Row>();
+    row->set_width(SizePolicy::Fixed, 300.0f);
+    row->set_height(SizePolicy::Fixed, 100.0f);
+    row->set_padding(10);
+    row->set_spacing(10);
+    row->set_align_items(Align::Center);
+
+    auto child1 = std::make_shared<GooeyNode>();
+    child1->set_width(SizePolicy::Flex, 1.0f);
+    child1->set_height(SizePolicy::Fixed, 40.0f);
+
+    auto child2 = std::make_shared<GooeyNode>();
+    child2->set_width(SizePolicy::Flex, 2.0f);
+    child2->set_height(SizePolicy::Fixed, 60.0f);
+
+    row->add_child(child1);
+    row->add_child(child2);
+
+    // Measure and layout
+    Size measured = row->measure(Size{300, 100});
+    EXPECT_EQ(measured.width, 300);
+    EXPECT_EQ(measured.height, 100);
+
+    row->layout(Rect{0, 0, 300, 100});
+
+    // Verify proportional flex sizing
+    // avail_w = 300 - 20 (padding) - 10 (spacing) = 270.
+    // child1: 1/3 of 270 = 90.
+    // child2: 2/3 of 270 = 180.
+    EXPECT_EQ(child1->get_measured_size().width, 90);
+    EXPECT_EQ(child2->get_measured_size().width, 180);
+
+    // Verify layout boundaries x-coordinates
+    EXPECT_EQ(child1->layout_bounds.x, 10);
+    EXPECT_EQ(child2->layout_bounds.x, 110); // 10 (padding) + 90 (child1 width) + 10 (spacing)
+
+    // Verify cross-axis center alignment
+    // Row inner content height is 80.
+    // child1 (height 40): cy = padding_top(10) + (80 - 40)/2 = 30
+    // child2 (height 60): cy = padding_top(10) + (80 - 60)/2 = 20
+    EXPECT_EQ(child1->layout_bounds.y, 30);
+    EXPECT_EQ(child2->layout_bounds.y, 20);
+
+    // Verify main-axis SpaceBetween justification distribution
+    auto row2 = std::make_shared<Row>();
+    row2->set_width(SizePolicy::Fixed, 300.0f);
+    row2->set_height(SizePolicy::Fixed, 100.0f);
+    row2->set_padding(10);
+    row2->set_spacing(0);
+    row2->set_justify_content(Justify::SpaceBetween);
+
+    auto fixed_child1 = std::make_shared<GooeyNode>();
+    fixed_child1->set_width(SizePolicy::Fixed, 50.0f);
+    fixed_child1->set_height(SizePolicy::Fixed, 50.0f);
+
+    auto fixed_child2 = std::make_shared<GooeyNode>();
+    fixed_child2->set_width(SizePolicy::Fixed, 50.0f);
+    fixed_child2->set_height(SizePolicy::Fixed, 50.0f);
+
+    row2->add_child(fixed_child1);
+    row2->add_child(fixed_child2);
+
+    row2->measure(Size{300, 100});
+    row2->layout(Rect{0, 0, 300, 100});
+
+    // Content area = 280. Total children width = 100.
+    // SpaceBetween distribution gap: (280 - 100) / 1 = 180.
+    // child1 x starts at 10.
+    // child2 x starts at 10 + 50 (child1 width) + 180 (gap) = 240.
+    EXPECT_EQ(fixed_child1->layout_bounds.x, 10);
+    EXPECT_EQ(fixed_child2->layout_bounds.x, 240);
+}
+
+
 
 
 

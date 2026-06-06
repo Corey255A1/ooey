@@ -51,6 +51,8 @@ public:
     bool on_pointer_event(const Pointer& e) override;
     bool on_key_event(const KeyEvent& e) override;
 
+    void draw(ooey::IRenderTarget& target) const override;
+
     std::function<void(int)> on_selected_changed;
 
     template <typename Target>

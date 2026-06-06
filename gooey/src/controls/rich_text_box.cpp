@@ -9,6 +9,23 @@
 namespace gooey::controls {
     using namespace ooey;
 
+static Size measure_text_logical(const std::string& text, const Font& font) {
+    float scale = 1.0f;
+    if (gooey::Application::get_instance()) {
+        scale = gooey::Application::get_instance()->get_dpi_scale();
+    }
+    if (scale == 1.0f) {
+        return FontEngine::measure_text(text, font);
+    }
+    Font scaled_font = font;
+    scaled_font.size = static_cast<int>(font.size * scale);
+    Size physical_size = FontEngine::measure_text(text, scaled_font);
+    return Size{
+        static_cast<int>(physical_size.width / scale),
+        static_cast<int>(physical_size.height / scale)
+    };
+}
+
 struct StyledSegment {
     std::string text;
     TextFormat format;
@@ -161,7 +178,25 @@ Rect RichTextBox::bounds() const {
 }
 
 void RichTextBox::set_text(const std::string& text) {
-    if (get_text() == text) {
+    auto normalize_newlines = [](const std::string& s) {
+        std::string res;
+        res.reserve(s.size());
+        for (size_t i = 0; i < s.size(); ++i) {
+            if (s[i] == '\r') {
+                if (i + 1 < s.size() && s[i + 1] == '\n') {
+                    res += '\n';
+                    i++;
+                } else {
+                    res += '\n';
+                }
+            } else {
+                res += s[i];
+            }
+        }
+        return res;
+    };
+
+    if (get_text() == normalize_newlines(text)) {
         return;
     }
 
@@ -351,7 +386,7 @@ int RichTextBox::get_column_x_offset(int line_idx, int col) const {
             font.weight = seg.format.weight;
             font.style = seg.format.style;
             if (seg.format.size > 0) font.size = seg.format.size;
-            x_offset += FontEngine::measure_text(seg.text, font).width;
+            x_offset += measure_text_logical(seg.text, font).width;
             current_col += seg_len;
         } else {
             int prefix_len = col - current_col;
@@ -360,7 +395,7 @@ int RichTextBox::get_column_x_offset(int line_idx, int col) const {
                 font.weight = seg.format.weight;
                 font.style = seg.format.style;
                 if (seg.format.size > 0) font.size = seg.format.size;
-                x_offset += FontEngine::measure_text(seg.text.substr(0, prefix_len), font).width;
+                x_offset += measure_text_logical(seg.text.substr(0, prefix_len), font).width;
             }
             break;
         }
@@ -461,7 +496,7 @@ void RichTextBox::scroll_cursor_into_view() {
     if (scroll_container_) {
         // Perform initial layout of scroll container if not laid out yet (for tests/direct calls)
         if (scroll_container_->bounds().width == 0 || scroll_container_->bounds().height == 0) {
-            Size char_size = FontEngine::measure_text("A", font_);
+            Size char_size = measure_text_logical("A", font_);
             int max_line_digits = std::to_string(get_lines_count()).size();
             int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
             
@@ -469,7 +504,7 @@ void RichTextBox::scroll_cursor_into_view() {
             scroll_container_->layout(Rect{bounds_.x + line_num_width, bounds_.y, bounds_.width - line_num_width, bounds_.height});
         }
 
-        Size char_size = FontEngine::measure_text("A", font_);
+        Size char_size = measure_text_logical("A", font_);
         int line_h = char_size.height + 4;
         
         int cx = get_column_x_offset(cursor_line_, cursor_col_);
@@ -484,7 +519,7 @@ bool RichTextBox::on_pointer_event(const Pointer& e) {
                 e.y >= bounds_.y && e.y <= bounds_.y + bounds_.height);
     if (!hit) return false;
     
-    Size char_size = FontEngine::measure_text("A", font_);
+    Size char_size = measure_text_logical("A", font_);
     int max_line_digits = std::to_string(get_lines_count()).size();
     int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
     
@@ -542,7 +577,7 @@ bool RichTextBox::on_content_pointer_event(const Pointer& e) {
                 e.y >= content_view_->bounds().y && e.y <= content_view_->bounds().y + content_view_->bounds().height);
     
     if (hit && e.state == PointerState::Pressed) {
-        Size char_size = FontEngine::measure_text("A", font_);
+        Size char_size = measure_text_logical("A", font_);
         int line_h = char_size.height + 4;
         
         int text_area_x = content_view_->bounds().x + 8;
@@ -579,7 +614,7 @@ bool RichTextBox::on_content_pointer_event(const Pointer& e) {
         invalidate_content_layout();
         return true;
     } else if (e.state == PointerState::Moved && dragging_selection_) {
-        Size char_size = FontEngine::measure_text("A", font_);
+        Size char_size = measure_text_logical("A", font_);
         int line_h = char_size.height + 4;
         
         int text_area_x = content_view_->bounds().x + 8;
@@ -840,7 +875,7 @@ bool RichTextBox::on_content_text_event(const TextEvent& e) {
 
 Size RichTextBox::measure_content(Size /*constraints*/) {
     // Measure all lines to find the maximum line width and height
-    Size char_size = FontEngine::measure_text("A", font_);
+    Size char_size = measure_text_logical("A", font_);
     int line_h = char_size.height + 4;
     
     int max_w = 0;
@@ -988,7 +1023,7 @@ Size RichTextBox::do_measure(Size constraints) {
     int h = resolve_height(constraints.height, absolute_bounds.height);
 
     if (scroll_container_) {
-        Size char_size = FontEngine::measure_text("A", font_);
+        Size char_size = measure_text_logical("A", font_);
         int max_line_digits = std::to_string(get_lines_count()).size();
         int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
 
@@ -1002,7 +1037,7 @@ Size RichTextBox::do_measure(Size constraints) {
 void RichTextBox::do_layout(Rect bounds) {
     bounds_ = bounds;
 
-    Size char_size = FontEngine::measure_text("A", font_);
+    Size char_size = measure_text_logical("A", font_);
     int max_line_digits = std::to_string(get_lines_count()).size();
     int line_num_width = show_line_numbers ? std::max(40, static_cast<int>(max_line_digits * char_size.width) + 16) : 0;
 

@@ -74,6 +74,8 @@ bool WindowBackend::create(const Size& size, const char* title) {
 }
 
 void WindowBackend::destroy() {
+    decorated_render_target_.reset();
+    render_target_.reset();
     if (glc_) {
         glXMakeCurrent(display_, None, nullptr);
         glXDestroyContext(display_, (GLXContext)glc_);

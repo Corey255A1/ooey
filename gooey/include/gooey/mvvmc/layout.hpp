@@ -7,7 +7,9 @@ namespace gooey {
 enum class SizePolicy {
     Fixed,
     WrapContent,
-    MatchParent
+    MatchParent,
+    Flex,
+    Percentage
 };
 
 struct LayoutLength {
@@ -19,10 +21,20 @@ struct LayoutLength {
 };
 
 enum class Align {
+    Inherit,
     Start,
     Center,
     End,
     Stretch
+};
+
+enum class Justify {
+    Start,
+    Center,
+    End,
+    SpaceBetween,
+    SpaceAround,
+    SpaceEvenly
 };
 
 } // namespace gooey

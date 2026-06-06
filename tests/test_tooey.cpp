@@ -251,3 +251,98 @@ TEST(TooeyLayout, LocalizationTokenizationAndCodegen) {
     EXPECT_NE(result.source.find("->set_localized_label_text(gooey::tr(\"start_wizard\"));"), std::string::npos);
     EXPECT_NE(result.source.find("->set_localized_text(gooey::tr(\"check_this_out\"));"), std::string::npos);
 }
+
+#include "tooey/linter.hpp"
+#include "tooey/hit_tester.hpp"
+#include "gooey/mvvmc/gooey_node.hpp"
+
+TEST(TooeyLayout, LinterBasic) {
+    // 1. Unknown token (lexer error)
+    {
+        std::string dsl = "HBox id=rootLayout:\n    Button &%\n";
+        auto diagnostics = Linter::run_diagnostics(dsl);
+        ASSERT_GE(diagnostics.size(), 1);
+        EXPECT_EQ(diagnostics[0].color.r, 255); // Red error
+    }
+
+    // 2. Duplicate ID check
+    {
+        std::string dsl = 
+            "HBox id=rootLayout:\n"
+            "    Button id=btn\n"
+            "    Button id=btn\n";
+        auto diagnostics = Linter::run_diagnostics(dsl);
+        ASSERT_GE(diagnostics.size(), 1);
+        EXPECT_EQ(diagnostics[0].color.r, 255); // Red error
+    }
+
+    // 3. Unrecognized Control types check
+    {
+        std::string dsl = 
+            "HBox id=rootLayout:\n"
+            "    UnknownControl id=ctrl\n";
+        auto diagnostics = Linter::run_diagnostics(dsl);
+        ASSERT_GE(diagnostics.size(), 1);
+        EXPECT_EQ(diagnostics[0].color.r, 255);
+        EXPECT_EQ(diagnostics[0].color.g, 165); // Orange warning
+    }
+
+    // 4. Missing localization warning
+    {
+        std::string dsl = 
+            "HBox id=rootLayout:\n"
+            "    Button id=btn text=\"Unlocalized Text\"\n";
+        auto diagnostics = Linter::run_diagnostics(dsl);
+        ASSERT_GE(diagnostics.size(), 1);
+        EXPECT_EQ(diagnostics[0].color.r, 255);
+        EXPECT_EQ(diagnostics[0].color.g, 165); // Orange warning
+    }
+
+    // 5. Custom type registration and checking
+    {
+        Linter::reset_known_types();
+        Linter::register_known_type("MyCustomCtrl");
+        std::string dsl = 
+            "HBox id=rootLayout:\n"
+            "    MyCustomCtrl id=ctrl\n";
+        auto diagnostics = Linter::run_diagnostics(dsl);
+        EXPECT_TRUE(diagnostics.empty());
+        Linter::reset_known_types();
+    }
+}
+
+TEST(TooeyLayout, HitTesterBasic) {
+    auto root = std::make_shared<gooey::mvvmc::GooeyNode>();
+    root->layout_bounds = ooey::Rect{0, 0, 800, 600};
+
+    auto child1 = std::make_shared<gooey::mvvmc::GooeyNode>();
+    child1->layout_bounds = ooey::Rect{10, 10, 100, 50};
+    root->add_child(std::move(child1));
+
+    auto child2 = std::make_shared<gooey::mvvmc::GooeyNode>();
+    child2->layout_bounds = ooey::Rect{150, 10, 200, 100};
+    root->add_child(std::move(child2));
+
+    // Get back the children pointers for assertions
+    auto children = root->get_children();
+    ASSERT_EQ(children.size(), 2);
+    auto c1_el = std::dynamic_pointer_cast<gooey::mvvmc::GooeyElement>(children[0]);
+    auto c2_el = std::dynamic_pointer_cast<gooey::mvvmc::GooeyElement>(children[1]);
+
+    // Hit test outside
+    auto hit_none = HitTester::hit_test(root, 900, 900);
+    EXPECT_EQ(hit_none, nullptr);
+
+    // Hit test inside child1
+    auto hit_child1 = HitTester::hit_test(root, 50, 30);
+    EXPECT_EQ(hit_child1, c1_el);
+
+    // Hit test inside child2
+    auto hit_child2 = HitTester::hit_test(root, 200, 50);
+    EXPECT_EQ(hit_child2, c2_el);
+
+    // Hit test inside root but outside children
+    auto hit_root = HitTester::hit_test(root, 3, 3);
+    EXPECT_EQ(hit_root, root);
+}
+

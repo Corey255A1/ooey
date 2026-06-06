@@ -494,6 +494,44 @@ TEST(OoeyControls, RichTextBoxSelectionAndCopyPaste) {
     EXPECT_EQ(box.get_text(), "Hello World - Hello");
 }
 
+TEST(OoeyControls, RichTextBoxTwoWayBindingCursor) {
+    ooey::Font font{"monospace", 14};
+    gooey::RichTextBox box{ooey::Rect{0, 0, 400, 300}, font, ooey::Color{255, 255, 255}, ooey::Color{30, 30, 30}};
+
+    std::string dslText = "VBox id=mainLayout\r\n    Label id=titleLabel text=\"Hello\"\r\n    Button id=btnClick text=\"Interact\"\r\n";
+    box.set_text(dslText);
+    
+    bool is_updating = false;
+    box.on_text_changed = [&](const std::string& text) {
+        if (is_updating) return;
+        is_updating = true;
+        dslText = text;
+        box.set_text(dslText);
+        is_updating = false;
+    };
+    
+    EXPECT_EQ(box.get_cursor_line(), 0);
+    EXPECT_EQ(box.get_cursor_col(), 0);
+    
+    // Press Down arrow
+    box.on_key_event({.key_code=0xFF54, .state=ooey::KeyState::Pressed}); // Down
+    EXPECT_EQ(box.get_cursor_line(), 1);
+    EXPECT_EQ(box.get_cursor_col(), 0);
+    
+    // Press End key
+    box.on_key_event({.key_code=0xFF57, .state=ooey::KeyState::Pressed}); // End
+    EXPECT_EQ(box.get_cursor_line(), 1);
+    int expected_len = std::string("    Label id=titleLabel text=\"Hello\"").size();
+    EXPECT_EQ(box.get_cursor_col(), expected_len);
+    
+    // Type '!'
+    box.on_text_event({static_cast<char32_t>('!')});
+    
+    EXPECT_EQ(box.get_line_text(1), "    Label id=titleLabel text=\"Hello\"!");
+    EXPECT_EQ(box.get_cursor_line(), 1);
+    EXPECT_EQ(box.get_cursor_col(), expected_len + 1);
+}
+
 namespace {
 
 class ChildViewModel : public gooey::ViewModel {

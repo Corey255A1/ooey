@@ -7,6 +7,7 @@
 #include "gooey/mvvmc/localization.hpp"
 #include <memory>
 #include <string>
+#include <limits>
 
 namespace gooey::mvvmc {
     using namespace ooey;
@@ -76,6 +77,11 @@ public:
     LayoutLength width{SizePolicy::WrapContent};
     LayoutLength height{SizePolicy::WrapContent};
 
+    float min_width{0.0f};
+    float max_width{1000000.0f};
+    float min_height{0.0f};
+    float max_height{1000000.0f};
+
     int margin_left{0};
     int margin_top{0};
     int margin_right{0};
@@ -86,7 +92,7 @@ public:
     int padding_right{0};
     int padding_bottom{0};
 
-    Align align_self{Align::Start};
+    Align align_self{Align::Inherit};
 
     // Laid-out absolute boundaries
     Rect layout_bounds{0, 0, 0, 0};
@@ -97,9 +103,15 @@ public:
     // Builder setters for chaining configuration
     GooeyElement& set_width(SizePolicy policy, float value = 0.0f) { width = {policy, value}; return *this; }
     GooeyElement& set_height(SizePolicy policy, float value = 0.0f) { height = {policy, value}; return *this; }
+    GooeyElement& set_min_width(float min_w) { min_width = min_w; return *this; }
+    GooeyElement& set_max_width(float max_w) { max_width = max_w; return *this; }
+    GooeyElement& set_min_height(float min_h) { min_height = min_h; return *this; }
+    GooeyElement& set_max_height(float max_h) { max_height = max_h; return *this; }
     GooeyElement& set_margin(int margin) { margin_left = margin_top = margin_right = margin_bottom = margin; return *this; }
+    GooeyElement& set_margin(int vertical, int horizontal) { margin_top = margin_bottom = vertical; margin_left = margin_right = horizontal; return *this; }
     GooeyElement& set_margin(int left, int top, int right, int bottom) { margin_left = left; margin_top = top; margin_right = right; margin_bottom = bottom; return *this; }
     GooeyElement& set_padding(int padding) { padding_left = padding_top = padding_right = padding_bottom = padding; return *this; }
+    GooeyElement& set_padding(int vertical, int horizontal) { padding_top = padding_bottom = vertical; padding_left = padding_right = horizontal; return *this; }
     GooeyElement& set_padding(int left, int top, int right, int bottom) { padding_left = left; padding_top = top; padding_right = right; padding_bottom = bottom; return *this; }
     GooeyElement& set_align_self(Align align) { align_self = align; return *this; }
     GooeyElement& set_absolute(bool absolute) { is_absolute = absolute; return *this; }
@@ -119,6 +131,7 @@ public:
     // Helpers to resolve width/height according to policies under parent constraints
     int resolve_width(int constraint_w, int content_w) const;
     int resolve_height(int constraint_h, int content_h) const;
+    Size get_measured_size() const { return measured_size_; }
 
     // Styling and Theme support
     void set_style_name(const std::string& name);
