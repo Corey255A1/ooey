@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <any>
 
 namespace gooey::controls {
     using namespace ooey;
@@ -18,6 +19,8 @@ namespace gooey::controls {
 struct DataGridColumn {
     std::string header;
     int width;
+    std::function<std::shared_ptr<gooey::mvvmc::GooeyElement>()> cell_factory;
+    std::function<void(const std::shared_ptr<gooey::mvvmc::GooeyElement>&, const std::any&, int)> cell_binder;
 };
 
 class DataGrid : public GooeyNode, public IInteractive {
@@ -31,6 +34,11 @@ public:
 
     void set_rows(const std::vector<std::vector<std::string>>& rows);
     const std::vector<std::vector<std::string>>& get_rows() const { return rows_; }
+
+    void set_items(const std::vector<std::any>& items);
+    const std::vector<std::any>& get_items() const { return items_; }
+    int get_row_count() const;
+    void update_cell_values();
 
     // separation lines styling
     void set_show_column_lines(bool show) { show_column_lines_ = show; invalidate_layout(); }
@@ -68,7 +76,6 @@ protected:
 private:
     void update_layout_elements();
     void update_scroll_ranges();
-    void update_cell_values();
 
     Rect bounds_;
     int row_height_;
@@ -107,7 +114,8 @@ private:
     std::vector<std::shared_ptr<LinePrimitive>> column_dividers_;
 
     std::vector<std::vector<std::shared_ptr<RectPrimitive>>> cell_bgs_;
-    std::vector<std::vector<std::shared_ptr<TextPrimitive>>> cell_texts_;
+    std::vector<std::vector<std::shared_ptr<gooey::mvvmc::GooeyElement>>> cell_elements_;
+    std::vector<std::any> items_;
 
     std::shared_ptr<ScrollBar> v_scroll_;
     std::shared_ptr<ScrollBar> h_scroll_;

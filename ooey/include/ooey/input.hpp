@@ -55,6 +55,13 @@ public:
     const std::vector<KeyEvent>& get_key_events() const { return key_events_; }
     const std::vector<TextEvent>& get_text_events() const { return text_events_; }
     
+    bool is_key_pressed(int key_code) const {
+        for (int k : pressed_keys_) {
+            if (k == key_code) return true;
+        }
+        return false;
+    }
+
     // Clear transient states like 'Moved' if no longer moving, etc.
     void update();
 
@@ -66,6 +73,7 @@ private:
     std::vector<Pointer> pointer_events_; // events for this frame
     std::vector<KeyEvent> key_events_; // For this frame
     std::vector<TextEvent> text_events_; // For this frame
+    std::vector<int> pressed_keys_; // currently held keys
     float scale_{1.0f};
 };
 

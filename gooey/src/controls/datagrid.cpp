@@ -1,4 +1,5 @@
 #include "gooey/controls/datagrid.hpp"
+#include "gooey/controls/label.hpp"
 #include <algorithm>
 
 namespace gooey::controls {
@@ -61,10 +62,10 @@ void DataGrid::set_rows(const std::vector<std::vector<std::string>>& rows) {
     if (visible_rows_count_ <= 0) visible_rows_count_ = 1;
 
     if (v_scroll_) {
-        v_scroll_->set_range(0, static_cast<int>(rows_.size()), visible_rows_count_);
+        v_scroll_->set_range(0, get_row_count(), visible_rows_count_);
     }
 
-    int max_scroll = std::max(0, static_cast<int>(rows_.size()) - visible_rows_count_);
+    int max_scroll = std::max(0, get_row_count() - visible_rows_count_);
     if (scroll_offset_y_ > max_scroll) {
         scroll_offset_y_ = max_scroll;
         if (v_scroll_) {
@@ -74,6 +75,40 @@ void DataGrid::set_rows(const std::vector<std::vector<std::string>>& rows) {
 
     update_layout_elements();
     invalidate_layout();
+}
+
+void DataGrid::set_items(const std::vector<std::any>& items) {
+    items_ = items;
+
+    int header_height = row_height_ + 6;
+    int viewport_h = bounds_.height - header_height;
+    if (h_scroll_ && h_scroll_->bounds().height > 0) {
+        viewport_h = std::max(0, viewport_h - 12);
+    }
+    visible_rows_count_ = row_height_ > 0 ? (viewport_h / row_height_) : 1;
+    if (visible_rows_count_ <= 0) visible_rows_count_ = 1;
+
+    if (v_scroll_) {
+        v_scroll_->set_range(0, get_row_count(), visible_rows_count_);
+    }
+
+    int max_scroll = std::max(0, get_row_count() - visible_rows_count_);
+    if (scroll_offset_y_ > max_scroll) {
+        scroll_offset_y_ = max_scroll;
+        if (v_scroll_) {
+            v_scroll_->set_value(scroll_offset_y_);
+        }
+    }
+
+    update_layout_elements();
+    invalidate_layout();
+}
+
+int DataGrid::get_row_count() const {
+    if (!items_.empty()) {
+        return static_cast<int>(items_.size());
+    }
+    return static_cast<int>(rows_.size());
 }
 
 bool DataGrid::on_pointer_event(const Pointer& e) {
@@ -161,7 +196,7 @@ void DataGrid::update_layout_elements() {
     column_dividers_.clear();
     row_dividers_.clear();
     cell_bgs_.clear();
-    cell_texts_.clear();
+    cell_elements_.clear();
 
     if (columns_.empty()) {
         return;
@@ -176,7 +211,7 @@ void DataGrid::update_layout_elements() {
     int viewport_w = bounds_.width;
     int viewport_h = bounds_.height - header_height;
 
-    bool need_v = (static_cast<int>(rows_.size()) * row_height_) > viewport_h;
+    bool need_v = (get_row_count() * row_height_) > viewport_h;
     bool need_h = total_col_width > viewport_w;
 
     if (need_v) {
@@ -185,7 +220,7 @@ void DataGrid::update_layout_elements() {
     if (need_h) {
         viewport_h = std::max(0, viewport_h - 12);
     }
-    need_v = (static_cast<int>(rows_.size()) * row_height_) > viewport_h;
+    need_v = (get_row_count() * row_height_) > viewport_h;
     need_h = total_col_width > viewport_w;
 
     visible_rows_count_ = row_height_ > 0 ? (viewport_h / row_height_) : 1;
@@ -194,7 +229,7 @@ void DataGrid::update_layout_elements() {
     Rect v_scroll_bounds = need_v ? Rect{bounds_.x + bounds_.width - 12, bounds_.y + header_height, 12, viewport_h} : Rect{0, 0, 0, 0};
     Rect h_scroll_bounds = need_h ? Rect{bounds_.x, bounds_.y + bounds_.height - 12, viewport_w, 12} : Rect{0, 0, 0, 0};
 
-    v_scroll_->set_range(0, static_cast<int>(rows_.size()), visible_rows_count_);
+    v_scroll_->set_range(0, get_row_count(), visible_rows_count_);
     v_scroll_->layout(v_scroll_bounds);
 
     h_scroll_->set_range(0, total_col_width, viewport_w);
@@ -256,11 +291,11 @@ void DataGrid::update_layout_elements() {
     }
 
     cell_bgs_.resize(visible_rows_count_);
-    cell_texts_.resize(visible_rows_count_);
+    cell_elements_.resize(visible_rows_count_);
 
     for (int r = 0; r < visible_rows_count_; ++r) {
         cell_bgs_[r].clear();
-        cell_texts_[r].clear();
+        cell_elements_[r].clear();
 
         int row_y = bounds_.y + header_height + r * row_height_;
         if (row_y + row_height_ > bounds_.y + bounds_.height - (need_h ? 12 : 0)) {
@@ -268,7 +303,8 @@ void DataGrid::update_layout_elements() {
         }
 
         col_x_offset = bounds_.x - scroll_offset_x_;
-        for (const auto & col : columns_) {
+        for (size_t col_idx = 0; col_idx < columns_.size(); ++col_idx) {
+            const auto& col = columns_[col_idx];
             if (col_x_offset + col.width < bounds_.x || col_x_offset > bounds_.x + viewport_w) {
                 col_x_offset += col.width;
                 continue;
@@ -287,11 +323,19 @@ void DataGrid::update_layout_elements() {
             auto cell_bg = std::make_shared<RectPrimitive>(cell_rect, bg_col);
             cell_bgs_[r].push_back(cell_bg);
 
-            Point text_pos{col_x_offset + 5, row_y + (row_height_ - font_.size) / 2};
-            if (text_pos.x >= bounds_.x && text_pos.x + 10 < bounds_.x + viewport_w) {
-                auto cell_text = std::make_shared<TextPrimitive>("", font_, text_pos, text_color_);
-                cell_texts_[r].push_back(cell_text);
+            auto cell_el = col.cell_factory ? col.cell_factory() : std::make_shared<Label>();
+            cell_el->set_absolute(true);
+            cell_el->set_absolute_bounds(cell_rect);
+            if (!col.cell_factory) {
+                auto lbl = std::dynamic_pointer_cast<Label>(cell_el);
+                if (lbl) {
+                    lbl->set_font(font_);
+                    lbl->set_color(text_color_);
+                    lbl->padding_left = 5;
+                }
             }
+            cell_el->layout(cell_rect);
+            cell_elements_[r].push_back(cell_el);
 
             col_x_offset += col.width;
         }
@@ -339,13 +383,13 @@ void DataGrid::update_layout_elements() {
         add_child(divider);
     }
 
-    // 5. Text labels (always on top of cell backgrounds and grid lines)
+    // 5. Custom elements and labels (always on top of cell backgrounds and grid lines)
     for (const auto& txt : header_texts_) {
         add_child(txt);
     }
-    for (const auto& row_texts : cell_texts_) {
-        for (const auto& cell_text : row_texts) {
-            add_child(cell_text);
+    for (const auto& row_els : cell_elements_) {
+        for (const auto& cell_el : row_els) {
+            add_child(cell_el);
         }
     }
 
@@ -362,9 +406,9 @@ void DataGrid::update_cell_values() {
 
     for (int r = 0; r < visible_rows_count_; ++r) {
         int row_idx = scroll_offset_y_ + r;
-        bool has_row = row_idx < static_cast<int>(rows_.size());
+        bool has_row = row_idx < get_row_count();
 
-        size_t cell_text_idx = 0;
+        size_t cell_idx = 0;
         int col_x_offset = bounds_.x - scroll_offset_x_;
         for (size_t col_idx = 0; col_idx < columns_.size(); ++col_idx) {
             const auto& col = columns_[col_idx];
@@ -374,14 +418,34 @@ void DataGrid::update_cell_values() {
                 continue;
             }
 
-            if (r < static_cast<int>(cell_texts_.size()) && cell_text_idx < cell_texts_[r].size()) {
-                auto& txt_prim = cell_texts_[r][cell_text_idx];
-                if (has_row && col_idx < rows_[row_idx].size()) {
-                    txt_prim->set_text(rows_[row_idx][col_idx]);
+            if (r < static_cast<int>(cell_elements_.size()) && cell_idx < cell_elements_[r].size()) {
+                auto& cell_el = cell_elements_[r][cell_idx];
+                if (has_row) {
+                    if (!items_.empty()) {
+                        if (col.cell_binder) {
+                            col.cell_binder(cell_el, items_[row_idx], row_idx);
+                        }
+                    } else if (col_idx < rows_[row_idx].size()) {
+                        if (col.cell_binder) {
+                            col.cell_binder(cell_el, rows_[row_idx][col_idx], row_idx);
+                        } else {
+                            auto lbl = std::dynamic_pointer_cast<Label>(cell_el);
+                            if (lbl) {
+                                lbl->set_text(rows_[row_idx][col_idx]);
+                            }
+                        }
+                    }
                 } else {
-                    txt_prim->set_text("");
+                    if (col.cell_binder) {
+                        col.cell_binder(cell_el, std::any(), row_idx);
+                    } else {
+                        auto lbl = std::dynamic_pointer_cast<Label>(cell_el);
+                        if (lbl) {
+                            lbl->set_text("");
+                        }
+                    }
                 }
-                cell_text_idx++;
+                cell_idx++;
             }
 
             col_x_offset += col.width;

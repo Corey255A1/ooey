@@ -2,10 +2,11 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace tooey {
 
-enum class TokenType {
+enum class TokenType : std::uint8_t {
     INDENT,
     USE,
     ELEMENT,

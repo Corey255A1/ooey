@@ -63,7 +63,7 @@ void set_control_value(std::shared_ptr<Control> control, const T& val) {
 }
 
 template <typename Control, typename T>
-void operator<<=(std::shared_ptr<Control> control, gooey::mvvmc::Property<T>& property) {
+void operator<<=(const std::shared_ptr<Control>& control, gooey::mvvmc::Property<T>& property) {
     if (!control) return;
     
     // Capture control weakly to break cyclic references between ViewModel properties and View hierarchies

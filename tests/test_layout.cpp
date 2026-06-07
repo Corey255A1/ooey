@@ -517,6 +517,84 @@ TEST(LayoutTest, DataGridVirtualizationAndSetup) {
     EXPECT_EQ(grid.get_row_line_style(), LineStyle::Dotted);
 }
 
+#include "gooey/controls/checkbox.hpp"
+
+TEST(LayoutTest, DataGridCustomCellsAndItems) {
+    Font font{"sans-serif", 12};
+    DataGrid grid(Rect{0, 0, 400, 300}, 20, font);
+
+    struct MyTask {
+        std::string name;
+        bool done;
+    };
+
+    std::vector<MyTask> tasks = {
+        {"Task A", false},
+        {"Task B", true},
+        {"Task C", false}
+    };
+
+    std::vector<std::any> items;
+    for (const auto& t : tasks) {
+        items.push_back(t);
+    }
+
+    std::vector<DataGridColumn> cols = {
+        {
+            .header="Task Name",
+            .width=200,
+            .cell_factory=nullptr,
+            .cell_binder=[](const std::shared_ptr<gooey::mvvmc::GooeyElement>& el, const std::any& item, int idx) {
+                auto lbl = std::dynamic_pointer_cast<Label>(el);
+                ASSERT_NE(lbl, nullptr);
+                if (item.has_value()) {
+                    auto t = std::any_cast<MyTask>(item);
+                    lbl->set_text(t.name);
+                } else {
+                    lbl->set_text("");
+                }
+            }
+        },
+        {
+            .header="Done",
+            .width=100,
+            .cell_factory=[]() {
+                return std::make_shared<CheckBox>();
+            },
+            .cell_binder=[](const std::shared_ptr<gooey::mvvmc::GooeyElement>& el, const std::any& item, int idx) {
+                auto cb = std::dynamic_pointer_cast<CheckBox>(el);
+                ASSERT_NE(cb, nullptr);
+                if (item.has_value()) {
+                    auto t = std::any_cast<MyTask>(item);
+                    cb->set_checked(t.done);
+                } else {
+                    cb->set_checked(false);
+                }
+            }
+        }
+    };
+
+    grid.set_columns(cols);
+    grid.set_items(items);
+
+    EXPECT_EQ(grid.get_row_count(), 3);
+
+    grid.layout(Rect{0, 0, 400, 300});
+
+    auto children = grid.get_children();
+    bool found_label = false;
+    bool found_checkbox = false;
+    for (const auto& child : children) {
+        if (std::dynamic_pointer_cast<Label>(child)) {
+            found_label = true;
+        } else if (std::dynamic_pointer_cast<CheckBox>(child)) {
+            found_checkbox = true;
+        }
+    }
+    EXPECT_TRUE(found_label);
+    EXPECT_TRUE(found_checkbox);
+}
+
 TEST(LayoutTest, AdaptiveStackHorizontal) {
     auto stack = std::make_shared<AdaptiveStack>();
     stack->set_breakpoint(600);

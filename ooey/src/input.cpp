@@ -26,6 +26,25 @@ void InputManager::push_pointer_event(const Pointer& pointer) {
 
 void InputManager::push_key_event(const KeyEvent& key_event) {
     key_events_.push_back(key_event);
+    if (key_event.state == KeyState::Pressed) {
+        bool found = false;
+        for (int k : pressed_keys_) {
+            if (k == key_event.key_code) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            pressed_keys_.push_back(key_event.key_code);
+        }
+    } else if (key_event.state == KeyState::Released) {
+        for (auto it = pressed_keys_.begin(); it != pressed_keys_.end(); ++it) {
+            if (*it == key_event.key_code) {
+                pressed_keys_.erase(it);
+                break;
+            }
+        }
+    }
 }
 
 void InputManager::push_text_event(const TextEvent& text_event) {

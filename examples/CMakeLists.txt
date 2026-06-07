@@ -66,6 +66,9 @@ if(OOEY_BUILD_CONTROLS)
     add_ooey_executable(hello_reflection hello_reflection.cpp)
     target_link_libraries(hello_reflection PRIVATE ooey ooey_controls)
 
+    add_ooey_executable(hello_spreadsheet hello_spreadsheet.cpp)
+    target_link_libraries(hello_spreadsheet PRIVATE ooey ooey_controls)
+
 
     if(NOT EMSCRIPTEN AND NOT ANDROID)
         find_package(Boost)

@@ -4,10 +4,11 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <cstdint>
 
 namespace tooey {
 
-enum class PropertyType {
+enum class PropertyType : std::uint8_t {
     String,
     Number,
     Boolean,
