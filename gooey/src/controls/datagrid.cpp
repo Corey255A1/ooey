@@ -46,12 +46,14 @@ Rect DataGrid::bounds() const {
 
 void DataGrid::set_columns(const std::vector<DataGridColumn>& columns) {
     columns_ = columns;
+    cell_cache_.clear();
     update_layout_elements();
     invalidate_layout();
 }
 
 void DataGrid::set_rows(const std::vector<std::vector<std::string>>& rows) {
     rows_ = rows;
+    cell_cache_.clear();
 
     int header_height = row_height_ + 6;
     int viewport_h = bounds_.height - header_height;
@@ -79,6 +81,7 @@ void DataGrid::set_rows(const std::vector<std::vector<std::string>>& rows) {
 
 void DataGrid::set_items(const std::vector<std::any>& items) {
     items_ = items;
+    cell_cache_.clear();
 
     int header_height = row_height_ + 6;
     int viewport_h = bounds_.height - header_height;
@@ -290,6 +293,15 @@ void DataGrid::update_layout_elements() {
         col_x_offset += col.width;
     }
 
+    if (cell_cache_.size() != static_cast<size_t>(get_row_count())) {
+        cell_cache_.resize(get_row_count());
+    }
+    for (auto& row_cache : cell_cache_) {
+        if (row_cache.size() != columns_.size()) {
+            row_cache.resize(columns_.size());
+        }
+    }
+
     cell_bgs_.resize(visible_rows_count_);
     cell_elements_.resize(visible_rows_count_);
 
@@ -297,6 +309,7 @@ void DataGrid::update_layout_elements() {
         cell_bgs_[r].clear();
         cell_elements_[r].clear();
 
+        int row_idx = scroll_offset_y_ + r;
         int row_y = bounds_.y + header_height + r * row_height_;
         if (row_y + row_height_ > bounds_.y + bounds_.height - (need_h ? 12 : 0)) {
             break;
@@ -323,7 +336,18 @@ void DataGrid::update_layout_elements() {
             auto cell_bg = std::make_shared<RectPrimitive>(cell_rect, bg_col);
             cell_bgs_[r].push_back(cell_bg);
 
-            auto cell_el = col.cell_factory ? col.cell_factory() : std::make_shared<Label>();
+            std::shared_ptr<gooey::mvvmc::GooeyElement> cell_el;
+            if (row_idx >= 0 && row_idx < static_cast<int>(cell_cache_.size()) &&
+                col_idx < cell_cache_[row_idx].size() && cell_cache_[row_idx][col_idx]) {
+                cell_el = cell_cache_[row_idx][col_idx];
+            } else {
+                cell_el = col.cell_factory ? col.cell_factory() : std::make_shared<Label>();
+                if (row_idx >= 0 && row_idx < static_cast<int>(cell_cache_.size()) &&
+                    col_idx < cell_cache_[row_idx].size()) {
+                    cell_cache_[row_idx][col_idx] = cell_el;
+                }
+            }
+
             cell_el->set_absolute(true);
             cell_el->set_absolute_bounds(cell_rect);
             if (!col.cell_factory) {

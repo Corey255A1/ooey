@@ -115,6 +115,7 @@ private:
 
     std::vector<std::vector<std::shared_ptr<RectPrimitive>>> cell_bgs_;
     std::vector<std::vector<std::shared_ptr<gooey::mvvmc::GooeyElement>>> cell_elements_;
+    std::vector<std::vector<std::shared_ptr<gooey::mvvmc::GooeyElement>>> cell_cache_;
     std::vector<std::any> items_;
 
     std::shared_ptr<ScrollBar> v_scroll_;

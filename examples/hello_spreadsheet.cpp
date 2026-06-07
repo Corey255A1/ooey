@@ -54,7 +54,10 @@ public:
     }
 
     void set_row_index(int idx) {
-        row_idx_ = idx;
+        if (row_idx_ != idx) {
+            row_idx_ = idx;
+            is_editing_ = false;
+        }
     }
 
     void set_row_data(std::shared_ptr<SpreadsheetRow> row_data) {

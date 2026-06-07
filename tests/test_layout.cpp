@@ -12,6 +12,7 @@
 #include "gooey/controls/vector_shape_view.hpp"
 #include "gooey/controls/rich_text_box.hpp"
 #include "gooey/mvvmc/controller.hpp"
+#include "gooey/application.hpp"
 
 using namespace gooey;
 using namespace ooey;
@@ -1188,7 +1189,12 @@ public:
     Rect bounds() const override { return layout_bounds; }
     void set_text(const std::string& text) { textbox_->set_text(text); }
     std::string get_text() const { return textbox_->get_text(); }
-    void set_row_index(int idx) { row_idx_ = idx; }
+    void set_row_index(int idx) {
+        if (row_idx_ != idx) {
+            row_idx_ = idx;
+            is_editing_ = false;
+        }
+    }
     void set_row_data(std::shared_ptr<TestSpreadsheetRow> row_data) { row_data_ = row_data; }
     void set_selected(bool selected) {
         if (is_selected_ != selected) {
@@ -1201,7 +1207,14 @@ public:
     bool is_selected() const { return is_selected_; }
     bool is_editing() const { return is_editing_; }
 
-    void draw(ooey::IRenderTarget& target) const override {}
+    void draw(ooey::IRenderTarget& target) const override {
+        if (is_editing_) {
+            auto* controller = dynamic_cast<gooey::mvvmc::Controller*>(Application::get_instance()->get_controller());
+            if (controller && controller->get_focused_element().get() != this) {
+                is_editing_ = false;
+            }
+        }
+    }
 
     bool on_pointer_event(const Pointer& e) override {
         bool hit = (e.x >= layout_bounds.x && e.x <= layout_bounds.x + layout_bounds.width &&
@@ -1279,9 +1292,6 @@ TEST(LayoutTest, SpreadsheetEditingInteraction) {
     root->set_width(SizePolicy::Fixed, 500.0f);
     root->set_height(SizePolicy::Fixed, 500.0f);
 
-    InputManager input_manager;
-    auto controller = std::make_shared<gooey::mvvmc::Controller>(input_manager, root);
-
     auto grid = std::make_shared<DataGrid>(Rect{10, 10, 400, 300}, 30, font);
     root->add_child(grid);
 
@@ -1343,6 +1353,13 @@ TEST(LayoutTest, SpreadsheetEditingInteraction) {
     }
     grid->set_items(grid_items);
 
+    Application app;
+    app.set_root_view(std::shared_ptr<GooeyNode>(root));
+
+    auto* controller = dynamic_cast<gooey::mvvmc::Controller*>(app.get_controller());
+    ASSERT_NE(controller, nullptr);
+    auto& input_manager = app.get_input_manager();
+
     root->measure(Size{500, 500});
     root->layout(Rect{0, 0, 500, 500});
 
@@ -1388,6 +1405,39 @@ TEST(LayoutTest, SpreadsheetEditingInteraction) {
     input_manager.push_pointer_event(Pointer{.id=0, .x=click_x, .y=click_y, .state=PointerState::Released});
     controller->process_events();
     input_manager.update();
+
+    // Call draw on cell00 to test if focused check in draw succeeds
+    class MockRenderTarget : public ooey::IRenderTarget {
+    public:
+        void clear(Color) override {}
+        void draw_geometry(const Geometry&) override {}
+        void draw_image(const Image&, const Rect&) override {}
+        Size measure_text(const std::string&, const Font&) override { return Size{0, 0}; }
+        void draw_text(const std::string&, const Font&, const Point&, Color) override {}
+        void push_clip(const Rect&) override {}
+        void pop_clip() override {}
+        void present() override {}
+    };
+    MockRenderTarget target;
+    cell00->draw(target);
+    EXPECT_TRUE(cell00->is_editing()); // MUST REMAIN TRUE!
+
+    // Trigger another layout pass to test cell reuse and editing state persistence
+    root->layout(Rect{0, 0, 500, 500});
+
+    // Find the cell (0, 0) in the grid children again
+    std::shared_ptr<TestSpreadsheetCell> cell00_after_layout = nullptr;
+    for (auto& child : grid->get_children()) {
+        auto cell = std::dynamic_pointer_cast<TestSpreadsheetCell>(child);
+        if (cell) {
+            if (!cell00_after_layout || (cell->bounds().y < cell00_after_layout->bounds().y) || 
+                (cell->bounds().y == cell00_after_layout->bounds().y && cell->bounds().x < cell00_after_layout->bounds().x)) {
+                cell00_after_layout = cell;
+            }
+        }
+    }
+    EXPECT_EQ(cell00_after_layout, cell00); // Must be the same instance!
+    EXPECT_TRUE(cell00_after_layout->is_editing()); // Must still be editing!
 
     // 3. Simulate typing "5"
     input_manager.push_text_event(TextEvent{.codepoint='5'});
