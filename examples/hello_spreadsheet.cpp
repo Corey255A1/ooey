@@ -146,6 +146,7 @@ public:
                     invalidate_layout();
                 } else {
                     is_editing_ = true;
+                    original_value_ = textbox_->get_text();
                     textbox_->on_pointer_event(e);
                     invalidate_layout();
                 }
@@ -164,8 +165,9 @@ public:
             if (e.state == KeyState::Pressed) {
                 if (e.key_code == 0xFF1B || e.key_code == 27) { // Escape
                     // Revert text
+                    textbox_->set_text(original_value_);
                     if (row_data_) {
-                        textbox_->set_text(row_data_->cells[col_idx_].value);
+                        row_data_->cells[col_idx_].value = original_value_;
                     }
                     is_editing_ = false;
                     invalidate_layout();
@@ -225,6 +227,7 @@ private:
     int col_idx_;
     bool is_selected_{false};
     mutable bool is_editing_{false};
+    std::string original_value_;
     std::shared_ptr<SpreadsheetRow> row_data_{nullptr};
     std::function<void(int, int, bool)> on_select_changed_;
     std::function<void()> on_clear_selection_;

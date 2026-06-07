@@ -1165,6 +1165,249 @@ TEST(LayoutTest, ProportionalFlexAndAlignment) {
     EXPECT_EQ(fixed_child2->layout_bounds.x, 240);
 }
 
+#include "gooey/controls/checkbox.hpp"
+#include "gooey/controls/text_box.hpp"
+#include "gooey/controls/datagrid.hpp"
+#include <any>
+
+struct TestSpreadsheetRow {
+    struct CellData {
+        std::string value{"0"};
+        bool selected{false};
+    };
+    CellData cells[3];
+};
+
+class TestSpreadsheetCell : public gooey::GooeyElement, public IInteractive, public std::enable_shared_from_this<TestSpreadsheetCell> {
+public:
+    TestSpreadsheetCell(int row_idx, int col_idx, std::function<void(int, int, bool)> on_select_changed, std::function<void()> on_clear_selection)
+        : row_idx_(row_idx), col_idx_(col_idx), on_select_changed_(on_select_changed), on_clear_selection_(on_clear_selection) {
+        textbox_ = std::make_shared<gooey::controls::TextBox>();
+    }
+
+    Rect bounds() const override { return layout_bounds; }
+    void set_text(const std::string& text) { textbox_->set_text(text); }
+    std::string get_text() const { return textbox_->get_text(); }
+    void set_row_index(int idx) { row_idx_ = idx; }
+    void set_row_data(std::shared_ptr<TestSpreadsheetRow> row_data) { row_data_ = row_data; }
+    void set_selected(bool selected) {
+        if (is_selected_ != selected) {
+            is_selected_ = selected;
+            if (on_select_changed_) on_select_changed_(row_idx_, col_idx_, selected);
+            invalidate_layout();
+        }
+        if (!is_selected_) is_editing_ = false;
+    }
+    bool is_selected() const { return is_selected_; }
+    bool is_editing() const { return is_editing_; }
+
+    void draw(ooey::IRenderTarget& target) const override {}
+
+    bool on_pointer_event(const Pointer& e) override {
+        bool hit = (e.x >= layout_bounds.x && e.x <= layout_bounds.x + layout_bounds.width &&
+                    e.y >= layout_bounds.y && e.y <= layout_bounds.y + layout_bounds.height);
+        if (hit && e.state == PointerState::Pressed) {
+            if (!is_selected_) {
+                if (on_clear_selection_) on_clear_selection_();
+                set_selected(true);
+                is_editing_ = false;
+                invalidate_layout();
+            } else {
+                is_editing_ = true;
+                original_value_ = textbox_->get_text();
+                textbox_->on_pointer_event(e);
+                invalidate_layout();
+            }
+            return true;
+        }
+        if (is_editing_) return textbox_->on_pointer_event(e);
+        return false;
+    }
+
+    bool on_key_event(const KeyEvent& e) override {
+        if (is_editing_) {
+            if (e.state == KeyState::Pressed) {
+                if (e.key_code == 0xFF1B || e.key_code == 27) { // Escape
+                    textbox_->set_text(original_value_);
+                    if (row_data_) {
+                        row_data_->cells[col_idx_].value = original_value_;
+                    }
+                    is_editing_ = false;
+                    invalidate_layout();
+                    return true;
+                } else if (e.key_code == 0xFF0D || e.key_code == 13 || e.key_code == 10) { // Return
+                    is_editing_ = false;
+                    invalidate_layout();
+                    return true;
+                }
+            }
+            return textbox_->on_key_event(e);
+        }
+        return false;
+    }
+
+    bool on_text_event(const TextEvent& e) override {
+        if (is_editing_) {
+            return textbox_->on_text_event(e);
+        }
+        return false;
+    }
+
+    std::shared_ptr<gooey::controls::TextBox> textbox() const { return textbox_; }
+
+protected:
+    void do_layout(Rect bounds) override {
+        GooeyElement::do_layout(bounds);
+        if (textbox_) textbox_->layout(bounds);
+    }
+
+private:
+    std::shared_ptr<gooey::controls::TextBox> textbox_;
+    int row_idx_;
+    int col_idx_;
+    bool is_selected_{false};
+    mutable bool is_editing_{false};
+    std::string original_value_;
+    std::shared_ptr<TestSpreadsheetRow> row_data_{nullptr};
+    std::function<void(int, int, bool)> on_select_changed_;
+    std::function<void()> on_clear_selection_;
+};
+
+TEST(LayoutTest, SpreadsheetEditingInteraction) {
+    Font font{"sans-serif", 12};
+    auto root = std::make_shared<GooeyNode>();
+    root->set_width(SizePolicy::Fixed, 500.0f);
+    root->set_height(SizePolicy::Fixed, 500.0f);
+
+    InputManager input_manager;
+    auto controller = std::make_shared<gooey::mvvmc::Controller>(input_manager, root);
+
+    auto grid = std::make_shared<DataGrid>(Rect{10, 10, 400, 300}, 30, font);
+    root->add_child(grid);
+
+    auto rows = std::make_shared<std::vector<std::shared_ptr<TestSpreadsheetRow>>>();
+    for (int i = 0; i < 5; ++i) {
+        auto r = std::make_shared<TestSpreadsheetRow>();
+        r->cells[0].value = std::to_string((i + 1) * 10);
+        r->cells[1].value = std::to_string((i + 1) * 5);
+        r->cells[2].value = std::to_string(i + 1);
+        rows->push_back(r);
+    }
+
+    std::vector<DataGridColumn> cols;
+    for (int col_idx = 0; col_idx < 3; ++col_idx) {
+        DataGridColumn col;
+        col.header = std::string(1, 'A' + col_idx);
+        col.width = 100;
+        col.cell_factory = [rows, col_idx, grid_weak = std::weak_ptr<DataGrid>(grid)]() {
+            return std::make_shared<TestSpreadsheetCell>(
+                0, col_idx,
+                [rows](int r, int c, bool sel) {
+                    if (r < static_cast<int>(rows->size())) {
+                        (*rows)[r]->cells[c].selected = sel;
+                    }
+                },
+                [rows, grid_weak]() {
+                    for (auto& row : *rows) {
+                        for (int col = 0; col < 3; ++col) {
+                            row->cells[col].selected = false;
+                        }
+                    }
+                    if (auto g = grid_weak.lock()) {
+                        g->update_cell_values();
+                    }
+                }
+            );
+        };
+        col.cell_binder = [col_idx](const std::shared_ptr<GooeyElement>& el, const std::any& item, int row_idx) {
+            auto cell = std::dynamic_pointer_cast<TestSpreadsheetCell>(el);
+            if (!cell) return;
+            cell->set_row_index(row_idx);
+            if (item.has_value()) {
+                auto row_data = std::any_cast<std::shared_ptr<TestSpreadsheetRow>>(item);
+                cell->set_row_data(row_data);
+                cell->set_text(row_data->cells[col_idx].value);
+                cell->set_selected(row_data->cells[col_idx].selected);
+                cell->textbox()->on_text_changed = [row_data, col_idx](const std::string& val) {
+                    row_data->cells[col_idx].value = val;
+                };
+            }
+        };
+        cols.push_back(col);
+    }
+    grid->set_columns(cols);
+
+    std::vector<std::any> grid_items;
+    for (const auto& r : *rows) {
+        grid_items.push_back(r);
+    }
+    grid->set_items(grid_items);
+
+    root->measure(Size{500, 500});
+    root->layout(Rect{0, 0, 500, 500});
+
+    // Find the cell (0, 0) in the grid children
+    std::shared_ptr<TestSpreadsheetCell> cell00 = nullptr;
+    for (auto& child : grid->get_children()) {
+        auto cell = std::dynamic_pointer_cast<TestSpreadsheetCell>(child);
+        if (cell) {
+            if (!cell00 || (cell->bounds().y < cell00->bounds().y) || 
+                (cell->bounds().y == cell00->bounds().y && cell->bounds().x < cell00->bounds().x)) {
+                cell00 = cell;
+            }
+        }
+    }
+    ASSERT_NE(cell00, nullptr);
+    EXPECT_FALSE(cell00->is_selected());
+    EXPECT_FALSE(cell00->is_editing());
+
+    // 1. Simulate first click (Select)
+    Rect cbounds = cell00->bounds();
+    int click_x = cbounds.x + 5;
+    int click_y = cbounds.y + 5;
+
+    input_manager.push_pointer_event(Pointer{.id=0, .x=click_x, .y=click_y, .state=PointerState::Pressed});
+    controller->process_events();
+    EXPECT_TRUE(cell00->is_selected());
+    EXPECT_FALSE(cell00->is_editing());
+    input_manager.update();
+
+    // Send released event to clean capture
+    input_manager.push_pointer_event(Pointer{.id=0, .x=click_x, .y=click_y, .state=PointerState::Released});
+    controller->process_events();
+    input_manager.update();
+
+    // 2. Simulate second click (Enter Edit Mode)
+    input_manager.push_pointer_event(Pointer{.id=0, .x=click_x, .y=click_y, .state=PointerState::Pressed});
+    controller->process_events();
+    EXPECT_TRUE(cell00->is_selected());
+    EXPECT_TRUE(cell00->is_editing());
+    EXPECT_EQ(controller->get_focused_element(), cell00);
+    input_manager.update();
+
+    input_manager.push_pointer_event(Pointer{.id=0, .x=click_x, .y=click_y, .state=PointerState::Released});
+    controller->process_events();
+    input_manager.update();
+
+    // 3. Simulate typing "5"
+    input_manager.push_text_event(TextEvent{.codepoint='5'});
+    controller->process_events();
+
+    // Verify textbox text updated
+    EXPECT_EQ(cell00->textbox()->get_text(), "105"); // Initial was 10, appended 5
+    EXPECT_EQ((*rows)[0]->cells[0].value, "105");
+    input_manager.update();
+
+    // 4. Simulate pressing Escape to cancel
+    input_manager.push_key_event(KeyEvent{.key_code=27, .state=KeyState::Pressed});
+    controller->process_events();
+    EXPECT_FALSE(cell00->is_editing());
+    EXPECT_EQ(cell00->textbox()->get_text(), "10"); // reverted
+    EXPECT_EQ((*rows)[0]->cells[0].value, "10");
+    input_manager.update();
+}
+
+
 
 
 
