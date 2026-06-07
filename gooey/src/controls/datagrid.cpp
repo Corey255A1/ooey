@@ -293,6 +293,9 @@ void DataGrid::update_layout_elements() {
         col_x_offset += col.width;
     }
 
+    // SOLID Principles: Single Responsibility Principle (SRP)
+    // Ensure the persistent cell_cache_ has dimensions matching the total row and column counts.
+    // This decouples viewport visibility/culling from actual cell element lifetime management.
     if (cell_cache_.size() != static_cast<size_t>(get_row_count())) {
         cell_cache_.resize(get_row_count());
     }
@@ -336,6 +339,9 @@ void DataGrid::update_layout_elements() {
             auto cell_bg = std::make_shared<RectPrimitive>(cell_rect, bg_col);
             cell_bgs_[r].push_back(cell_bg);
 
+            // Fetch the cell from cell_cache_ if it was already instantiated for this position.
+            // This prevents re-creation of interactive cells across layout invalidation passes,
+            // preserving state (focus, cursor position, selection, editing mode) and adhering to LSP/DIP.
             std::shared_ptr<gooey::mvvmc::GooeyElement> cell_el;
             if (row_idx >= 0 && row_idx < static_cast<int>(cell_cache_.size()) &&
                 col_idx < cell_cache_[row_idx].size() && cell_cache_[row_idx][col_idx]) {
