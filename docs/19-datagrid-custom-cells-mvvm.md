@@ -399,8 +399,6 @@ col1.cell_binder = [](const std::shared_ptr<gooey::mvvmc::GooeyElement>& el, con
 taskGrid->add_column(col1);
 ```
 
----
-
 ## 6. Implementation Milestones
 
 To roll out these grid improvements safely without breaking existing dashboards, we propose a three-stage roadmap:
@@ -408,3 +406,61 @@ To roll out these grid improvements safely without breaking existing dashboards,
 1. **Core DataGrid API Refactoring**: Refactor `DataGrid` to store and draw `GooeyElement` cell trees instead of hard-coded `TextPrimitive` values. Establish the visible cell recycling pool and layout handlers.
 2. **Focus & Keyboard Navigation**: Implement grid-level focus management, keyboard navigation (Arrow keys, Tab, Enter, Escape), and pointer event routing down to interactive cell children.
 3. **Tooey Compiler Support**: Extend the layout parser and code generator to compile nested template structures in `.ooey` layout files.
+
+---
+
+## 7. Interactive Cell Persistence and Layout-Pass Resilience
+
+When migrating from static display labels to interactive, editable input fields inside grid cells, we encountered a critical challenge: **state preservation across layout invalidation**.
+
+### 7.1 The Layout Invalidation Problem
+In our MVVM design, selecting a cell or typing text inside a textbox triggers state changes which invoke `invalidate_layout()`. The layout engine propagates this invalidation up the view hierarchy. On the next frame, a full layout pass occurs:
+1. `DataGrid::do_layout` is called.
+2. `DataGrid::update_layout_elements` is invoked.
+3. Standard virtualized recyclers call `clear_children()` and request new cell elements from the `cell_factory()`.
+
+If cell elements are discarded and re-instantiated on every layout pass, any transient state (such as the `is_editing_` mode, textbox caret positions, and text selections) is destroyed. Moreover, the global `Controller` loses reference to the focused object, resetting keyboard focus to `nullptr`.
+
+### 7.2 The Solution: Direct-Index Cell Caching
+To resolve this, we introduced a 2D caching layer (`cell_cache_`) in `DataGrid` indexed by the cell's absolute `(row_idx, col_idx)` position:
+
+```cpp
+// Declared in gooey/include/gooey/controls/datagrid.hpp
+std::vector<std::vector<std::shared_ptr<gooey::mvvmc::GooeyElement>>> cell_cache_;
+```
+
+During `update_layout_elements`, we check the cache before invoking factories:
+
+```cpp
+std::shared_ptr<gooey::mvvmc::GooeyElement> cell_el;
+if (row_idx >= 0 && row_idx < static_cast<int>(cell_cache_.size()) &&
+    col_idx < cell_cache_[row_idx].size() && cell_cache_[row_idx][col_idx]) {
+    cell_el = cell_cache_[row_idx][col_idx]; // Cache Hit: Reuse same cell element instance
+} else {
+    cell_el = col.cell_factory ? col.cell_factory() : std::make_shared<Label>(); // Cache Miss: Instantiate
+    if (row_idx >= 0 && row_idx < static_cast<int>(cell_cache_.size()) &&
+        col_idx < cell_cache_[row_idx].size()) {
+        cell_cache_[row_idx][col_idx] = cell_el;
+    }
+}
+```
+
+* **Virtualization-Safe**: The viewport renderer only adds *visible* cells as children of the `DataGrid` via `add_child()`, maintaining rendering virtualization.
+* **Focus Retention**: Because the cell pointer is preserved, the `Controller`'s focused element pointer remains valid, preserving editing context and keyboard focus.
+* **Safe Recycled Binding**: When cells are reused for different rows during scrolling, `set_row_index` detects the mismatch and resets the editing state:
+  ```cpp
+  void set_row_index(int idx) {
+      if (row_idx_ != idx) {
+          row_idx_ = idx;
+          is_editing_ = false; // Safely exit edit mode when cell is recycled for a new row
+      }
+  }
+  ```
+* **Cache Lifecycle**: The cache is cleared (`cell_cache_.clear()`) when structural updates occur (`set_columns()`, `set_rows()`, `set_items()`), ensuring fresh initialization when datasets change.
+
+### 7.3 SOLID Principles Alignment
+* **Single Responsibility Principle (SRP)**: The grid divides its responsibilities cleanly: the virtualization layout loop handles visibility/culling, while the `cell_cache_` manages cell instance persistence and reuse.
+* **Open/Closed Principle (OCP)**: The datagrid is closed to modifications when adding new types of interactive cells. All custom input logic is contained entirely in user factories and binders.
+* **Liskov Substitution Principle (LSP)**: The cache stores cell elements polymorphically as `std::shared_ptr<GooeyElement>`, allowing native elements, custom compound cells, or custom templates to be treated identically.
+* **Interface Segregation Principle (ISP)**: Custom cells implement the light-weight `IInteractive` interface specifically for event routing, without being forced to implement unnecessary layout container interfaces.
+* **Dependency Inversion Principle (DIP)**: Instead of the grid managing individual cell input fields directly, the grid relies on the high-level binders to bind data to the cells, keeping the UI engine decoupled from specific view-models.
