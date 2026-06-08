@@ -165,3 +165,82 @@ To prevent both loop iterator invalidation and lifetime destruction mid-stack, t
    }
    ```
    * **Reasoning**: Even if callbacks such as `on_close` or parent modifications clear all external shared references to this menu, `self` keeps the object memory valid until `close()` completes its stack execution and safely unwinds.
+
+---
+
+## 7. Click / Spawning Menu Visibility Fix
+
+### Detailed Investigation and Debugging Steps
+
+#### The Symptom
+When the user clicked a menu category header (like "File" or "View") on the `MenuBar`, the dropdown menu did not appear, or disappeared instantly, rendering the menu options invisible.
+
+#### The Investigation
+By tracing the controller's event loop and the menu draw cycle, the issue was identified as a focus conflict:
+1. **Spawning & Initial Focus**:
+   When a category header is clicked, `MenuBar::on_pointer_event` calls `open_menu(idx)`. Inside `open_menu(idx)`, it calls `controller->set_focused_element(active_menu_)` to focus the newly spawned menu dropdown.
+2. **Focus Overwrite in Event Routing**:
+   In `Controller::route_pointer_event`, the pointer event is routed to the `MenuBar` container first:
+   ```cpp
+   if (interactive->on_pointer_event(pointer)) {
+       if (pointer.state == PointerState::Pressed) {
+           set_focused_element(node); // <-- node is MenuBar!
+   ```
+   Because `on_pointer_event` returns `true`, the `Controller` overwrites the focused element with the `MenuBar` itself *after* the `MenuBar` had already set focus to the `Menu`.
+3. **Instant Dismissal in Focus Validation**:
+   During the next rendering pass, `Menu::draw` executes focus validation:
+   ```cpp
+   auto focused = controller->get_focused_element(); // focused is MenuBar
+   // ... loops submenu and parent menu chains ...
+   if (!has_focus && controller->get_focused_element() != nullptr) {
+       // Dismiss menu if focus shifted completely outside the menu hierarchy
+       ...
+   }
+   ```
+   Since the `MenuBar` is not in the menu or submenu chain of the `Menu`, `has_focus` remained `false`. And since the focused element (`MenuBar`) was not null, it dispatched the menu `close()` task immediately, closing the menu before a single frame could be displayed to the user.
+
+### Resolution and Reasoning
+We resolved the focus conflict by recognizing that if the `MenuBar` that spawned the menu hierarchy has focus, the menu itself should remain open.
+
+* **MenuBar Focus Exception**: We added a type check in `Menu::draw` to treat `MenuBar` focus as valid:
+  ```cpp
+  // Also allow focus on the parent MenuBar itself
+  if (!has_focus && focused) {
+      if (dynamic_cast<gooey::controls::MenuBar*>(focused.get())) {
+          has_focus = true;
+      }
+  }
+  ```
+* **Reasoning**: When a user clicks a menu header, the focus naturally rests on the `MenuBar` container. Treating it as holding valid focus ensures the menu remains open. If the user clicks elsewhere (like on a button or preview canvas), focus shifts to that interactive control, which correctly triggers the focus validation check and dismisses the menu.
+
+---
+
+## 8. Column and Row Absolute Layout Position Fix
+
+### Detailed Investigation and Debugging Steps
+
+#### The Symptom
+Even with the focus validation fix, when clicking a menu option, the menu dropdown was still not visible on the screen. The user questioned if it could be a render order (Z-order) issue.
+
+#### The Investigation
+By tracing the coordinates of the spawned menu container in `ooey-gooey-editor`:
+1. **Root View Layout**: The editor's root node (`windowRoot`) is defined as a `VBox` (which maps to the `Column` layout class).
+2. **Sequential Layout Flow**: In the `Column::do_layout()` and `Column::do_measure()` implementations, the layout loops through all children and places them sequentially along the Y-axis.
+3. **Absolute Positioning Ignored**: Although the spawned `Menu` has `is_absolute = true` and `MenuBar::open_menu` sets `active_menu_->set_absolute_bounds(...)`, the `Column` container completely ignored the `is_absolute` flag.
+4. **Layout Offset Off-screen**: As a result, the `Column` treated the `Menu` as a normal sequential child and placed it at `cy = bounds.y + padding_top + MenuBar_height + editorRoot_height = 0 + 0 + 40 + 728 = 768`. Since the window height is exactly 768 pixels, the menu was placed entirely off-screen at the bottom of the window, rendering it completely invisible. A similar bug existed in the `Row` layout container.
+
+### Resolution and Reasoning
+We resolved the absolute positioning layout bug by bringing `Column` and `Row` layout behaviors in line with the default `GooeyNode` layout behavior.
+
+* **Absolute Layout Handling**: We updated `Column::do_measure`/`Column::do_layout` in `column.cpp` and `Row::do_measure`/`Row::do_layout` in `row.cpp` to check if `child->is_absolute` is true.
+* **Bypass Sequence Flow**: When a child is absolute, it is bypassed in the sequential flow layout calculations (so it does not consume spacing or change the sequential Y/X offsets), but it is still measured and laid out directly at its relative `absolute_bounds` offset:
+  ```cpp
+  if (child_view->is_absolute) {
+      int cx = bounds.x + padding_left + child_view->absolute_bounds.x;
+      int cy = bounds.y + padding_top + child_view->absolute_bounds.y;
+      child_view->layout(Rect{cx, cy, child_view->absolute_bounds.width, child_view->absolute_bounds.height});
+      continue;
+  }
+  ```
+* **Reasoning**: This guarantees that dynamically mounted root-level overlays (such as dropdowns, context menus, and tooltips) can be placed at their absolute pixel coordinates regardless of whether the root node container is a sequential flow layout (`Column` or `Row`) or a free-form container (`GooeyNode`).
+

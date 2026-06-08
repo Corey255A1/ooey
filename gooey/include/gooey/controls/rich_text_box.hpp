@@ -77,6 +77,7 @@ public:
     bool on_text_event(const TextEvent& e) override;
 
     void draw(ooey::IRenderTarget& target) const override;
+    void apply_style(const mvvmc::Style& style) override;
 
     std::string get_selected_text() const;
     void insert_text(const std::string& text);

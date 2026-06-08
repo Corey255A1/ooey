@@ -245,6 +245,64 @@ TEST(LayoutTest, AbsolutePositioningWithinView) {
     EXPECT_EQ(child->layout_bounds.height, 80);
 }
 
+TEST(LayoutTest, AbsolutePositioningWithinColumnAndRow) {
+    auto col = std::make_shared<Column>();
+    col->set_width(SizePolicy::Fixed, 400);
+    col->set_height(SizePolicy::Fixed, 400);
+    col->set_padding(10);
+
+    auto normal_child = std::make_shared<GooeyNode>();
+    normal_child->set_width(SizePolicy::Fixed, 100);
+    normal_child->set_height(SizePolicy::Fixed, 50);
+    col->add_child(normal_child);
+
+    auto absolute_child = std::make_shared<GooeyNode>();
+    absolute_child->set_absolute(true);
+    absolute_child->set_absolute_bounds(Rect{100, 50, 120, 80});
+    col->add_child(absolute_child);
+
+    Size col_measured = col->measure(Size{500, 500});
+    EXPECT_EQ(col_measured.width, 400);
+    EXPECT_EQ(col_measured.height, 400);
+
+    col->layout(Rect{0, 0, 400, 400});
+
+    EXPECT_EQ(normal_child->layout_bounds.x, 10);
+    EXPECT_EQ(normal_child->layout_bounds.y, 10);
+
+    EXPECT_EQ(absolute_child->layout_bounds.x, 110);
+    EXPECT_EQ(absolute_child->layout_bounds.y, 60);
+
+    auto row = std::make_shared<Row>();
+    row->set_width(SizePolicy::Fixed, 400);
+    row->set_height(SizePolicy::Fixed, 400);
+    row->set_padding(10);
+    
+    // Create new instances to avoid layout/parent state sharing issues
+    auto normal_child2 = std::make_shared<GooeyNode>();
+    normal_child2->set_width(SizePolicy::Fixed, 100);
+    normal_child2->set_height(SizePolicy::Fixed, 50);
+    
+    auto absolute_child2 = std::make_shared<GooeyNode>();
+    absolute_child2->set_absolute(true);
+    absolute_child2->set_absolute_bounds(Rect{100, 50, 120, 80});
+
+    row->add_child(normal_child2);
+    row->add_child(absolute_child2);
+
+    Size row_measured = row->measure(Size{500, 500});
+    EXPECT_EQ(row_measured.width, 400);
+    EXPECT_EQ(row_measured.height, 400);
+
+    row->layout(Rect{0, 0, 400, 400});
+
+    EXPECT_EQ(normal_child2->layout_bounds.x, 10);
+    EXPECT_EQ(normal_child2->layout_bounds.y, 10);
+
+    EXPECT_EQ(absolute_child2->layout_bounds.x, 110);
+    EXPECT_EQ(absolute_child2->layout_bounds.y, 60);
+}
+
 TEST(LayoutTest, LabelLayoutDynamicAndAbsolute) {
     // 1. Dynamic positioning in Column
     auto col = std::make_shared<Column>();

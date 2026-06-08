@@ -37,6 +37,8 @@ public:
         invalidate_layout();
     }
 
+    void apply_style(const mvvmc::Style& style) override;
+
     void close();
     bool is_open() const { return is_open_; }
 

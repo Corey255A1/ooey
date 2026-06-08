@@ -1,5 +1,7 @@
 #include "gooey/controls/menu.hpp"
+#include "gooey/controls/menubar.hpp"
 #include "gooey/mvvmc/controller.hpp"
+#include "gooey/mvvmc/theme.hpp"
 #include "gooey/application.hpp"
 #include <algorithm>
 
@@ -8,6 +10,7 @@ namespace gooey::controls {
 Menu::Menu(const std::vector<MenuItem>& items)
     : items_(items) {
     set_absolute(true);
+    set_style_name("menu");
 }
 
 Size Menu::do_measure(Size constraints) {
@@ -60,9 +63,8 @@ void Menu::draw(ooey::IRenderTarget& target) const {
         
         // Also allow focus on the parent MenuBar itself
         if (!has_focus && focused) {
-            auto* node = dynamic_cast<GooeyNode*>(focused.get());
-            if (node && node->id == "propertiesGrid") { // skip properties grid interactions if needed, but standard menu bar id check:
-                // ...
+            if (dynamic_cast<gooey::controls::MenuBar*>(focused.get())) {
+                has_focus = true;
             }
         }
 
@@ -155,29 +157,39 @@ void Menu::draw(ooey::IRenderTarget& target) const {
 bool Menu::on_pointer_event(const Pointer& e) {
     if (!is_open_) return false;
 
-    // Check if pointer falls inside our submenu first
-    if (active_submenu_ && active_submenu_->on_pointer_event(e)) {
-        return true;
+    // Check if pointer falls inside our submenu first, but only if click is within submenu bounds
+    if (active_submenu_) {
+        bool in_submenu = (e.x >= active_submenu_->bounds_.x && 
+                          e.x <= active_submenu_->bounds_.x + active_submenu_->bounds_.width &&
+                          e.y >= active_submenu_->bounds_.y && 
+                          e.y <= active_submenu_->bounds_.y + active_submenu_->bounds_.height);
+        if (in_submenu && active_submenu_->on_pointer_event(e)) {
+            return true;
+        }
     }
 
     bool hit = (e.x >= bounds_.x && e.x <= bounds_.x + bounds_.width &&
                 e.y >= bounds_.y && e.y <= bounds_.y + bounds_.height);
 
+    auto compute_hovered_idx = [&](int x, int y) {
+        int curr_y = bounds_.y;
+        int new_hover = -1;
+        for (size_t i = 0; i < items_.size(); ++i) {
+            int item_h = items_[i].is_separator ? 10 : row_height_;
+            if (y >= curr_y && y < curr_y + item_h) {
+                if (!items_[i].is_separator) {
+                    new_hover = static_cast<int>(i);
+                }
+                break;
+            }
+            curr_y += item_h;
+        }
+        return new_hover;
+    };
+
     if (e.state == PointerState::Moved) {
         if (hit) {
-            // Find which item is hovered
-            int curr_y = bounds_.y;
-            int new_hover = -1;
-            for (size_t i = 0; i < items_.size(); ++i) {
-                int item_h = items_[i].is_separator ? 10 : row_height_;
-                if (e.y >= curr_y && e.y < curr_y + item_h) {
-                    if (!items_[i].is_separator) {
-                        new_hover = static_cast<int>(i);
-                    }
-                    break;
-                }
-                curr_y += item_h;
-            }
+            int new_hover = compute_hovered_idx(e.x, e.y);
 
             if (new_hover != hovered_idx_) {
                 hovered_idx_ = new_hover;
@@ -189,7 +201,6 @@ bool Menu::on_pointer_event(const Pointer& e) {
                     controller->set_focused_element(shared_from_this());
                 }
 
-                // If hovered item has a submenu, open it
                 if (hovered_idx_ >= 0 && !items_[hovered_idx_].subitems.empty()) {
                     close_submenus();
                     
@@ -200,14 +211,21 @@ bool Menu::on_pointer_event(const Pointer& e) {
 
                     auto submenu = std::make_shared<Menu>(items_[hovered_idx_].subitems);
                     submenu->parent_menu_ = shared_from_this();
+                    submenu->set_theme_manager(get_theme_manager());
                     
-                    // Position to the right of this item
-                    Rect sub_rect{bounds_.x + bounds_.width - 2, sub_y, 180, 0}; // height resolved by measure
+                    Rect sub_rect{bounds_.x + bounds_.width - 2, sub_y, 180, 0};
                     Size sub_size = submenu->measure(Size{180, 400});
                     sub_rect.height = sub_size.height;
+                    submenu->set_absolute_bounds(sub_rect);
                     submenu->layout(sub_rect);
+                    add_child(std::static_pointer_cast<IDrawable>(submenu));
 
                     active_submenu_ = submenu;
+                    
+                    // Set focus to submenu so it receives hover and click events
+                    if (controller) {
+                        controller->set_focused_element(active_submenu_);
+                    }
                 } else {
                     close_submenus();
                 }
@@ -224,6 +242,12 @@ bool Menu::on_pointer_event(const Pointer& e) {
     }
 
     if (hit && e.state == PointerState::Pressed) {
+        int new_hover = compute_hovered_idx(e.x, e.y);
+        if (new_hover != hovered_idx_) {
+            hovered_idx_ = new_hover;
+            invalidate_layout();
+        }
+
         auto self = shared_from_this();
         if (hovered_idx_ >= 0 && hovered_idx_ < static_cast<int>(items_.size())) {
             auto action = items_[hovered_idx_].action;
@@ -236,6 +260,32 @@ bool Menu::on_pointer_event(const Pointer& e) {
                 if (action) {
                     action();
                 }
+            } else {
+                close_submenus();
+                int sub_y = bounds_.y;
+                for (int k = 0; k < hovered_idx_; ++k) {
+                    sub_y += items_[k].is_separator ? 10 : row_height_;
+                }
+
+                auto submenu = std::make_shared<Menu>(items_[hovered_idx_].subitems);
+                submenu->parent_menu_ = shared_from_this();
+                submenu->set_theme_manager(get_theme_manager());
+                
+                Rect sub_rect{bounds_.x + bounds_.width - 2, sub_y, 180, 0};
+                Size sub_size = submenu->measure(Size{180, 400});
+                sub_rect.height = sub_size.height;
+                submenu->set_absolute_bounds(sub_rect);
+                submenu->layout(sub_rect);
+                add_child(std::static_pointer_cast<IDrawable>(submenu));
+
+                active_submenu_ = submenu;
+                
+                auto* controller = dynamic_cast<gooey::mvvmc::Controller*>(
+                    gooey::Application::get_instance()->get_controller());
+                if (controller) {
+                    controller->set_focused_element(active_submenu_);
+                }
+                invalidate_layout();
             }
         }
         return true;
@@ -316,11 +366,14 @@ bool Menu::on_key_event(const KeyEvent& e) {
                 }
                 auto submenu = std::make_shared<Menu>(items_[hovered_idx_].subitems);
                 submenu->parent_menu_ = shared_from_this();
+                submenu->set_theme_manager(get_theme_manager());
 
                 Rect sub_rect{bounds_.x + bounds_.width - 2, sub_y, 180, 0};
                 Size sub_size = submenu->measure(Size{180, 400});
                 sub_rect.height = sub_size.height;
+                submenu->set_absolute_bounds(sub_rect);
                 submenu->layout(sub_rect);
+                add_child(std::static_pointer_cast<IDrawable>(submenu));
 
                 active_submenu_ = submenu;
 
@@ -347,6 +400,13 @@ void Menu::close() {
     
     close_submenus();
 
+    // If we're a submenu, clear the parent's active submenu pointer.
+    if (auto parent = parent_menu_.lock()) {
+        if (parent->active_submenu_.get() == this) {
+            parent->active_submenu_ = nullptr;
+        }
+    }
+
     // Remove ourselves from parent nodes
     auto* parent_el = get_parent();
     if (parent_el) {
@@ -368,8 +428,25 @@ void Menu::close() {
     }
 }
 
+void Menu::apply_style(const mvvmc::Style& style) {
+    bg_color_ = style.fill_color;
+    border_color_ = style.stroke_color;
+    text_color_ = style.text_color;
+
+    if (bg_color_.r != 0 || bg_color_.g != 0 || bg_color_.b != 0 || bg_color_.a != 0) {
+        hover_bg_color_ = Color{
+            static_cast<uint8_t>(std::clamp(bg_color_.r + 30, 0, 255)),
+            static_cast<uint8_t>(std::clamp(bg_color_.g + 30, 0, 255)),
+            static_cast<uint8_t>(std::clamp(bg_color_.b + 30, 0, 255)),
+            bg_color_.a
+        };
+    }
+}
+
 void Menu::close_submenus() {
     if (active_submenu_) {
+        // Recursively close all nested submenus
+        active_submenu_->close_submenus();
         active_submenu_->close();
         active_submenu_ = nullptr;
     }

@@ -12,7 +12,8 @@ Size Row::do_measure(Size constraints) {
 
     int visible_child_count = 0;
     for (const auto& child : get_children()) {
-        if (dynamic_cast<GooeyElement*>(child.get())) {
+        auto* child_elem = dynamic_cast<GooeyElement*>(child.get());
+        if (child_elem && !child_elem->is_absolute) {
             visible_child_count++;
         }
     }
@@ -28,6 +29,13 @@ Size Row::do_measure(Size constraints) {
     for (const auto& child : get_children()) {
         auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
+            if (child_view->is_absolute) {
+                child_view->measure(Size{avail_w, avail_h});
+                int child_total_h = child_view->absolute_bounds.y + child_view->absolute_bounds.height;
+                content_max_h = std::max(content_max_h, child_total_h);
+                continue;
+            }
+
             if (child_view->width.policy == SizePolicy::Flex) {
                 total_weight += child_view->width.value;
                 flex_children.push_back(child_view);
@@ -90,7 +98,7 @@ void Row::do_layout(Rect bounds) {
     int visible_child_count = 0;
     for (const auto& child : get_children()) {
         auto* child_view = dynamic_cast<GooeyElement*>(child.get());
-        if (child_view) {
+        if (child_view && !child_view->is_absolute) {
             total_children_w += child_view->get_measured_size().width + child_view->margin_left + child_view->margin_right;
             visible_child_count++;
         }
@@ -129,6 +137,13 @@ void Row::do_layout(Rect bounds) {
     for (const auto& child : get_children()) {
         auto* child_view = dynamic_cast<GooeyElement*>(child.get());
         if (child_view) {
+            if (child_view->is_absolute) {
+                int cx = bounds.x + padding_left + child_view->absolute_bounds.x;
+                int cy = bounds.y + padding_top + child_view->absolute_bounds.y;
+                child_view->layout(Rect{cx, cy, child_view->absolute_bounds.width, child_view->absolute_bounds.height});
+                continue;
+            }
+
             if (!first) {
                 current_x += spacing_override;
             }

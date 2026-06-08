@@ -1018,6 +1018,30 @@ void RichTextBox::draw(ooey::IRenderTarget& target) const {
     GooeyNode::draw(target);
 }
 
+void RichTextBox::apply_style(const mvvmc::Style& style) {
+    bg_color = style.fill_color;
+    default_text_color = style.text_color;
+    divider_color = style.stroke_color;
+    if (style.fill_color.r < 128) {
+        line_num_bg = Color{
+            static_cast<uint8_t>(std::clamp(style.fill_color.r + 8, 0, 255)),
+            static_cast<uint8_t>(std::clamp(style.fill_color.g + 8, 0, 255)),
+            static_cast<uint8_t>(std::clamp(style.fill_color.b + 8, 0, 255)),
+            style.fill_color.a
+        };
+        line_num_color = Color{120, 120, 120};
+    } else {
+        line_num_bg = Color{
+            static_cast<uint8_t>(std::clamp(style.fill_color.r - 15, 0, 255)),
+            static_cast<uint8_t>(std::clamp(style.fill_color.g - 15, 0, 255)),
+            static_cast<uint8_t>(std::clamp(style.fill_color.b - 15, 0, 255)),
+            style.fill_color.a
+        };
+        line_num_color = Color{80, 80, 80};
+    }
+    GooeyNode::apply_style(style);
+}
+
 Size RichTextBox::do_measure(Size constraints) {
     int w = resolve_width(constraints.width, absolute_bounds.width);
     int h = resolve_height(constraints.height, absolute_bounds.height);
