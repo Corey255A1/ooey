@@ -295,6 +295,8 @@ target_sources(gooey PRIVATE
     gooey/src/controls/scroll_container.cpp
     gooey/src/controls/canvas_layout.cpp
     gooey/src/controls/vector_shape_view.cpp
+    gooey/src/controls/menu.cpp
+    gooey/src/controls/menubar.cpp
     gooey/src/mvvmc/controller.cpp
     gooey/src/mvvmc/navigation_coordinator.cpp
     gooey/src/mvvmc/gooey_element.cpp

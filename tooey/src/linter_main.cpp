@@ -17,7 +17,7 @@ const std::set<std::string> KNOWN_ELEMENTS = {
     "Button", "CheckBox", "Label", "TextBox", "RichTextBox",
     "ImageControl", "ScrollBar", "ScrollContainer", "ListControl",
     "DataGrid", "AdaptiveStack", "CanvasLayout", "VectorShapeView",
-    "Root"
+    "MenuBar", "Menu", "Root"
 };
 
 // Check for duplicate IDs

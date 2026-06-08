@@ -16,7 +16,7 @@ void Linter::init_default_known_types() {
             "Button", "CheckBox", "Label", "TextBox", "RichTextBox",
             "ImageControl", "ScrollBar", "ScrollContainer", "ListControl",
             "DataGrid", "AdaptiveStack", "CanvasLayout", "VectorShapeView",
-            "Root"
+            "MenuBar", "Menu", "Root"
         };
         initialized_ = true;
     }

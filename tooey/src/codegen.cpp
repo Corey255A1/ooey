@@ -95,6 +95,10 @@ static std::string generate_template_node(
         cpp_type = "gooey::controls::CanvasLayout";
     } else if (node->nodeType == "VectorShapeView") {
         cpp_type = "gooey::controls::VectorShapeView";
+    } else if (node->nodeType == "MenuBar") {
+        cpp_type = "gooey::controls::MenuBar";
+    } else if (node->nodeType == "Menu") {
+        cpp_type = "gooey::controls::Menu";
     } else {
         cpp_type = node->nodeType;
     }
@@ -418,6 +422,10 @@ static void generate_node(
         cpp_type = "gooey::controls::CanvasLayout";
     } else if (node->nodeType == "VectorShapeView") {
         cpp_type = "gooey::controls::VectorShapeView";
+    } else if (node->nodeType == "MenuBar") {
+        cpp_type = "gooey::controls::MenuBar";
+    } else if (node->nodeType == "Menu") {
+        cpp_type = "gooey::controls::Menu";
     } else {
         cpp_type = node->nodeType; // Custom subclass component
     }
@@ -767,6 +775,8 @@ CodegenResult CodeGenerator::generate(
     h_ss << "#include \"gooey/controls/scroll_container.hpp\"\n";
     h_ss << "#include \"gooey/controls/canvas_layout.hpp\"\n";
     h_ss << "#include \"gooey/controls/vector_shape_view.hpp\"\n";
+    h_ss << "#include \"gooey/controls/menubar.hpp\"\n";
+    h_ss << "#include \"gooey/controls/menu.hpp\"\n";
     h_ss << "#include \"gooey/controls/column.hpp\"\n";
     h_ss << "#include \"gooey/controls/row.hpp\"\n";
     h_ss << "#include \"gooey/controls/grid.hpp\"\n";

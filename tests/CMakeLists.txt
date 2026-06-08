@@ -16,6 +16,7 @@ set(OOEY_TEST_SRCS
     test_font.cpp
     test_dpi_scaling.cpp
     test_tooey.cpp
+    test_menu.cpp
     ../examples/codeeditor/code_editor.cpp
 )
 
